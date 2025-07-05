@@ -19,6 +19,7 @@ return new class extends Migration
         $table->string('contact')->nullable();
         $table->timestamps();
 
+        $table->foreign('manager_id')->nullable()->constrained('users')->onDelete('set null');
         $table->foreign('business_id')->references('id')->on('businesses')->onDelete('cascade');
     });
     }
@@ -29,5 +30,11 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('branches');
+
+        Schema::table('branches', function (Blueprint $table) {
+            $table->dropForeign(['manager_id']);
+            $table->dropColumn('manager_id');
+        });
+        
     }
 };
