@@ -56,40 +56,43 @@
         }
         .main-content {
             margin-top: 60px;
-            margin-left: 280px;
+            margin-left: 0;
             transition: margin-left 0.2s ease;
+        }
+        body.auth .main-content {
+            margin-left: 280px;
         }
         body.collapsed .sidebar {
             width: 64px;
         }
-        body.collapsed .main-content {
+        body.auth.collapsed .main-content {
             margin-left: 64px;
         }
     </style>
 </head>
-<body class="bg-gray-50" x-data="{ collapsed: false }" x-bind:class="{'collapsed': collapsed}">
+<body class="bg-gray-50 @auth auth @endauth" x-data="{ collapsed: false }" x-bind:class="{'collapsed': collapsed}">
     @auth
         <!-- Top Bar -->
         <x-top-bar />
 
         <!-- Sidebar -->
         <x-sidebar />
-
-        <!-- Main Content Area -->
-        <div class="main-content">
-            @if(session('error'))
-                <div class="mb-4 text-red-600 bg-red-100 border border-red-400 px-4 py-3 rounded">
-                    {{ session('error') }}
-                </div>
-            @endif
-            @if(session('status'))
-                <div class="mb-4 text-green-600 bg-green-100 border border-green-400 px-4 py-3 rounded">
-                    {{ session('status') }}
-                </div>
-            @endif
-            @yield('content')
-        </div>
     @endauth
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+        @if(session('error'))
+            <div class="mb-4 text-red-600 bg-red-100 border border-red-400 px-4 py-3 rounded">
+                {{ session('error') }}
+            </div>
+        @endif
+        @if(session('status'))
+            <div class="mb-4 text-green-600 bg-green-100 border border-green-400 px-4 py-3 rounded">
+                {{ session('status') }}
+            </div>
+        @endif
+        @yield('content')
+    </div>
     @livewireScripts
 </body>
 </html>

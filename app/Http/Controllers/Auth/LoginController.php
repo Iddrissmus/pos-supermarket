@@ -31,13 +31,17 @@ class LoginController extends Controller
             $request->session()->regenerate();
 
             $user = Auth::user();
-            if ($user->role === 'manager') {
-                return redirect()->intended('/admin/dashboard');
-            } elseif ($user->role === 'owner') {
-                return redirect()->intended('/owner/dashboard');
-            } 
-              else {
-                return redirect()->intended('/cashier/dashboard');
+            switch ($user->role) {
+                case 'admin':
+                    return redirect()->route('layouts.admin');
+                case 'owner':
+                    return redirect()->route('layouts.owner');
+                case 'manager':
+                    return redirect()->route('layouts.manager');
+                case 'cashier':
+                    return redirect()->route('layouts.cashier');
+                default:
+                    return redirect()->route('dashboard');
             }
         }
 

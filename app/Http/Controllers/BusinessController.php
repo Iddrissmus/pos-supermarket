@@ -32,6 +32,12 @@ class BusinessController extends Controller
             return response()->json(['errors '=> $validator->errors()], 422);
         }
 
+        // Handle product image upload 
+        // if ($request->hasFile('logo')) {
+        //     $logoPath = $request->file('logo')->store('logos', 'public');
+        //     $validator->validated()['logo'] = $logoPath; // Add logo path to validated data
+        // }
+
         $business = Business::create($validator->validated());
         return response()->json($business, 201);
     }

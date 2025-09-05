@@ -46,7 +46,7 @@ class RegisterController extends Controller
         } elseif ($user->role === 'manager') {
             return redirect('/manager/dashboard');
         } else {
-            return redirect('/cashier/dashboard');
+            return redirect('/dashboard');
         }
     }
 }

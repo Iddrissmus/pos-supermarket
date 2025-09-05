@@ -13,6 +13,14 @@ class Branch extends Model
         return $this->belongsTo(Business::class);
     }
 
+    public function products() 
+    {
+        return $this->belongsToMany(Product::class)
+            ->using(BranchProduct::class)
+            ->withPivot(['price', 'stock', 'reorder_level'])
+            ->withTimestamps();
+    }
+
     public function branchProducts()
     {
         return $this->hasMany(BranchProduct::class);

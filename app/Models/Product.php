@@ -27,4 +27,12 @@ class Product extends Model
     {
         return $this->hasMany(SaleItem::class);
     }
+
+    public function branches() 
+    {
+        return $this->belongsToMany(Branch::class)
+            ->using(BranchProduct::class)
+            ->withPivot(['price', 'stock', 'reorder_level'])
+            ->withTimestamps();
+    }
 }

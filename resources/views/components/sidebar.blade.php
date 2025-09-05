@@ -4,7 +4,8 @@
             <div class="px-4">
                 <div class="sidebar-item active flex items-center px-3 py-2 rounded-lg mb-1 cursor-pointer">
                     <i class="fas fa-home mr-3 text-gray-600"></i>
-                    <span class="text-gray-700 font-medium">Home</span>
+                    {{-- <span class="text-gray-700 font-medium">Home</span> --}}
+                    <a href="{{route('layouts.productman')}}">Home</a>
                 </div>
 
                 <div class="sidebar-item flex items-center px-3 py-2 rounded-lg mb-1 cursor-pointer">
