@@ -3,78 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'Inventory Management System')</title>
+    <title>@yield('title', 'Dashoard')</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    @livewireStyles
+    {{-- WireUI scripts registration (v2 component tag) --}}
+    <wireui:scripts />
+    {{-- If on older WireUI, use: @wireUiScripts --}}
+    <script src="//unpkg.com/alpinejs" defer></script>
+    <style>
+        .sidebar-item {
+            transition: all 0.3s ease;
+        }
+        .sidebar-item:hover {
+            background-color: #e0f2fe;
+        }
+        .sidebar-item.active {
+            background-color: #e0f2fe;
+            color: #1e40af;
+        }
+        .sidebar-item.active i {
+            color: #1e40af;
+        }
+        .badge {
+            background-color: #ef4444;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        .content-area {
+            margin-left: 280px;
+        }
+        .sidebar {
+            width: 280px;
+            height: calc(100vh - 60px);
+            position: fixed;
+            left: 0;
+            top: 60px;
+            z-index: 40;
+            overflow-y: auto;
+        }
+        .top-bar {
+            height: 60px;
+            background-color: #374151;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+        }
+        .main-content {
+            margin-top: 60px;
+            margin-left: 280px;
+            transition: margin-left 0.2s ease;
+        }
+        body.collapsed .sidebar {
+            width: 64px;
+        }
+        body.collapsed .main-content {
+            margin-left: 64px;
+        }
+    </style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-50" x-data="{ collapsed: false }" x-bind:class="{'collapsed': collapsed}">
     @auth
-        <!-- Navigation -->
-        <nav class="bg-white shadow-lg">
-            <div class="max-w-7xl mx-auto px-4">
-                <div class="flex justify-between h-16">
-                    <div class="flex">
-                        <div class="flex-shrink-0 flex items-center">
-                            <h1 class="text-xl font-bold text-gray-800">IMS</h1>
-                        </div>
-                        <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-                            <a href="{{ route('dashboard') }}" class="text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium hover:border-gray-300">
-                                Dashboard
-                            </a>
-                            @if(auth()->user()->role === 'admin')
-                                <a href="#" class="text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium hover:border-gray-300">
-                                    Users
-                                </a>
-                                <a href="#" class="text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium hover:border-gray-300">
-                                    Businesses
-                                </a>
-                            @endif
-                            @if(in_array(auth()->user()->role, ['owner', 'manager']))
-                                <a href="#" class="text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium hover:border-gray-300">
-                                    Inventory
-                                </a>
-                                <a href="#" class="text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium hover:border-gray-300">
-                                    Sales
-                                </a>
-                            @endif
-                        </div>
-                    </div>
-                    <div class="flex items-center">
-                        <div class="ml-3 relative">
-                            <div class="flex items-center space-x-4">
-                                <span class="text-sm text-gray-700">{{ auth()->user()->name }}</span>
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                    {{ ucfirst(auth()->user()->role) }}
-                                </span>
-                                <form method="POST" action="{{ route('logout') }}" class="inline">
-                                    @csrf
-                                    <button type="submit" class="text-sm text-red-600 hover:text-red-900">
-                                        Logout
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </nav>
-    @endauth
+        <!-- Top Bar -->
+        <x-top-bar />
 
-    <main class="py-8">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <!-- Sidebar -->
+        <x-sidebar />
+
+        <!-- Main Content Area -->
+        <div class="main-content">
             @if(session('error'))
-                <div class="mb-4 text-red-600">
+                <div class="mb-4 text-red-600 bg-red-100 border border-red-400 px-4 py-3 rounded">
                     {{ session('error') }}
                 </div>
             @endif
             @if(session('status'))
-                <div class="mb-4 text-green-600">
+                <div class="mb-4 text-green-600 bg-green-100 border border-green-400 px-4 py-3 rounded">
                     {{ session('status') }}
                 </div>
             @endif
             @yield('content')
         </div>
-    </main>
+    @endauth
+    @livewireScripts
 </body>
 </html>
 
