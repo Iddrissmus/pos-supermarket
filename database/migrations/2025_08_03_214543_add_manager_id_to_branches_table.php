@@ -12,8 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('branches', function (Blueprint $table) {
-            $table->unsignedBigInteger('manager_id')->nullable()->after('business_id');
-            $table->foreign('manager_id')->references('id')->on('users')->onDelete('set null');
+            if (!Schema::hasColumn('branches', 'manager_id')) {
+                $table->unsignedBigInteger('manager_id')->nullable()->after('business_id');
+                $table->foreign('manager_id')->references('id')->on('users')->onDelete('set null');
+            }
         });
     }
 
@@ -23,7 +25,17 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('branches', function (Blueprint $table) {
-            //
+            if (Schema::hasColumn('branches', 'manager_id')) {
+                // Drop foreign key if exists (SQLite may ignore)
+                $sm = Schema::getConnection()->getDoctrineSchemaManager();
+                // Use conditional drop to avoid errors in sqlite during tests
+                try {
+                    $table->dropForeign(['manager_id']);
+                } catch (\Throwable $e) {
+                    // ignore
+                }
+                $table->dropColumn('manager_id');
+            }
         });
     }
 };

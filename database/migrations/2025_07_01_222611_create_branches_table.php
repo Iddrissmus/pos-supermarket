@@ -12,16 +12,24 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('branches', function (Blueprint $table) {
-        $table->id();
-        $table->unsignedBigInteger('business_id');
-        $table->string('name');
-        $table->string('location')->nullable();
-        $table->string('contact')->nullable();
-        $table->timestamps();
+            $table->id();
+            $table->unsignedBigInteger('manager_id')->nullable();
+            $table->unsignedBigInteger('business_id');
+            $table->string('name');
+            $table->string('location')->nullable();
+            $table->string('contact')->nullable();
+            $table->timestamps();
 
-        $table->foreign('manager_id')->nullable()->constrained('users')->onDelete('set null');
-        $table->foreign('business_id')->references('id')->on('businesses')->onDelete('cascade');
-    });
+            $table->foreign('manager_id')
+                  ->references('id')
+                  ->on('users')
+                  ->onDelete('set null');
+            
+            $table->foreign('business_id')
+                  ->references('id')
+                  ->on('businesses')
+                  ->onDelete('cascade');
+        });
     }
 
     /**
@@ -30,11 +38,5 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('branches');
-
-        Schema::table('branches', function (Blueprint $table) {
-            $table->dropForeign(['manager_id']);
-            $table->dropColumn('manager_id');
-        });
-        
     }
 };
