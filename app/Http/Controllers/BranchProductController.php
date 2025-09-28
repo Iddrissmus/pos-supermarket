@@ -9,7 +9,8 @@ class BranchProductController extends Controller
 {
     public function index()
     {
-        $branchProducts = BranchProduct::with(['branch', 'product'])->get();
+        $perPage = request()->query('per_page', 25);
+        $branchProducts = BranchProduct::with(['branch', 'product'])->paginate((int)$perPage);
         return response()->json($branchProducts);
     }
 

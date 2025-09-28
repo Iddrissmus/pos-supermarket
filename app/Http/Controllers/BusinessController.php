@@ -13,7 +13,8 @@ class BusinessController extends Controller
      */
     public function index()
     {
-        $businesses = Business::with('owner')->get();
+        $perPage = request()->query('per_page', 25);
+        $businesses = Business::with('owner')->paginate((int)$perPage);
         return response()->json($businesses);
     }
 
