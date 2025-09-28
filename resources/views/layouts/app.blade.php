@@ -10,7 +10,7 @@
     {{-- WireUI scripts registration (v2 component tag) --}}
     <wireui:scripts />
     {{-- If on older WireUI, use: @wireUiScripts --}}
-    <script src="//unpkg.com/alpinejs" defer></script>
+    @stack('styles')
     <style>
         .sidebar-item {
             transition: all 0.3s ease;
@@ -69,6 +69,7 @@
             margin-left: 64px;
         }
     </style>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 </head>
 <body class="bg-gray-50 @auth auth @endauth" x-data="{ collapsed: false }" x-bind:class="{'collapsed': collapsed}">
     @auth
@@ -82,18 +83,20 @@
     <!-- Main Content Area -->
     <div class="main-content">
         @if(session('error'))
-            <div class="mb-4 text-red-600 bg-red-100 border border-red-400 px-4 py-3 rounded">
-                {{ session('error') }}
-            </div>
+        <div class="mb-4 text-red-600 bg-red-100 border border-red-400 px-4 py-3 rounded">
+            {{ session('error') }}
+        </div>
         @endif
         @if(session('status'))
-            <div class="mb-4 text-green-600 bg-green-100 border border-green-400 px-4 py-3 rounded">
-                {{ session('status') }}
-            </div>
+        <div class="mb-4 text-green-600 bg-green-100 border border-green-400 px-4 py-3 rounded">
+            {{ session('status') }}
+        </div>
         @endif
+        <x-notifications position="top-right"/>
         @yield('content')
     </div>
     @livewireScripts
+    @stack('scripts')
 </body>
 </html>
 

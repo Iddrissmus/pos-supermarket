@@ -1,6 +1,6 @@
 <div class="top-bar flex items-center justify-between px-6">
     <div class="flex items-center space-x-3">
-        <button type="button" class="text-white focus:outline-none" @click="collapsed = !collapsed">
+        <button type="button" class="text-white focus:outline-none" @click="collapsed = !collapsed" >
             <i class="fas fa-bars"></i>
         </button>
         <div class="text-white font-semibold text-lg">Dashboard</div>

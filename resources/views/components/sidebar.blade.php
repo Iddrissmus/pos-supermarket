@@ -50,7 +50,7 @@
                     <div class="sidebar-item flex items-center justify-between px-3 py-2 rounded-lg mb-1 cursor-pointer">
                         <div class="flex items-center">
                             <i class="fas fa-comment mr-3 text-gray-600"></i>
-                            <span class="text-gray-700">Messages</span>
+                            <a class="text-gray-700" href="{{ route('reorder.requests') }}">Messages</a>
                         </div>
                         <span class="badge">2</span>
                     </div>

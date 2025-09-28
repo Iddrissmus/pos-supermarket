@@ -53,7 +53,7 @@
         <div class="bg-white rounded-lg shadow-md p-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-2">Quick Actions</h3>
             <div class="space-y-2">
-                <button onclick="openProductModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">
+                <button class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">
                     <i class="fas fa-plus mr-2"></i>Add New Product
                 </button>
                 <button class="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">
@@ -66,10 +66,8 @@
         </div>
     </div>
 
-    <livewire:products.manage-products />
-
     <!-- Inventory Summary Section -->
-    <div class="bg-white rounded-lg shadow-md overflow-x-auto">
+    <div class="bg-white rounded-lg shadow-md">
         <div class="p-6 border-b border-gray-200">
             <h2 class="text-xl font-semibold text-gray-800">Inventory Summary</h2>
         </div>
@@ -96,15 +94,19 @@
             </div>
         </div>
 
+        <!-- Product Table -->
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Product Name
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Description
+                            Category
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Unit Price
@@ -116,31 +118,108 @@
                             Cost Price
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Actions
+                            Total Value
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            In Store
                         </th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                    @forelse($products as $product)
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $product->name }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ Str::limit($product->description, 80) }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{$product->price}}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{$product->stock}}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{$product->cost_price}}</td>
-                            <td class="px-4 py-2 whitespace-nowrap text-right space-x-2">
-                                <button type="button" wire:click="edit({{ $product->id }})" class="px-3 py-1 border rounded-lg">Edit</button>
-                                <button type="button" wire:click="delete({{ $product->id }})" class="px-3 py-1 border rounded-lg text-red-600">Delete</button>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="3" class="px-4 py-6 text-center text-gray-500">No products found.</td>
-                        </tr>
-                    @endforelse
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-gray-200 rounded-lg mr-3 flex items-center justify-center">
+                                    <i class="fas fa-mobile-alt text-gray-500"></i>
+                                </div>
+                                <div class="text-sm font-medium text-gray-900">iPhone 14</div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">iPhone</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$799</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">12</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$10</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$10,165</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-xs font-medium transition-colors">
+                                Unpublish
+                            </button>
+                        </td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-gray-200 rounded-lg mr-3 flex items-center justify-center">
+                                    <i class="fas fa-mobile-alt text-gray-500"></i>
+                                </div>
+                                <div class="text-sm font-medium text-gray-900">iPhone 13</div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">iPhone</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$699</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">12</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$10</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$10,165</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <button class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-xs font-medium transition-colors">
+                                Publish
+                            </button>
+                        </td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-gray-200 rounded-lg mr-3 flex items-center justify-center">
+                                    <i class="fas fa-laptop text-gray-500"></i>
+                                </div>
+                                <div class="text-sm font-medium text-gray-900">MacBook Pro</div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Laptop</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$1,299</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">8</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$15</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$15,165</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <button class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-xs font-medium transition-colors">
+                                Publish
+                            </button>
+                        </td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-gray-200 rounded-lg mr-3 flex items-center justify-center">
+                                    <i class="fas fa-tablet-alt text-gray-500"></i>
+                                </div>
+                                <div class="text-sm font-medium text-gray-900">iPad Air</div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Tablet</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$599</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">5</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$8</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$8,165</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-xs font-medium transition-colors">
+                                Unpublish
+                            </button>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
-            <div class="p-4">{{ $products->links() }}</div>
         </div>
 
         <!-- Pagination -->
@@ -160,9 +239,6 @@
         </div>
     </div>
 </div>
-
-
-
 
 <script>
 // Add interactive functionality
@@ -207,97 +283,5 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
-
-window.openProductModal = function(product = null) {
-    const modal = document.getElementById('productModal');
-    const form = document.getElementById('productForm');
-    const title = document.getElementById('modalTitle');
-    if (product) {
-        title.textContent = 'Edit Product';
-        document.getElementById('product_id').value = product.id;
-        document.getElementById('product_name').value = product.name;
-        document.getElementById('product_price').value = product.price;
-        document.getElementById('product_stock').value = product.stock;
-        form.action = '{{ route("product.update", ":id") }}'.replace(':id', product.id);
-        form.setAttribute('data-method', 'PUT');
-    } else {
-        title.textContent = 'Add Product';
-        form.reset();
-        form.action = '{{ route("product.store") }}';
-        form.setAttribute('data-method', 'POST');
-    }
-    modal.classList.remove('hidden');
-    // document.getElementById('productModal').classList.remove('hidden');
-    // document.getElementById('modalTitle').innerText = 'Add Product';
-    // document.getElementById('productForm').reset();
-    // document.getElementById('product_id').value = '';
-}
-window.closeProductModal = function() {
-    document.getElementById('productModal').classList.add('hidden');
-}
-
-
-function generateSKU(name) {
-    const namePart = name.toUpperCase().replace(/\s+/g, '').substring(0, 3);
-    const randomPart = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
-    return namePart + randomPart;
-}
-
-document.getElementById('product_name').addEventListener('blur', function() {
-    if (this.value) {
-        document.getElementById('product_sku').value = generateSKU(this.value);
-    }
-});
-
-document.getElementById('productForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(this);
-    const method = this.getAttribute('data-method') || 'POST';
-    
-    try {
-        const response = await fetch(this.action, {  // Use the form's action URL
-            method,
-            body: formData,
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Accept': 'application/json'
-            }
-            // credentials: 'same-origin'
-        });
-
-        const data = await response.json();
-        // console.log('Response:',  data);
-
-        if (response.ok) {
-            showSuccess('Product saved successfully!');
-            closeProductModal();
-        } else {
-            showError(data.message || 'Failed to save product');
-            // console.error('Error details:', data);
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        showError('An error occurred while saving');
-    }
-});
-
-function showSuccess(message) {
-    showNotification(message, 'bg-green-500');
-}
-
-function showError(message) {
-    showNotification(message, 'bg-red-500');
-}
-
-function showNotification(message, colorClass) {
-    const notification = document.getElementById('notification');
-    const messageElement = document.getElementById('notification-message');
-    
-    messageElement.textContent = message;
-    notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${colorClass}`;
-    
-    setTimeout(() => notification.classList.add('hidden'), 3000);
-}
 </script>
-@endsection
+@endsection 
