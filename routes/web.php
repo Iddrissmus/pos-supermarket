@@ -4,13 +4,14 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\BusinessController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\Dashboard\AdminDashboardController;
 use App\Http\Controllers\Dashboard\OwnerDashboardController;
 use App\Http\Controllers\Dashboard\ManagerDashboardController;
 use App\Http\Controllers\Dashboard\CashierDashboardController;
 
 Route::get('/', function () {
-    return view('dashboard');
+    return view('welcome');
 });
 
 // Authentication
@@ -45,6 +46,9 @@ Route::middleware(['auth'])->group(function () {
         return view('layouts.productman');
     })->name('layouts.productman');
 
+    Route::get('/assign', function () {
+        return view('layouts.assign');
+    })->name('layouts.assign');
 
     Route::get('/dashboard', function () {
         try {
@@ -72,7 +76,18 @@ Route::middleware(['auth'])->group(function () {
         }
     })->name('dashboard');
     
-    Route::get('/products', function () {
+    Route::get('/product', function () {
         return view('layouts.product');
     })->name('layouts.product');
+    
+    Route::get('/manage', function () {
+        return view('layouts.manage');
+    })->name('layouts.manage');
+    Route::post('/product', [ProductController::class, 'store'])->name('product.store');
+    Route::put('/product/{product}', [ProductController::class, 'update'])->name('product.update');
+
+    // Pending reorder requests for managers
+    Route::get('/reorder-requests', [\App\Http\Controllers\ReorderRequestController::class, 'index'])
+        ->name('reorder.requests')
+        ->middleware('auth');
 });

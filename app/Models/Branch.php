@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Branch extends Model
 {
-    protected $fillable = ['business_id', 'name', 'location', 'contact'];
+    protected $fillable = ['business_id', 'manager_id', 'name', 'contact', 'latitude', 'longitude', 'address'];
 
     public function business()
     {
@@ -15,9 +15,8 @@ class Branch extends Model
 
     public function products() 
     {
-        return $this->belongsToMany(Product::class)
-            ->using(BranchProduct::class)
-            ->withPivot(['price', 'stock', 'reorder_level'])
+        return $this->belongsToMany(Product::class, 'branch_products')
+            ->withPivot(['price', 'cost_price', 'stock_quantity', 'reorder_level'])
             ->withTimestamps();
     }
 
