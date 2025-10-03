@@ -15,8 +15,17 @@ class ProductController extends Controller
     public function index()
     {
         $perPage = request()->query('per_page', 25);
-        $products = Product::with('owner')->paginate((int)$perPage);
-        return response()->json($products);
+        $products = Product::with('business')
+            ->orderBy('created_at', 'desc')
+            ->paginate((int)$perPage);
+
+        // If request expects JSON (API/AJAX), return JSON
+        if (request()->wantsJson() || request()->ajax() || request()->expectsJson()) {
+            return response()->json($products);
+        }
+
+        // Otherwise return the blade view and pass products for server-side rendering
+        return view('layouts.product', compact('products'));
     }
 
     /**
@@ -28,11 +37,26 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
             'sku' => 'nullable|string|unique:products,sku',
-            'image' => 'nullable|image|max:2048'
+            'image' => 'nullable|image|max:2048',
+
+            // optional branch/stock fields
+            'branch_id' => 'nullable|exists:branches,id',
+            'stock_quantity' => 'nullable|integer|min:0',
+            'price' => 'nullable|numeric|min:0',
+            'cost_price' => 'nullable|numeric|min:0',
+            'reorder_level' => 'nullable|integer|min:0',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            // if caller expects JSON (AJAX), return JSON errors
+            if ($request->wantsJson()|| $request->ajax() || $request->expectsJson()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+            
+            //Otherwise redirect back with errors and old input
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
         }
 
         try {
@@ -41,7 +65,11 @@ class ProductController extends Controller
             // Resolve business_id for the authenticated owner
             $businessId = Business::where('owner_id', auth()->id())->value('id');
             if (!$businessId) {
-                return response()->json(['error' => 'No business found for this owner'], 422);
+                $error_message = 'No business found for the authenticated owner.';
+                if ($request->wantsJson()|| $request->ajax() || $request->expectsJson()) {
+                    return response()->json(['error' => $error_message], 422);
+                }
+            return redirect()->back()->with('error',$error_message)->withInput();
             }
             $validatedData['business_id'] = $businessId;
 
@@ -52,14 +80,42 @@ class ProductController extends Controller
             }
 
             $product = Product::create($validatedData);
+
+            // If branch info provided, create or update branch_products row
+            $branchId = $request->input('branch_id');
+            $stockQty = $request->input('stock_quantity');
+            $bpData = [];
+            if (!is_null($stockQty)) $bpData['stock_quantity'] = (int) $stockQty;
+            if ($request->filled('price')) $bpData['price'] = $request->input('price');
+            if ($request->filled('cost_price')) $bpData['cost_price'] = $request->input('cost_price');
+            if ($request->filled('reorder_level')) $bpData['reorder_level'] = $request->input('reorder_level');
+
+            if ($branchId && count($bpData)) {
+                // create or update existing BranchProduct record
+                $branchProduct = \App\Models\BranchProduct::firstOrNew([
+                    'branch_id' => $branchId,
+                    'product_id' => $product->id,
+                ]);
+                foreach ($bpData as $k => $v) $branchProduct->$k = $v;
+                $branchProduct->save();
+            }
             
-            return response()->json([
-                'message' => 'Product created successfully',
-                'product' => $product
-            ], 201);
+            // JSON for AJAX, redirect for regular form submit
+            if ($request->wantsJson() || $request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Product created successfully',
+                    'product' => $product
+                ], 201);
+            }
+
+            return redirect()->route('layouts.product')->with('success', 'Product created successfully');
         } catch (\Exception $e) {
             \Log::error('Product creation failed: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to create product'], 500);
+
+            if ($request->wantsJson() || $request->ajax() || $request->expectsJson()) {
+                return response()->json(['error' => 'Failed to create product'], 500);
+            }
+            return redirect()->back()->with('error', 'Failed to create product')->withInput();
         }
     }
 
@@ -68,7 +124,7 @@ class ProductController extends Controller
      */
     public function show(string $id)
     {
-        $product = Product::with('owner')->findorFail($id);
+        $product = Product::with('business')->findOrFail($id);
         return response()->json($product);
     }
 
@@ -110,6 +166,3 @@ class ProductController extends Controller
 
     
 }
-
-
-
