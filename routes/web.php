@@ -5,6 +5,7 @@ use App\Http\Controllers\BusinessController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductDashboardController;
 use App\Http\Controllers\Dashboard\AdminDashboardController;
 use App\Http\Controllers\Dashboard\OwnerDashboardController;
 use App\Http\Controllers\Dashboard\ManagerDashboardController;
@@ -45,6 +46,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/productmanager', function () {
         return view('layouts.productman');
     })->name('layouts.productman');
+    Route::get('/productmanager', [ProductDashboardController::class, 'index'])
+        ->name('layouts.productman');
+        // ->middleware('auth');
 
     Route::get('/assign', function () {
         return view('layouts.assign');
@@ -76,15 +80,31 @@ Route::middleware(['auth'])->group(function () {
         }
     })->name('dashboard');
     
-    Route::get('/product', function () {
-        return view('layouts.product');
-    })->name('layouts.product');
+    // Use controller to provide both JSON and web view
+    Route::get('/product', [ProductController::class, 'index'])->name('layouts.product');
+
+    // Show add product page (modal-like dedicated page)
+    Route::get('/product/create', function () {
+        // Pass branches for the current user's business so the form can map stock to a branch
+        try {
+            $businessId = \App\Models\Business::where('owner_id', auth()->id())->value('id');
+            $branches = [];
+            if ($businessId) {
+                $branches = \App\Models\Branch::where('business_id', $businessId)->get();
+            }
+            return view('layouts.product-create', compact('branches'));
+        } catch (\Throwable $e) {
+            // fallback: render view without branches
+            return view('layouts.product-create');
+        }
+    })->name('product.create');
+    
+    Route::post('/product', [ProductController::class, 'store'])->name('product.store');
+    Route::put('/product/{product}', [ProductController::class, 'update'])->name('product.update');
     
     Route::get('/manage', function () {
         return view('layouts.manage');
     })->name('layouts.manage');
-    Route::post('/product', [ProductController::class, 'store'])->name('product.store');
-    Route::put('/product/{product}', [ProductController::class, 'update'])->name('product.update');
 
     // Pending reorder requests for managers
     Route::get('/reorder-requests', [\App\Http\Controllers\ReorderRequestController::class, 'index'])

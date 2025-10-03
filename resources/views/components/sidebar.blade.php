@@ -20,7 +20,7 @@
 
                 <div class="sidebar-item flex items-center px-3 py-2 rounded-lg mb-1 cursor-pointer">
                     <i class="fas fa-chart-line mr-3 text-gray-600"></i>
-                    <span class="text-gray-700">Stocks</span>
+                    <a href="{{ route('layouts.assign') }}" class="text-gray-700">Stocks Movement</a>
                 </div>
 
                 <div class="sidebar-item flex items-center px-3 py-2 rounded-lg mb-1 cursor-pointer">

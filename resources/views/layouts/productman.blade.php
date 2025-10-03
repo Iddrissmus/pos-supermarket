@@ -31,7 +31,7 @@
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">Total Products</p>
-                    <p class="text-2xl font-semibold text-gray-900">350</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ $stats['total_products'] ?? 0}}</p>
                 </div>
             </div>
         </div>
@@ -43,7 +43,7 @@
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">In Store</p>
-                    <p class="text-2xl font-semibold text-gray-900">102</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ $stats['in_store'] ?? 0}}</p>
                 </div>
             </div>
         </div>
@@ -55,7 +55,7 @@
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">Low Stock</p>
-                    <p class="text-2xl font-semibold text-gray-900">12</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ $stats['low_stock'] ?? 0}}</p>
                 </div>
             </div>
         </div>
@@ -63,11 +63,11 @@
         <div class="bg-white rounded-lg shadow-md p-6">
             <div class="flex items-center">
                 <div class="p-3 rounded-full bg-purple-100 text-purple-600">
-                    <i class="fas fa-dollar-sign text-xl"></i>
+                    <i class="fas fa-cedi-sign text-xl"></i>
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">Total Value</p>
-                    <p class="text-2xl font-semibold text-gray-900">$45,230</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ number_format($stats['total_value'] ?? 0, 2) }}</p>
                 </div>
             </div>
         </div>

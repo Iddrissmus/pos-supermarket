@@ -14,11 +14,13 @@ class UsersTableSeeder extends Seeder
      */
     public function run(): void
     {
-        User::create([
+        User::firstOrCreate(    //won't create duplicates
+            ['email' => 'admin@example.com'],
+        [
             'name' => 'Super Admin',
-            'email' => 'admin@example.com',
             'password' => Hash::make('password'),
             'role' => 'super_admin',
-        ]);
+        ]
+);
     }
 }

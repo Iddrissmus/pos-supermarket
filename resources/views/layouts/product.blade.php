@@ -4,6 +4,26 @@
 
 @section('content')
 <div class="p-6">
+    @if (session('success'))
+        <div class="mb-4 p-4 bg-green-100 text-green-800 rounded-lg">
+            {{ session('success') }}
+        </div>
+    @endif
+    @if (session('error'))
+        <div class="mb-4 p-4 bg-red-100 text-red-800 rounded-lg">
+            {{ session('error') }}
+        </div>
+    @endif
+
+    @if ($errors->any())
+        <div class="mb-4 p-4 bg-yellow-100 text-yellow-800 rounded-lg">
+            <ul class="list-disc list-inside pl-5">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
     <!-- Green Header Bar -->
     <div class="bg-green-600 text-white px-6 py-4 rounded-t-lg mb-6">
         <div class="flex justify-between items-center">
@@ -53,9 +73,9 @@
         <div class="bg-white rounded-lg shadow-md p-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-2">Quick Actions</h3>
             <div class="space-y-2">
-                <button onclick="openProductModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">
+                <a href="{{ route('product.create') }}" class="w-full inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">
                     <i class="fas fa-plus mr-2"></i>Add New Product
-                </button>
+                </a>
                 <button class="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">
                     <i class="fas fa-download mr-2"></i>Export Inventory
                 </button>
@@ -66,7 +86,7 @@
         </div>
     </div>
 
-    <livewire:products.manage-products />
+    {{-- <livewire:products.manage-products /> --}}
 
     <!-- Inventory Summary Section -->
     <div class="bg-white rounded-lg shadow-md overflow-x-auto">
@@ -124,23 +144,23 @@
                     @forelse($products as $product)
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $product->name }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ Str::limit($product->description, 80) }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{$product->price}}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{$product->stock}}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{$product->cost_price}}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ \Illuminate\Support\Str::limit($product->description, 80) }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${{ number_format($product->price ?? 0, 2) }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $product->stock ?? 0 }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $product->cost_price ?? '-' }}</td>
                             <td class="px-4 py-2 whitespace-nowrap text-right space-x-2">
-                                <button type="button" wire:click="edit({{ $product->id }})" class="px-3 py-1 border rounded-lg">Edit</button>
-                                <button type="button" wire:click="delete({{ $product->id }})" class="px-3 py-1 border rounded-lg text-red-600">Delete</button>
+                                <button type="button" class="px-3 py-1 border rounded-lg">Edit</button>
+                                <button type="button" class="px-3 py-1 border rounded-lg text-red-600">Delete</button>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="3" class="px-4 py-6 text-center text-gray-500">No products found.</td>
+                            <td colspan="6" class="px-4 py-6 text-center text-gray-500">No products found.</td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
-            <div class="p-4">{{ $products->links() }}</div>
+            {{-- <div class="p-4">{{ $products->links() }}</div> --}}
         </div>
 
         <!-- Pagination -->
@@ -208,79 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-window.openProductModal = function(product = null) {
-    const modal = document.getElementById('productModal');
-    const form = document.getElementById('productForm');
-    const title = document.getElementById('modalTitle');
-    if (product) {
-        title.textContent = 'Edit Product';
-        document.getElementById('product_id').value = product.id;
-        document.getElementById('product_name').value = product.name;
-        document.getElementById('product_price').value = product.price;
-        document.getElementById('product_stock').value = product.stock;
-        form.action = '{{ route("product.update", ":id") }}'.replace(':id', product.id);
-        form.setAttribute('data-method', 'PUT');
-    } else {
-        title.textContent = 'Add Product';
-        form.reset();
-        form.action = '{{ route("product.store") }}';
-        form.setAttribute('data-method', 'POST');
-    }
-    modal.classList.remove('hidden');
-    // document.getElementById('productModal').classList.remove('hidden');
-    // document.getElementById('modalTitle').innerText = 'Add Product';
-    // document.getElementById('productForm').reset();
-    // document.getElementById('product_id').value = '';
-}
-window.closeProductModal = function() {
-    document.getElementById('productModal').classList.add('hidden');
-}
-
-
-function generateSKU(name) {
-    const namePart = name.toUpperCase().replace(/\s+/g, '').substring(0, 3);
-    const randomPart = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
-    return namePart + randomPart;
-}
-
-document.getElementById('product_name').addEventListener('blur', function() {
-    if (this.value) {
-        document.getElementById('product_sku').value = generateSKU(this.value);
-    }
-});
-
-document.getElementById('productForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(this);
-    const method = this.getAttribute('data-method') || 'POST';
-    
-    try {
-        const response = await fetch(this.action, {  // Use the form's action URL
-            method,
-            body: formData,
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Accept': 'application/json'
-            }
-            // credentials: 'same-origin'
-        });
-
-        const data = await response.json();
-        // console.log('Response:',  data);
-
-        if (response.ok) {
-            showSuccess('Product saved successfully!');
-            closeProductModal();
-        } else {
-            showError(data.message || 'Failed to save product');
-            // console.error('Error details:', data);
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        showError('An error occurred while saving');
-    }
-});
+// Modal/form handlers moved to dedicated product-create page
 
 function showSuccess(message) {
     showNotification(message, 'bg-green-500');

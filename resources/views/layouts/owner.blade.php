@@ -9,9 +9,9 @@
         <div class="flex justify-between items-center">
             <h1 class="text-2xl font-bold">Owner Dashboard</h1>
             <div class="flex space-x-3">
-                <button class="bg-green-700 hover:bg-green-800 px-4 py-2 rounded-lg font-medium transition-colors">
-                    <i class="fas fa-plus mr-2"></i>Manage Business
-                </button>
+                <a href="{{ route('layouts.manage') }}" class="bg-green-700 hover:bg-green-800 px-4 py-2 rounded-lg font-medium transition-colors flex items-center">
+                    <i class="fas fa-plus mr-2"></i> Manage Branch
+                </a>
             </div>
         </div>
     </div>

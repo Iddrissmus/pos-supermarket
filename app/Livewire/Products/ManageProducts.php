@@ -89,7 +89,7 @@ class ManageProducts extends Component
                     $p->where('name', 'like', "%{$this->search}%")
                 );
             })
-            ->with(['product', 'branch'])
+            ->with(['product:id,name', 'branch:id,name,business_id'])
             ->latest();
 
         return view('layouts.product', [

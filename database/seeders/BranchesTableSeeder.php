@@ -17,13 +17,13 @@ class BranchesTableSeeder extends Seeder
             [
                 'business_id' => 1,
                 'name' => 'Accra Central',
-                'location' => 'Accra',
+                'address' => 'Accra',
                 'contact' => '0551234567',
             ],
             [
                 'business_id' => 1,
                 'name' => 'Kumasi Market',
-                'location' => 'Kumasi',
+                'address' => 'Kumasi',
                 'contact' => '0249876543',
             ]
         ]);
