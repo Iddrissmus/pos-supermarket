@@ -4,46 +4,52 @@
             <div class="px-4">
                 <div class="sidebar-item active flex items-center px-3 py-2 rounded-lg mb-1 cursor-pointer">
                     <i class="fas fa-home mr-3 text-gray-600"></i>
-                    {{-- <span class="text-gray-700 font-medium">Home</span> --}}
-                    <a href="{{route('layouts.productman')}}">Home</a>
+                    <a href="{{route('layouts.productman')}}" class="text-gray-700">Home</a>
                 </div>
 
                 <div class="sidebar-item flex items-center px-3 py-2 rounded-lg mb-1 cursor-pointer">
                     <i class="fas fa-th-large mr-3 text-gray-600"></i>
-                    <a href="{{route('dashboard')}}">Dashboard</a>
+                    <a href="{{route('dashboard')}}" class="text-gray-700">Dashboard</a>
                 </div>
 
                 <div class="sidebar-item flex items-center px-3 py-2 rounded-lg mb-1 cursor-pointer">
                     <i class="fas fa-box mr-3 text-gray-600"></i>
-                    <a href="{{route('layouts.product')}}">Products</a>
+                    <a href="{{route('layouts.product')}}" class="text-gray-700">Products</a>
                 </div>
 
                 <div class="sidebar-item flex items-center px-3 py-2 rounded-lg mb-1 cursor-pointer">
-                    <i class="fas fa-chart-line mr-3 text-gray-600"></i>
-                    <a href="{{ route('layouts.assign') }}" class="text-gray-700">Stocks Movement</a>
+                    <i class="fas fa-plus-circle mr-3 text-gray-600"></i>
+                    <a href="{{ route('product.create') }}" class="text-gray-700">Add Product</a>
                 </div>
 
                 <div class="sidebar-item flex items-center px-3 py-2 rounded-lg mb-1 cursor-pointer">
-                    <i class="fas fa-file-alt mr-3 text-gray-600"></i>
-                    <span class="text-gray-700">Reports</span>
+                    <i class="fas fa-truck mr-3 text-gray-600"></i>
+                    <a href="{{ route('stock-receipts.index') }}" class="text-gray-700">Receive Stock</a>
                 </div>
 
                 <div class="sidebar-item flex items-center px-3 py-2 rounded-lg mb-1 cursor-pointer">
-                    <i class="fas fa-warehouse mr-3 text-gray-600"></i>
-                    <span class="text-gray-700">Warehouse</span>
+                    <i class="fas fa-industry mr-3 text-gray-600"></i>
+                    <a href="{{ route('suppliers.index') }}" class="text-gray-700">Suppliers</a>
                 </div>
 
                 <div class="sidebar-item flex items-center px-3 py-2 rounded-lg mb-1 cursor-pointer">
-                    <i class="fas fa-history mr-3 text-gray-600"></i>
-                    <span class="text-gray-700">History</span>
+                    <i class="fas fa-cash-register mr-3 text-gray-600"></i>
+                    <a href="{{ route('sales.create') }}" class="text-gray-700">New Sale</a>
                 </div>
 
-                <div class="sidebar-item flex items-center justify-between px-3 py-2 rounded-lg mb-1 cursor-pointer">
-                    <div class="flex items-center">
-                        <i class="fas fa-dollar-sign mr-3 text-gray-600"></i>
-                        <span class="text-gray-700">Sales</span>
-                    </div>
-                    <i class="fas fa-chevron-down text-gray-500 text-xs"></i>
+                <div class="sidebar-item flex items-center px-3 py-2 rounded-lg mb-1 cursor-pointer">
+                    <i class="fas fa-receipt mr-3 text-gray-600"></i>
+                    <a href="{{ route('sales.index') }}" class="text-gray-700">All Sales</a>
+                </div>
+
+                <div class="sidebar-item flex items-center px-3 py-2 rounded-lg mb-1 cursor-pointer">
+                    <i class="fas fa-chart-bar mr-3 text-gray-600"></i>
+                    <a href="{{ route('sales.report') }}" class="text-gray-700">Sales Report</a>
+                </div>
+
+                <div class="sidebar-item flex items-center px-3 py-2 rounded-lg mb-1 cursor-pointer">
+                    <i class="fas fa-building mr-3 text-gray-600"></i>
+                    <a href="{{ route('layouts.manage') }}" class="text-gray-700">Manage Business</a>
                 </div>
 
                 <div class="mt-6">
@@ -51,14 +57,6 @@
                         <div class="flex items-center">
                             <i class="fas fa-comment mr-3 text-gray-600"></i>
                             <a class="text-gray-700" href="{{ route('reorder.requests') }}">Messages</a>
-                        </div>
-                        <span class="badge">2</span>
-                    </div>
-
-                    <div class="sidebar-item flex items-center justify-between px-3 py-2 rounded-lg mb-1 cursor-pointer">
-                        <div class="flex items-center">
-                            <i class="fas fa-bell mr-3 text-gray-600"></i>
-                            <span class="text-gray-700">Notifications</span>
                         </div>
                         <span class="badge">2</span>
                     </div>

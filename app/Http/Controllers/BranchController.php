@@ -33,9 +33,15 @@ class CreateBranch extends Component
     public function save(): void
     {
         $validated = $this->validate();
-        Branch::create($validated);
-        $this->reset(['name', 'location', 'contact']);
-        $this->dispatchBrowserEvent('notify', ['type' => 'success', 'message' => 'Branch created']);
+        try {
+            Branch::create($validated);
+            
+            $this->reset(['name', 'location', 'contact']);
+            $this->dispatch('notify', type: 'success', message: 'Branch created successfully!');
+        } catch (\Throwable $e) {
+            \Log::error('CreateBranch save failed: '.$e->getMessage());
+            $this->dispatch('notify', type: 'error', message: 'Failed to create branch: ' . $e->getMessage());
+        }
     }
 
     public function render()

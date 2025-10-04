@@ -40,7 +40,7 @@ class BusinessController extends Controller
         // }
 
         $business = Business::create($validator->validated());
-        return response()->json($business, 201);
+        return response()->json($business, 201)->with('success', 'Business created successfully!');
     }
 
     /**
@@ -70,7 +70,7 @@ class BusinessController extends Controller
         }
 
         $business->update($validator->validated());
-        return response()->json($business);
+        return response()->json($business)->with('success', 'Business updated successfully');
     }
 
     /**

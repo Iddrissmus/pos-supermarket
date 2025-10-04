@@ -44,10 +44,10 @@ class CreateBusiness extends Component
             Business::create($data);
 
             $this->reset(['name', 'logo']);
-            $this->notification()->success('Business created');
+            $this->dispatch('notify', type: 'success', message: 'Business created successfully!');
         } catch (\Throwable $e) {
             \Log::error('CreateBusiness save failed: '.$e->getMessage());
-            $this->dispatch('notify', type: 'error', message: 'Failed to create business');
+            $this->dispatch('notify', type: 'error', message: 'Failed to create business: ' . $e->getMessage());
         }
     }
 

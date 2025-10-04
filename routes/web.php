@@ -6,6 +6,9 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductDashboardController;
+use App\Http\Controllers\StockReceiptController;
+use App\Http\Controllers\SalesController;
+use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\Dashboard\AdminDashboardController;
 use App\Http\Controllers\Dashboard\OwnerDashboardController;
 use App\Http\Controllers\Dashboard\ManagerDashboardController;
@@ -105,6 +108,25 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/manage', function () {
         return view('layouts.manage');
     })->name('layouts.manage');
+
+    // Supplier Management
+    Route::resource('suppliers', SupplierController::class);
+    Route::patch('/suppliers/{supplier}/toggle-status', [SupplierController::class, 'toggleStatus'])
+        ->name('suppliers.toggle-status');
+
+    // Stock Receipt Management
+    Route::resource('stock-receipts', StockReceiptController::class);
+    Route::get('/api/product-info', [StockReceiptController::class, 'getProductInfo'])
+        ->name('api.product.info');
+    Route::get('/api/current-cost', [StockReceiptController::class, 'getCurrentCost'])
+        ->name('api.current.cost');
+
+    // Sales Management with COGS Integration
+    Route::resource('sales', SalesController::class);
+    Route::get('/api/product-stock', [SalesController::class, 'getProductStock'])
+        ->name('api.product.stock');
+    Route::get('/sales-report', [SalesController::class, 'report'])
+        ->name('sales.report');
 
     // Pending reorder requests for managers
     Route::get('/reorder-requests', [\App\Http\Controllers\ReorderRequestController::class, 'index'])

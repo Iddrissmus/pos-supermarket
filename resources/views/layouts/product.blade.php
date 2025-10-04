@@ -4,6 +4,9 @@
 
 @section('content')
 <div class="p-6">
+    <!-- Notification Container -->
+    <div id="notification-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
     @if (session('success'))
         <div class="mb-4 p-4 bg-green-100 text-green-800 rounded-lg">
             {{ session('success') }}
@@ -76,9 +79,9 @@
                 <a href="{{ route('product.create') }}" class="w-full inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">
                     <i class="fas fa-plus mr-2"></i>Add New Product
                 </a>
-                <button class="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">
-                    <i class="fas fa-download mr-2"></i>Export Inventory
-                </button>
+                <a href="{{route('layouts.assign')}}" class="w-full inline-flex items-center justify-center bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">
+                    <i class="fas fa-download mr-2"></i>Assign Product to Branch
+                </a>
                 <button class="w-full bg-yellow-600 hover:bg-yellow-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">
                     <i class="fas fa-chart-bar mr-2"></i>Generate Report
                 </button>
@@ -230,22 +233,101 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Modal/form handlers moved to dedicated product-create page
 
-function showSuccess(message) {
-    showNotification(message, 'bg-green-500');
-}
+// Listen for Livewire notification events
+    window.addEventListener('notify', function(event) {
+        showNotification(event.detail.message, event.detail.type);
+    });
 
-function showError(message) {
-    showNotification(message, 'bg-red-500');
-}
+    // Function to show notifications
+    function showNotification(message, type = 'success') {
+        const container = document.getElementById('notification-container');
+        
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification px-6 py-4 rounded-lg shadow-lg text-white transform transition-all duration-300 ease-in-out translate-x-full opacity-0 ${getNotificationClass(type)}`;
+        
+        notification.innerHTML = `
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <i class="fas ${getNotificationIcon(type)} mr-3"></i>
+                    <span>${message}</span>
+                </div>
+                <button onclick="removeNotification(this)" class="ml-4 text-white hover:text-gray-200">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        
+        // Add to container
+        container.appendChild(notification);
+        
+        // Animate in
+        setTimeout(() => {
+            notification.classList.remove('translate-x-full', 'opacity-0');
+        }, 100);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            removeNotification(notification.querySelector('button'));
+        }, 5000);
+    }
 
-function showNotification(message, colorClass) {
-    const notification = document.getElementById('notification');
-    const messageElement = document.getElementById('notification-message');
-    
-    messageElement.textContent = message;
-    notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${colorClass}`;
-    
-    setTimeout(() => notification.classList.add('hidden'), 3000);
-}
+    // Function to get notification CSS class based on type
+    function getNotificationClass(type) {
+        switch(type) {
+            case 'success':
+                return 'bg-green-500';
+            case 'error':
+                return 'bg-red-500';
+            case 'warning':
+                return 'bg-yellow-500';
+            case 'info':
+                return 'bg-blue-500';
+            default:
+                return 'bg-green-500';
+        }
+    }
+
+    // Function to get notification icon based on type
+    function getNotificationIcon(type) {
+        switch(type) {
+            case 'success':
+                return 'fa-check-circle';
+            case 'error':
+                return 'fa-exclamation-circle';
+            case 'warning':
+                return 'fa-exclamation-triangle';
+            case 'info':
+                return 'fa-info-circle';
+            default:
+                return 'fa-check-circle';
+        }
+    }
+
+    // Make removeNotification globally available
+    window.removeNotification = function(button) {
+        const notification = button.closest('.notification');
+        notification.classList.add('translate-x-full', 'opacity-0');
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    };
+
+    // Legacy functions for backward compatibility
+    function showSuccess(message) {
+        showNotification(message, 'success');
+    }
+
+    function showError(message) {
+        showNotification(message, 'error');
+    }
+});
 </script>
+
+<style>
+.notification {
+    min-width: 300px;
+    max-width: 400px;
+}
+</style>
 @endsection
