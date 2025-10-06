@@ -1,4 +1,5 @@
 import './bootstrap';
+import 'chart.js/auto';
 
 // Sidebar Navigation Functionality
 document.addEventListener('DOMContentLoaded', function() {

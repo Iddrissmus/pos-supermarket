@@ -120,21 +120,21 @@
                     <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div class="bg-blue-50 p-4 rounded-lg">
                             <div class="text-sm font-medium text-blue-600">Total Sales</div>
-                            <div class="text-2xl font-bold text-blue-900">{{ $sales->total() }}</div>
+                            <div class="text-2xl font-bold text-blue-900">{{ $summary['total_sales'] }}</div>
                         </div>
                         <div class="bg-green-50 p-4 rounded-lg">
                             <div class="text-sm font-medium text-green-600">Total Revenue</div>
-                            <div class="text-2xl font-bold text-green-900">${{ number_format($sales->sum('total'), 2) }}</div>
+                            <div class="text-2xl font-bold text-green-900">${{ number_format($summary['total_revenue'] , 2) }}</div>
                         </div>
                         <div class="bg-purple-50 p-4 rounded-lg">
-                            <div class="text-sm font-medium text-purple-600">Average Sale</div>
+                            <div class="text-sm font-medium text-purple-600">Total COGS</div>
                             <div class="text-2xl font-bold text-purple-900">
-                                ${{ $sales->count() > 0 ? number_format($sales->sum('total') / $sales->count(), 2) : '0.00' }}
+                                ${{number_format($summary['total_cogs'], 2) }}
                             </div>
                         </div>
                         <div class="bg-yellow-50 p-4 rounded-lg">
-                            <div class="text-sm font-medium text-yellow-600">Items Sold</div>
-                            <div class="text-2xl font-bold text-yellow-900">{{ $sales->sum(function($sale) { return $sale->items->sum('quantity'); }) }}</div>
+                            <div class="text-sm font-medium text-yellow-600">Total Profit</div>
+                            <div class="text-2xl font-bold text-yellow-900">{{ number_format($summary['total_profit'], 2)}}</div>
                         </div>
                     </div>
                 @else

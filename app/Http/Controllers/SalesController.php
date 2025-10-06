@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\SalesReportExport;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Product;
@@ -11,6 +14,7 @@ use App\Services\ReceiveStockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Carbon;
 
 class SalesController extends Controller
 {
@@ -34,7 +38,21 @@ class SalesController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        return view('sales.index', compact('sales'));
+        $summary = [
+            'total_sales' => $sales->total(),
+            'total_revenue' => $sales->sum('total',2),
+            'total_cogs' => $sales->sum(function ($sale) {
+                return $sale->items->sum('total_cost');
+            }),
+            'total_profit' => 0,
+            'items_sold' => $sales->sum(function ($sale) {
+                return $sale->items->sum('quantity');
+            }),
+        ];
+        $summary['total_profit'] = $summary['total_revenue'] - $summary['total_cogs'];
+
+
+        return view('sales.index', compact('sales', 'summary'));
     }
 
     /**
@@ -190,20 +208,66 @@ class SalesController extends Controller
         ]);
     }
 
+    //export sales report methods
+    public function exportCsv(Request $request)
+    {
+        $data = $this->buildReportData($request);
+
+        $filename = sprintf(
+            'sales-report-%s-%s.csv',
+            $data['startDate']->format('Ymd'),
+            $data['endDate']->format('Ymd')
+        );
+
+        return Excel::download(
+            new SalesReportExport($data['sales'], $data['summary'], $data['startDate'], $data['endDate']),
+            $filename
+        );
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $data = $this->buildReportData($request);
+
+        $pdf = Pdf::loadView('sales.pdf', [
+            'sales' => $data['sales'],
+            'summary' => $data['summary'],
+            'startDate' => $data['startDate'],
+            'endDate' => $data['endDate'],
+            'chartData' => $data['chartData'],
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download(sprintf(
+            'sales-report-%s-%s.pdf',
+            $data['startDate']->format('Ymd'),
+            $data['endDate']->format('Ymd')
+        ));
+    }
+    
+
     /**
      * Sales report with margin analysis
      */
-    public function report(Request $request)
+    protected function buildReportData(Request $request): array
     {
         $user = Auth::user();
-        $startDate = $request->input('start_date', now()->startOfMonth());
-        $endDate = $request->input('end_date', now()->endOfMonth());
+        $startDateInput = $request->input('start_date');
+        $endDateInput = $request->input('end_date');
 
-        $sales = Sale::with(['items', 'branch'])
+        $startDate = $startDateInput
+            ? Carbon::parse($startDateInput)->startOfDay()
+            : now()->startOfMonth();
+
+        $endDate = $endDateInput
+            ? Carbon::parse($endDateInput)->endOfDay()
+            : now()->endOfMonth();
+
+        $sales = Sale::with(['items', 'branch', 'cashier'])
             ->when($user->branch_id, function ($query) use ($user) {
                 return $query->where('branch_id', $user->branch_id);
             })
             ->whereBetween('created_at', [$startDate, $endDate])
+            ->orderBy('created_at')
             ->get();
 
         $summary = [
@@ -221,6 +285,50 @@ class SalesController extends Controller
             $summary['average_margin'] = ($summary['total_profit'] / $summary['total_revenue']) * 100;
         }
 
-        return view('sales.report', compact('sales', 'summary', 'startDate', 'endDate'));
+        $dailyData = $sales->groupBy(fn ($sale) => $sale->created_at->format('Y-m-d'))
+            ->sortKeys();
+
+        $chartData = [
+            'labels' => $dailyData->keys()->values()->all(),
+            'revenue' => $dailyData->map(fn ($daySales) => (float) $daySales->sum('total'))->values()->all(),
+            'cogs' => $dailyData->map(fn ($daySales) => (float) $daySales->sum(fn ($sale) => $sale->items->sum('total_cost')))->values()->all(),
+            'profit' => $dailyData->map(function ($daySales) {
+                $revenue = $daySales->sum('total');
+                $cogs = $daySales->sum(fn ($sale) => $sale->items->sum('total_cost'));
+                return (float) ($revenue - $cogs);
+            })->values()->all(),
+            'loss' => $dailyData->map(function ($daySales) {
+                $revenue = $daySales->sum('total');
+                $cogs = $daySales->sum(fn ($sale) => $sale->items->sum('total_cost'));
+                $net = (float) ($revenue - $cogs);
+                return $net < 0 ? abs($net) : 0.0;
+            })->values()->all(),
+            'margin' => $dailyData->map(function ($daySales) {
+                $revenue = $daySales->sum('total');
+                if ($revenue <= 0) {
+                    return 0.0;
+                }
+
+                $cogs = $daySales->sum(fn ($sale) => $sale->items->sum('total_cost'));
+                $profit = $revenue - $cogs;
+
+                return round(($profit / $revenue) * 100, 2);
+            })->values()->all(),
+        ];
+
+        return [
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'sales' => $sales,
+            'summary' => $summary,
+            'chartData' => $chartData,
+        ];
+    }
+
+    public function report(Request $request)
+    {
+        $data = $this->buildReportData($request);
+
+        return view('sales.report', $data);
     }
 }

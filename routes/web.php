@@ -128,6 +128,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/sales-report', [SalesController::class, 'report'])
         ->name('sales.report');
 
+    //export sales reports
+    Route::get('/sales/export/csv', [SalesController::class, 'exportCsv'])
+        ->name('sales.export.csv');
+    Route::get('/sales/export/pdf', [SalesController::class, 'exportPdf'])
+        ->name('sales.export.pdf');
+
     // Pending reorder requests for managers
     Route::get('/reorder-requests', [\App\Http\Controllers\ReorderRequestController::class, 'index'])
         ->name('reorder.requests')
