@@ -1,9 +1,9 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\Models\User;
 use App\Models\Business;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 
 class BusinessController extends Controller
@@ -13,9 +13,38 @@ class BusinessController extends Controller
      */
     public function index()
     {
-        $perPage = request()->query('per_page', 25);
-        $businesses = Business::with('owner')->paginate((int)$perPage);
-        return response()->json($businesses);
+        $user = auth()->user();
+
+        if ($user->role === 'superadmin'){
+            //they can see all businesses 
+            $businesses = Business::with('businessAdmin')->paginate(15);
+        }
+        else {
+            //business admin sees only their business
+            $businesses = Business::with('businessAdmin')
+                ->where('business_admin_id', $user->id)
+                ->paginate(15);
+        }
+        return view('businesses.index', compact('businesses'));
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+        // only superamdin can create business
+        $user = auth()->user();
+        if ($user->role !== 'superadmin') {
+            abort(403, 'Only Super Admin can create a business.');
+        }
+        // Get all business admin users
+        $availableAdmins = User::where('role', 'business_admin')
+            ->with('managedBusiness')
+            ->orderBy('name')
+            ->get();
+            
+        return view('businesses.create', compact('availableAdmins'));
     }
 
     /**
@@ -23,24 +52,26 @@ class BusinessController extends Controller
      */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'owner_id' => 'required|exists:users,id',
+            'business_admin_id' => 'required|exists:users,id',
             'logo' => 'nullable|image|max:2048', // Optional logo, max size 2MB
         ]);
 
-        if ($validator->fails()) {
-            return response()->json(['errors '=> $validator->errors()], 422);
+        // Handle logo upload if present
+        if ($request->hasFile('logo')) {
+            $logoPath = $request->file('logo')->store('logos', 'public');
+            $validated['logo'] = $logoPath;
         }
 
-        // Handle product image upload 
-        // if ($request->hasFile('logo')) {
-        //     $logoPath = $request->file('logo')->store('logos', 'public');
-        //     $validator->validated()['logo'] = $logoPath; // Add logo path to validated data
-        // }
-
-        $business = Business::create($validator->validated());
-        return response()->json($business, 201)->with('success', 'Business created successfully!');
+        $business = Business::create($validated);
+        
+        // Assign the business to the business admin
+        \App\Models\User::where('id', $validated['business_admin_id'])
+            ->update(['business_id' => $business->id]);
+        
+        return redirect()->route('businesses.index')
+            ->with('success', 'Business created successfully!');
     }
 
     /**
@@ -48,8 +79,42 @@ class BusinessController extends Controller
      */
     public function show(string $id)
     {
-        $business = Business::with('owner')->findorFail($id);
-        return response()->json($business);
+        $user = auth()->user();
+        $business = Business::with('businessAdmin', 'branches')->findOrFail($id);
+        // Ensure that non-superadmin users can only view their own business
+        if ($user->role === 'business_admin' && $business->business_admin_id !== $user->id) {
+        abort(403, 'Unauthorized access');
+        }
+        return view('businesses.show', compact('business'));
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(string $id)
+    {
+        $user = auth()->user();
+        $business = Business::with('businessAdmin', 'branches')->findOrFail($id);
+        
+        // Business admin can only edit their own business
+        if ($user->role === 'business_admin' && $business->business_admin_id !== $user->id) {
+            abort(403, 'Unauthorized access');
+        }
+        
+        // Only superadmin can change business admin assignment
+        if ($user->role === 'superadmin') {
+            $availableAdmins = User::where('role', 'business_admin')
+                ->where(function($q) use ($business) {
+                    $q->whereNull('business_id')
+                      ->orWhere('business_id', $business->id);
+                })
+                ->get();
+        } else {
+            // Business admin cannot change their assignment
+            $availableAdmins = collect([$user]);
+        }
+            
+        return view('businesses.edit', compact('business', 'availableAdmins'));
     }
 
     /**
@@ -57,20 +122,41 @@ class BusinessController extends Controller
      */
     public function update(Request $request, string $id)
     {
+        $user = auth()->user();
         $business = Business::findOrFail($id);
-
-        $validator = Validator::make($request->all(), [
-            'name' => 'sometimes|required|string|max:255',
-            'owner_id' => 'sometimes|required|exists:users,id',
-            'logo' => 'nullable|image|max:2048', // Optional logo, max size 2MB
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+        
+        // Business admin can only update their own business
+        if ($user->role === 'business_admin' && $business->business_admin_id !== $user->id) {
+            abort(403, 'Unauthorized access');
         }
 
-        $business->update($validator->validated());
-        return response()->json($business)->with('success', 'Business updated successfully');
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'business_admin_id' => 'required|exists:users,id',
+            'logo' => 'nullable|image|max:2048',
+        ]);
+        
+        // Business admin cannot change their own assignment
+        if ($user->role === 'business_admin' && $validated['business_admin_id'] !== $user->id) {
+            abort(403, 'You cannot change business admin assignment');
+        }
+
+        // Handle logo upload if present
+        if ($request->hasFile('logo')) {
+            $logoPath = $request->file('logo')->store('logos', 'public');
+            $validated['logo'] = $logoPath;
+        }
+
+        $business->update($validated);
+        
+        // Update the business admin's business assignment (only if changed by superadmin)
+        if ($user->role === 'superadmin') {
+            User::where('id', $validated['business_admin_id'])
+                ->update(['business_id' => $business->id]);
+        }
+        
+        return redirect()->route('businesses.index')
+            ->with('success', 'Business updated successfully');
     }
 
     /**
@@ -78,8 +164,15 @@ class BusinessController extends Controller
      */
     public function destroy(string $id)
     {
+        // Only superadmin can delete businesses
+        if (auth()->user()->role !== 'superadmin') {
+            abort(403, 'Only SuperAdmin can delete businesses');
+        }
+        
         $business = Business::findOrFail($id);
         $business->delete();
-        return response()->json(['message' => 'Business deleted successfully'], 204);
+        
+        return redirect()->route('businesses.index')
+            ->with('success', 'Business deleted successfully');
     }
 }

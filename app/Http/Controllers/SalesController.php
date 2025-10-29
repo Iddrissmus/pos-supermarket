@@ -31,7 +31,7 @@ class SalesController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        $sales = Sale::with(['branch', 'cashier', 'items.product'])
+    $sales = Sale::with(['branch.business', 'cashier', 'items.product'])
             ->when($user->branch_id, function ($query) use ($user) {
                 return $query->where('branch_id', $user->branch_id);
             })
@@ -40,7 +40,9 @@ class SalesController extends Controller
 
         $summary = [
             'total_sales' => $sales->total(),
-            'total_revenue' => $sales->sum('total',2),
+            'total_revenue' => $sales->sum('total'),
+            'total_subtotal' => $sales->sum('subtotal'),
+            'total_tax_amount' => $sales->sum('tax_amount'),
             'total_cogs' => $sales->sum(function ($sale) {
                 return $sale->items->sum('total_cost');
             }),
@@ -49,7 +51,8 @@ class SalesController extends Controller
                 return $sale->items->sum('quantity');
             }),
         ];
-        $summary['total_profit'] = $summary['total_revenue'] - $summary['total_cogs'];
+        // Calculate profit from subtotal (before tax)
+        $summary['total_profit'] = ($summary['total_subtotal'] ?: $summary['total_revenue']) - $summary['total_cogs'];
 
 
         return view('sales.index', compact('sales', 'summary'));
@@ -60,34 +63,25 @@ class SalesController extends Controller
      */
     public function create()
     {
-        $user = Auth::user();
-        $branches = $user->branch_id 
-            ? Branch::where('id', $user->branch_id)->get()
-            : Branch::all();
-        
-        // Get products with current stock for the user's branch(es)
-        $products = collect();
-        foreach ($branches as $branch) {
-            $branchProducts = BranchProduct::where('branch_id', $branch->id)
-                ->where('stock_quantity', '>', 0)
-                ->with('product')
-                ->get();
-            
-            foreach ($branchProducts as $bp) {
-                $products->push([
-                    'id' => $bp->product->id,
-                    'name' => $bp->product->name,
-                    'sku' => $bp->product->sku,
-                    'branch_id' => $branch->id,
-                    'branch_name' => $branch->name,
-                    'stock_quantity' => $bp->stock_quantity,
-                    'selling_price' => $bp->selling_price,
-                    'cost_price' => $bp->cost_price,
-                ]);
-            }
-        }
+        $branches = $this->resolveBranchesForUser();
+        $products = $this->buildProductCatalog($branches);
+        $customers = \App\Models\Customer::active()->orderBy('name')->get();
 
-        return view('sales.create', compact('branches', 'products'));
+        return view('sales.create', compact('branches', 'products', 'customers'));
+    }
+
+    /**
+     * Point-of-sale terminal interface for cashiers.
+     */
+    public function terminal()
+    {
+        $branches = $this->resolveBranchesForUser();
+        $catalog = $this->buildProductCatalog($branches, false);
+
+        return view('sales.terminal', [
+            'branches' => $branches,
+            'catalog' => $catalog,
+        ]);
     }
 
     /**
@@ -97,6 +91,7 @@ class SalesController extends Controller
     {
         $validated = $request->validate([
             'branch_id' => 'required|exists:branches,id',
+            'customer_id' => 'nullable|exists:customers,id',
             'payment_method' => 'required|string|in:cash,card,mobile_money',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
@@ -105,28 +100,26 @@ class SalesController extends Controller
         ]);
 
         try {
-            return DB::transaction(function () use ($validated) {
-                // Create the sale
+        $sale = DB::transaction(function () use ($validated) {
                 $sale = Sale::create([
                     'branch_id' => $validated['branch_id'],
+                    'customer_id' => $validated['customer_id'] ?? null,
                     'cashier_id' => Auth::id(),
                     'payment_method' => $validated['payment_method'],
-                    'total' => 0, // Will be calculated
+                    'total' => 0,
                 ]);
 
                 $totalAmount = 0;
 
-                // Process each sale item with COGS calculation
                 foreach ($validated['items'] as $itemData) {
-                    // Get COGS and reduce stock
                     $cogsResult = $this->receiveStockService->processSale(
                         $validated['branch_id'],
                         $itemData['product_id'],
                         $itemData['quantity']
                     );
 
-                    // Create sale item with COGS data
                     $itemTotal = $itemData['quantity'] * $itemData['price'];
+
                     SaleItem::create([
                         'sale_id' => $sale->id,
                         'product_id' => $itemData['product_id'],
@@ -135,19 +128,49 @@ class SalesController extends Controller
                         'total' => $itemTotal,
                         'unit_cost' => $cogsResult['unit_cost'],
                         'total_cost' => $cogsResult['total_cost'],
-                        // Margins will be calculated automatically by the model
                     ]);
 
                     $totalAmount += $itemTotal;
                 }
 
-                // Update sale total
-                $sale->update(['total' => $totalAmount]);
+                // Calculate taxes automatically after all items are added
+                $sale->calculateTotals();
 
-                return redirect()->route('sales.show', $sale)
-                    ->with('success', 'Sale completed successfully!');
+                return $sale->fresh(['items.product', 'branch.business', 'cashier']);
             });
+
+            if ($request->expectsJson()) {
+                $taxBreakdown = $sale->getTaxBreakdown();
+                return response()->json([
+                    'message' => 'Sale completed successfully!',
+                    'sale' => [
+                        'id' => $sale->id,
+                        'subtotal' => $taxBreakdown['subtotal'],
+                        'tax_amount' => $taxBreakdown['tax_amount'],
+                        'total' => $taxBreakdown['total'],
+                        'tax_components' => $taxBreakdown['tax_components'],
+                        'payment_method' => $sale->payment_method,
+                        'created_at' => $sale->created_at->toDateTimeString(),
+                        'branch' => optional($sale->branch)->display_label,
+                        'cashier' => optional($sale->cashier)->name,
+                    ],
+                    'receipt_url' => route('sales.receipt', $sale),
+                    'redirect_url' => route('sales.show', $sale),
+                ]);
+            }
+
+            return redirect()->route('sales.show', $sale)
+                ->with('success', 'Sale completed successfully!');
         } catch (\Exception $e) {
+            if ($request->expectsJson()) {
+                report($e);
+
+                return response()->json([
+                    'message' => 'Failed to complete sale.',
+                    'errors' => [$e->getMessage()],
+                ], 422);
+            }
+
             return back()->withInput()
                 ->withErrors(['error' => 'Failed to complete sale: ' . $e->getMessage()]);
         }
@@ -158,22 +181,39 @@ class SalesController extends Controller
      */
     public function show(Sale $sale)
     {
-        $sale->load(['items.product', 'branch', 'cashier']);
+        $sale->load(['items.product', 'branch.business', 'cashier', 'customer']);
         
-        // Calculate totals for display
-        $totals = [
-            'revenue' => $sale->total,
-            'cogs' => $sale->items->sum('total_cost'),
-            'gross_profit' => $sale->total - $sale->items->sum('total_cost'),
-        ];
+        // Get comprehensive analysis including tax breakdown
+        $profitAnalysis = $sale->getProfitAnalysis();
+        $taxBreakdown = $sale->getTaxBreakdown();
         
-        if ($totals['revenue'] > 0) {
-            $totals['margin_percent'] = ($totals['gross_profit'] / $totals['revenue']) * 100;
-        } else {
-            $totals['margin_percent'] = 0;
-        }
+        $totals = array_merge($profitAnalysis, [
+            'tax_breakdown' => $taxBreakdown,
+        ]);
 
         return view('sales.show', compact('sale', 'totals'));
+    }
+
+    /**
+     * Printable receipt for a completed sale.
+     */
+    public function receipt(Sale $sale)
+    {
+        $sale->load(['items.product', 'branch.business', 'cashier', 'customer']);
+
+        $taxBreakdown = $sale->getTaxBreakdown();
+        $totals = [
+            'subtotal' => $taxBreakdown['subtotal'],
+            'tax_components' => $taxBreakdown['tax_components'],
+            'tax_amount' => $taxBreakdown['tax_amount'],
+            'total' => $taxBreakdown['total'],
+            'cogs' => $sale->items->sum('total_cost'),
+        ];
+
+        return view('sales.receipt', [
+            'sale' => $sale,
+            'totals' => $totals,
+        ]);
     }
 
     /**
@@ -201,10 +241,41 @@ class SalesController extends Controller
         return response()->json([
             'available' => $branchProduct->stock_quantity > 0,
             'stock_quantity' => $branchProduct->stock_quantity,
-            'selling_price' => $branchProduct->selling_price,
+            'selling_price' => $branchProduct->price ?? $branchProduct->selling_price,
             'cost_price' => $branchProduct->cost_price,
             'product_name' => $branchProduct->product->name,
             'sku' => $branchProduct->product->sku,
+        ]);
+    }
+
+    /**
+     * API endpoint to calculate taxes for a given subtotal
+     */
+    public function calculateTaxes(Request $request)
+    {
+        $request->validate([
+            'subtotal' => 'required|numeric|min:0',
+        ]);
+
+        $subtotal = $request->subtotal;
+        
+        // Use the same tax calculation as Sale model
+        $taxRate = Sale::DEFAULT_TAX_RATE;
+        $taxAmount = ($subtotal * $taxRate) / 100;
+        $total = $subtotal + $taxAmount;
+
+        return response()->json([
+            'subtotal' => round($subtotal, 2),
+            'tax_rate' => $taxRate,
+            'tax_amount' => round($taxAmount, 2),
+            'total' => round($total, 2),
+            'tax_components' => [
+                [
+                    'name' => 'Sales Tax',
+                    'rate' => $taxRate,
+                    'amount' => round($taxAmount, 2)
+                ]
+            ],
         ]);
     }
 
@@ -243,7 +314,51 @@ class SalesController extends Controller
             $data['endDate']->format('Ymd')
         ));
     }
-    
+
+    protected function resolveBranchesForUser()
+    {
+        $user = Auth::user();
+
+        if ($user && $user->branch_id) {
+            return Branch::with('business:id,name')->where('id', $user->branch_id)->get();
+        }
+
+        return Branch::with('business:id,name')->get();
+    }
+
+    protected function buildProductCatalog($branches, bool $onlyInStock = true)
+    {
+        $branchIds = $branches->pluck('id');
+
+        if ($branchIds->isEmpty()) {
+            return collect();
+        }
+
+    $query = BranchProduct::with(['product', 'branch.business'])
+            ->whereIn('branch_id', $branchIds);
+
+        if ($onlyInStock) {
+            $query->where('stock_quantity', '>', 0);
+        }
+
+        return $query->get()->map(function (BranchProduct $branchProduct) {
+            $price = $branchProduct->price ?? data_get($branchProduct, 'selling_price', 0);
+
+            return [
+                'id' => $branchProduct->product_id,
+                'name' => optional($branchProduct->product)->name,
+                'sku' => optional($branchProduct->product)->sku,
+                'branch_id' => $branchProduct->branch_id,
+                'branch_name' => optional($branchProduct->branch)->display_label,
+                'stock_quantity' => $branchProduct->stock_quantity,
+                'selling_price' => $price,
+                'price' => $price,
+                'cost_price' => $branchProduct->cost_price,
+                'image' => optional($branchProduct->product)->image,
+            ];
+        })->values();
+    }
+
 
     /**
      * Sales report with margin analysis
@@ -262,7 +377,7 @@ class SalesController extends Controller
             ? Carbon::parse($endDateInput)->endOfDay()
             : now()->endOfMonth();
 
-        $sales = Sale::with(['items', 'branch', 'cashier'])
+    $sales = Sale::with(['items', 'branch.business', 'cashier'])
             ->when($user->branch_id, function ($query) use ($user) {
                 return $query->where('branch_id', $user->branch_id);
             })

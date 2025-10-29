@@ -62,7 +62,7 @@
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-900">{{ $sale->branch->name }}</div>
+                                        <div class="text-sm text-gray-900">{{ optional($sale->branch)->display_label ?? 'Unassigned branch' }}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm text-gray-900">{{ $sale->cashier->name }}</div>
@@ -75,11 +75,19 @@
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm font-medium text-gray-900">
-                                            ${{ number_format($sale->total, 2) }}
+                                            ₵{{ number_format($sale->total, 2) }}
                                         </div>
+                                        @if($sale->subtotal && $sale->tax_amount)
+                                            <div class="text-sm text-gray-500">
+                                                Subtotal: ₵{{ number_format($sale->subtotal, 2) }}
+                                            </div>
+                                            <div class="text-sm text-gray-500">
+                                                Tax: ${{ number_format($sale->tax_amount, 2) }}
+                                            </div>
+                                        @endif
                                         @if($sale->items->sum('total_cost') > 0)
                                             <div class="text-sm text-gray-500">
-                                                Profit: ${{ number_format($sale->total - $sale->items->sum('total_cost'), 2) }}
+                                                Profit: ₵{{ number_format(($sale->subtotal ?? $sale->total) - $sale->items->sum('total_cost'), 2) }}
                                             </div>
                                         @endif
                                     </td>
@@ -124,12 +132,12 @@
                         </div>
                         <div class="bg-green-50 p-4 rounded-lg">
                             <div class="text-sm font-medium text-green-600">Total Revenue</div>
-                            <div class="text-2xl font-bold text-green-900">${{ number_format($summary['total_revenue'] , 2) }}</div>
+                            <div class="text-2xl font-bold text-green-900">₵{{ number_format($summary['total_revenue'] , 2) }}</div>
                         </div>
                         <div class="bg-purple-50 p-4 rounded-lg">
                             <div class="text-sm font-medium text-purple-600">Total COGS</div>
                             <div class="text-2xl font-bold text-purple-900">
-                                ${{number_format($summary['total_cogs'], 2) }}
+                                ₵{{number_format($summary['total_cogs'], 2) }}
                             </div>
                         </div>
                         <div class="bg-yellow-50 p-4 rounded-lg">

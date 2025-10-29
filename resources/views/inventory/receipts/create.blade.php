@@ -37,7 +37,7 @@
                             <option value="">Select Branch</option>
                             @foreach($branches as $branch)
                                 <option value="{{ $branch->id }}" {{ old('branch_id') == $branch->id ? 'selected' : '' }}>
-                                    {{ $branch->name }}
+                                    {{ $branch->display_label }}
                                 </option>
                             @endforeach
                         </select>
@@ -128,7 +128,7 @@
                     <div class="mt-4 p-3 bg-blue-50 rounded-lg">
                         <div class="flex justify-between items-center">
                             <span class="font-medium text-gray-700">Total Receipt Amount:</span>
-                            <span id="grand-total" class="text-xl font-bold text-blue-600">$0.00</span>
+                            <span id="grand-total" class="text-xl font-bold text-blue-600">₵0.00</span>
                         </div>
                     </div>
                 </div>
@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const quantity = parseFloat(row.querySelector('.quantity-input').value) || 0;
         const unitCost = parseFloat(row.querySelector('.unit-cost-input').value) || 0;
         const total = quantity * unitCost;
-        row.querySelector('.total-cost-display').value = '$' + total.toFixed(2);
+        row.querySelector('.total-cost-display').value = '₵' + total.toFixed(2);
     }
 
     function calculateGrandTotal() {
@@ -216,7 +216,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const unitCost = parseFloat(row.querySelector('.unit-cost-input').value) || 0;
             grandTotal += quantity * unitCost;
         });
-        document.getElementById('grand-total').textContent = '$' + grandTotal.toFixed(2);
+        document.getElementById('grand-total').textContent = '₵' + grandTotal.toFixed(2);
     }
 
     // Initial calculations

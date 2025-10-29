@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\BranchProduct;
 use App\Models\StockLog;
+use App\Models\User;
+use App\Notifications\LowStockNotification;
 use Illuminate\Support\Facades\DB;
 use App\Models\StockTransfer;
 
@@ -78,7 +80,8 @@ class StockReorderService
      */
     public function checkItem(int $branchId, int $productId): bool
     {
-        $bp = BranchProduct::where('branch_id', $branchId)
+        $bp = BranchProduct::with(['branch', 'product'])
+            ->where('branch_id', $branchId)
             ->where('product_id', $productId)
             ->first();
 
@@ -110,6 +113,8 @@ class StockReorderService
                 ->where('status', 'pending')
                 ->exists();
 
+            $requestCreated = false;
+
             if (!$existsTransfer) {
                 $fromBranch = env('REORDER_SOURCE_BRANCH_ID') ?: $bp->branch_id;
 
@@ -121,10 +126,64 @@ class StockReorderService
                     'status' => 'pending',
                 ]);
 
-                return true;
+                $requestCreated = true;
             }
 
-            return false;
+            // Send notification to branch manager(s)
+            $this->notifyBranchManager($bp);
+
+            return $requestCreated;
         });
+    }
+
+    /**
+     * Send low stock notification to the branch manager
+     */
+    private function notifyBranchManager(BranchProduct $branchProduct): void
+    {
+        try {
+            logger()->info('Low stock detected', [
+                'product_id' => $branchProduct->product_id,
+                'branch_id' => $branchProduct->branch_id,
+                'stock_quantity' => $branchProduct->stock_quantity,
+                'reorder_level' => $branchProduct->reorder_level,
+            ]);
+
+            // Find all managers for this branch
+            $managers = User::where('role', 'manager')
+                ->where('branch_id', $branchProduct->branch_id)
+                ->get();
+
+            logger()->info('Managers found for branch', [
+                'branch_id' => $branchProduct->branch_id,
+                'manager_count' => $managers->count(),
+            ]);
+
+            // If no branch-specific manager, notify business admin users
+            if ($managers->isEmpty()) {
+                $managers = User::where('role', 'business_admin')
+                    ->where('business_id', $branchProduct->branch->business_id)
+                    ->get();
+                logger()->info('No branch managers, using business admins', [
+                    'business_admin_count' => $managers->count(),
+                ]);
+            }
+
+            // Send notification to each manager
+            foreach ($managers as $manager) {
+                logger()->info('Sending notification to user', [
+                    'user_id' => $manager->id,
+                    'user_name' => $manager->name,
+                    'user_email' => $manager->email,
+                ]);
+                $manager->notify(new LowStockNotification($branchProduct));
+            }
+
+            logger()->info('Notifications sent successfully');
+        } catch (\Throwable $e) {
+            logger()->error('Failed to send low stock notification: ' . $e->getMessage(), [
+                'exception' => $e->getTraceAsString()
+            ]);
+        }
     }
 }

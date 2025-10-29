@@ -170,6 +170,13 @@ class ReceiveStockService
             'note' => "Stock sold",
         ]);
 
+        // Check if stock has reached reorder level and send notification
+        try {
+            (new StockReorderService())->checkItem($branchId, $productId);
+        } catch (\Throwable $e) {
+            logger()->error('StockReorderService failed after sale: ' . $e->getMessage());
+        }
+
         return [
             'unit_cost' => $costPrice,
             'total_cost' => $totalCost,

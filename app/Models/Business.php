@@ -6,12 +6,18 @@ use Illuminate\Database\Eloquent\Model;
 
 class Business extends Model
 {
-    protected $fillable = ['name', 'owner_id', 'logo'];
+    protected $fillable = ['name', 'business_admin_id', 'logo'];
 
     
+    public function businessAdmin()
+    {
+        return $this->belongsTo(User::class, 'business_admin_id');
+    }
+    
+    // Alias for backwards compatibility
     public function owner()
     {
-        return $this->belongsTo(User::class, 'owner_id');
+        return $this->businessAdmin();
     }
 
     public function branches()

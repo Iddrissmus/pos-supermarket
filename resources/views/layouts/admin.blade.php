@@ -91,7 +91,7 @@
                             <p class="text-sm text-gray-500">{{ $sale->created_at->diffForHumans() }}</p>
                         </div>
                         <div class="text-right">
-                            <p class="text-sm font-medium text-gray-900">${{ number_format($sale->total ?? 0, 2) }}</p>
+                            <p class="text-sm font-medium text-gray-900">₵{{ number_format($sale->total ?? 0, 2) }}</p>
                         </div>
                     </div>
                     @endforeach

@@ -13,9 +13,27 @@ class CategoriesTableSeeder extends Seeder
      */
     public function run(): void
     {
-        Category::create([
-            'business_id' => 1,
-            'name' => 'Groceries'
-        ]);
+        $categories = [
+            // FreshMart Categories
+            ['business_id' => 1, 'name' => 'Groceries'],
+            ['business_id' => 1, 'name' => 'Beverages'],
+            ['business_id' => 1, 'name' => 'Household Items'],
+            ['business_id' => 1, 'name' => 'Personal Care'],
+            ['business_id' => 1, 'name' => 'Electronics'],
+            ['business_id' => 1, 'name' => 'Snacks & Confectionery'],
+            ['business_id' => 1, 'name' => 'Dairy & Eggs'],
+            ['business_id' => 1, 'name' => 'Frozen Foods'],
+            
+            // QuickShop Categories
+            ['business_id' => 2, 'name' => 'Food Items'],
+            ['business_id' => 2, 'name' => 'Drinks'],
+            ['business_id' => 2, 'name' => 'Home & Kitchen'],
+        ];
+
+        foreach ($categories as $category) {
+            Category::create($category);
+        }
+
+        $this->command->info('✓ Categories seeded successfully');
     }
 }

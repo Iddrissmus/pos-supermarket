@@ -136,7 +136,7 @@
                                         {{ $receipt->items->count() }} item(s)
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        ${{ number_format($receipt->total_amount, 2) }}
+                                        ₵{{ number_format($receipt->total_amount, 2) }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <a href="{{ route('stock-receipts.show', $receipt) }}" 
@@ -231,7 +231,7 @@
                     <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-600">Total Value</span>
                         <span class="text-sm font-medium text-gray-900">
-                            ${{ number_format($supplier->stockReceipts()->sum('total_amount'), 2) }}
+                            ₵{{ number_format($supplier->stockReceipts()->sum('total_amount'), 2) }}
                         </span>
                     </div>
                     <div class="flex items-center justify-between">

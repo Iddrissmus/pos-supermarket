@@ -4,106 +4,183 @@
 
 @section('content')
 <div class="p-6">
-    <!-- Green Header Bar -->
-    <div class="bg-green-600 text-white px-6 py-4 rounded-t-lg mb-6">
-        <div class="flex justify-between items-center">
-            <h1 class="text-2xl font-bold">Cashier Dashboard</h1>
-            <div class="flex space-x-3">
-                <button class="bg-green-700 hover:bg-green-800 px-4 py-2 rounded-lg font-medium transition-colors">
-                    <i class="fas fa-plus mr-2"></i>New Sale
-                </button>
+    @php
+        $branch = Auth::user()->branch;
+        $todaySales = \App\Models\Sale::where('cashier_id', Auth::id())
+            ->whereDate('created_at', today())
+            ->count();
+        $todayRevenue = \App\Models\Sale::where('cashier_id', Auth::id())
+            ->whereDate('created_at', today())
+            ->sum('total');
+    @endphp
+
+    <!-- Welcome Header -->
+    <div class="bg-gradient-to-r from-orange-600 to-amber-600 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold mb-2">Cashier Dashboard</h1>
+                <p class="text-orange-100">Branch: <span class="font-semibold">{{ $branch->name ?? 'No Branch Assigned' }}</span></p>
+                <p class="text-orange-100 text-sm mt-1">Welcome back, {{ Auth::user()->name }}!</p>
+            </div>
+            <div class="text-6xl opacity-50">
+                <i class="fas fa-cash-register"></i>
             </div>
         </div>
     </div>
 
-    <!-- Welcome Section -->
-    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">Welcome, {{ auth()->user()->name }}!</h2>
-        <p class="text-gray-600">This is your cashier dashboard. You can manage sales and view your performance statistics.</p>
-    </div>
-
-    <!-- Quick Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <div class="flex items-center">
-                <div class="p-3 rounded-full bg-blue-100 text-blue-600">
-                    <i class="fas fa-shopping-cart text-xl"></i>
+    @if(!$branch)
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg mb-8">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-exclamation-triangle text-yellow-400 text-xl"></i>
                 </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Total Sales</p>
-                    <p class="text-2xl font-semibold text-gray-900">{{ $stats['total_sales'] ?? 0 }}</p>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">No Branch Assigned</h3>
+                    <p class="text-sm text-yellow-700 mt-1">
+                        You are not currently assigned to any branch. Please contact your manager.
+                    </p>
                 </div>
             </div>
         </div>
-
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <div class="flex items-center">
-                <div class="p-3 rounded-full bg-green-100 text-green-600">
-                    <i class="fas fa-calendar-day text-xl"></i>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Today's Sales</p>
-                    <p class="text-2xl font-semibold text-gray-900">{{ $stats['today_sales'] ?? 0 }}</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <div class="flex items-center">
-                <div class="p-3 rounded-full bg-purple-100 text-purple-600">
-                    <i class="fas fa-calendar-alt text-xl"></i>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Monthly Sales</p>
-                    <p class="text-2xl font-semibold text-gray-900">{{ $stats['monthly_sales'] ?? 0 }}</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Recent Sales -->
-    <div class="bg-white rounded-lg shadow-md">
-        <div class="p-6 border-b border-gray-200">
-            <h2 class="text-xl font-semibold text-gray-800">Recent Sales</h2>
-        </div>
-        <div class="p-6">
-            @if(isset($recent_sales) && $recent_sales->count() > 0)
-                <div class="space-y-4">
-                    @foreach($recent_sales as $sale)
-                    <div class="flex items-center space-x-4">
-                        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-receipt text-green-600"></i>
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-sm font-medium text-gray-900">Sale #{{ $sale->id }} - {{ $sale->branch->name ?? 'Unknown Branch' }}</p>
-                            <p class="text-sm text-gray-500">{{ $sale->created_at->diffForHumans() }}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-sm font-medium text-gray-900">${{ number_format($sale->total ?? 0, 2) }}</p>
-                        </div>
+    @else
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Today's Sales</p>
+                        <p class="text-3xl font-bold text-orange-600 mt-2">{{ $todaySales }}</p>
                     </div>
-                    @endforeach
+                    <div class="bg-orange-100 rounded-full p-4">
+                        <i class="fas fa-shopping-cart text-orange-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Today's Revenue</p>
+                        <p class="text-3xl font-bold text-green-600 mt-2">${{ number_format($todayRevenue, 2) }}</p>
+                    </div>
+                    <div class="bg-green-100 rounded-full p-4">
+                        <i class="fas fa-dollar-sign text-green-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Total Sales</p>
+                        <p class="text-3xl font-bold text-blue-600 mt-2">{{ $stats['total_sales'] ?? 0 }}</p>
+                    </div>
+                    <div class="bg-blue-100 rounded-full p-4">
+                        <i class="fas fa-receipt text-blue-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Branch</p>
+                        <p class="text-lg font-bold text-purple-600 mt-2">{{ $branch->name }}</p>
+                    </div>
+                    <div class="bg-purple-100 rounded-full p-4">
+                        <i class="fas fa-store text-purple-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">
+                <i class="fas fa-bolt text-yellow-500 mr-2"></i>Quick Actions
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <a href="{{ route('sales.terminal') }}" class="flex items-center p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors border-2 border-orange-200">
+                    <div class="bg-orange-600 rounded-full p-3 mr-4">
+                        <i class="fas fa-cart-shopping text-white"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800">POS Terminal</p>
+                        <p class="text-sm text-gray-600">Open point of sale</p>
+                    </div>
+                </a>
+
+                <a href="{{ route('sales.create') }}" class="flex items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors border-2 border-green-200">
+                    <div class="bg-green-600 rounded-full p-3 mr-4">
+                        <i class="fas fa-plus-square text-white"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800">New Sale</p>
+                        <p class="text-sm text-gray-600">Create new transaction</p>
+                    </div>
+                </a>
+
+                <a href="{{ route('sales.index') }}" class="flex items-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border-2 border-blue-200">
+                    <div class="bg-blue-600 rounded-full p-3 mr-4">
+                        <i class="fas fa-receipt text-white"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800">My Sales</p>
+                        <p class="text-sm text-gray-600">View sales history</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Recent Sales -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">
+                <i class="fas fa-history text-orange-600 mr-2"></i>Recent Sales
+            </h2>
+            @php
+                $recentSales = \App\Models\Sale::where('cashier_id', Auth::id())
+                    ->orderBy('created_at', 'desc')
+                    ->take(5)
+                    ->get();
+            @endphp
+            
+            @if($recentSales->count() > 0)
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sale ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            @foreach($recentSales as $sale)
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{{ $sale->id }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $sale->created_at->format('M d, Y H:i') }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${{ number_format($sale->total, 2) }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                            Completed
+                                        </span>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
             @else
-                <div class="text-center py-8">
-                    <i class="fas fa-shopping-cart text-gray-400 text-4xl mb-4"></i>
-                    <p class="text-gray-500">No recent sales found.</p>
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-receipt text-4xl mb-3"></i>
+                    <p>No sales yet today</p>
+                    <a href="{{ route('sales.create') }}" class="text-orange-600 hover:text-orange-800 text-sm mt-2 inline-block">
+                        Create your first sale
+                    </a>
                 </div>
             @endif
         </div>
-    </div>
+    @endif
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Update the active sidebar item to "Dashboard"
-    const sidebarItems = document.querySelectorAll('.sidebar-item');
-    sidebarItems.forEach(item => {
-        item.classList.remove('active');
-        if (item.textContent.includes('Dashboard')) {
-            item.classList.add('active');
-        }
-    });
-});
-</script>
 @endsection 

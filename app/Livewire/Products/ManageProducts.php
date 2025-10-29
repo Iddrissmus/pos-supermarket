@@ -47,7 +47,7 @@ class ManageProducts extends Component
     {
         $this->validate();
 
-        $businessId = Business::where('owner_id', Auth::id())->value('id');
+        $businessId = Business::where('business_admin_id', Auth::id())->value('id');
         if (!$businessId) {
             $this->dispatch('notify', type: 'error', message: 'Create a business first');
             return;
@@ -83,7 +83,7 @@ class ManageProducts extends Component
     public function render()
     {
         $query = BranchProduct::query()
-            ->whereHas('branch.business', fn($q) => $q->where('owner_id', Auth::id()))
+            ->whereHas('branch.business', fn($q) => $q->where('business_admin_id', Auth::id()))
             ->when($this->search, function ($q) {
                 $q->whereHas('product', fn($p) => 
                     $p->where('name', 'like', "%{$this->search}%")

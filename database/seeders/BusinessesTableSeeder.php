@@ -15,8 +15,16 @@ class BusinessesTableSeeder extends Seeder
     {
         Business::create([
             'name' => 'FreshMart Supermarket',
-            'owner_id' => 1,
+            'business_admin_id' => 2, // Business Admin user
             'logo' => null,
         ]);
+
+        Business::create([
+            'name' => 'QuickShop Retail',
+            'business_admin_id' => 1, // SuperAdmin (no business admin assigned yet)
+            'logo' => null,
+        ]);
+
+        $this->command->info('✓ Businesses seeded successfully');
     }
 }

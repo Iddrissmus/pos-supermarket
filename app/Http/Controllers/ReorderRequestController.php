@@ -8,21 +8,13 @@ use Illuminate\Support\Facades\Auth;
 
 class ReorderRequestController extends Controller
 {
+    /**
+     * Redirect to notifications page
+     * (Reorder requests are now shown as notifications)
+     */
     public function index(Request $request)
     {
-        $user = Auth::user();
-
-        // If user manages branches, show transfers to those branches; otherwise show pending transfers
-        $transfers = StockTransfer::where('status', 'pending')
-            ->when($user, function ($q) use ($user) {
-                $q->whereHas('toBranch', function ($qb) use ($user) {
-                    $qb->where('manager_id', $user->id);
-                });
-            })
-            ->with(['product', 'toBranch'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(25);
-
-        return view('reorder_requests.index', ['transfers' => $transfers]);
+        return redirect()->route('notifications.index')
+            ->with('info', 'Low stock alerts are now shown in notifications. You can take action from there.');
     }
 }

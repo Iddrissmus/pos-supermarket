@@ -1,0 +1,404 @@
+@extends('layouts.app')
+
+@section('title', 'Edit Business - ' . $business->name)
+
+@section('content')
+<div class="p-6 max-w-2xl mx-auto">
+    <!-- Success/Error Messages -->
+    @if(session('success'))
+        <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
+            <span class="block sm:inline">{{ session('success') }}</span>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+            <span class="block sm:inline">{{ session('error') }}</span>
+        </div>
+    @endif
+
+    <div class="bg-white shadow rounded-lg p-6">
+        <div class="mb-6">
+            <h1 class="text-2xl font-semibold text-gray-800">Edit Business</h1>
+            <p class="text-sm text-gray-600">Update business information and ownership</p>
+        </div>
+
+        <form action="{{ route('businesses.update', $business->id) }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            @method('PUT')
+
+            <!-- Business Name -->
+            <div class="mb-4">
+                <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
+                    Business Name <span class="text-red-500">*</span>
+                </label>
+                <input type="text" 
+                       id="name" 
+                       name="name" 
+                       value="{{ old('name', $business->name) }}"
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 @error('name') border-red-500 @enderror"
+                       required>
+                @error('name')
+                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <!-- Business Admin Selection -->
+            <div class="mb-4">
+                <label for="business_admin_id" class="block text-sm font-medium text-gray-700 mb-2">
+                    Business Admin <span class="text-red-500">*</span>
+                </label>
+                <select id="business_admin_id" 
+                        name="business_admin_id" 
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 @error('business_admin_id') border-red-500 @enderror"
+                        required>
+                    <option value="">Select a Business Admin</option>
+                    @foreach($availableAdmins as $admin)
+                        <option value="{{ $admin->id }}" 
+                                {{ old('business_admin_id', $business->business_admin_id) == $admin->id ? 'selected' : '' }}>
+                            {{ $admin->name }} ({{ $admin->email }})
+                            @if($admin->business_id && $admin->business_id != $business->id)
+                                - Currently assigned to: {{ $admin->managedBusiness->name ?? 'Business #' . $admin->business_id }}
+                            @elseif($admin->business_id == $business->id)
+                                - Current admin
+                            @endif
+                        </option>
+                    @endforeach
+                </select>
+                @error('business_admin_id')
+                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                @enderror
+                @if($availableAdmins->isEmpty())
+                    <p class="text-amber-600 text-sm mt-1">
+                        <i class="fas fa-exclamation-triangle"></i> No business admins found. Create a business admin user first.
+                    </p>
+                @else
+                    <p class="text-blue-600 text-xs mt-1">
+                        <i class="fas fa-info-circle"></i> Note: Assigning a business admin who is already assigned to another business will reassign them to this business.
+                    </p>
+                @endif
+            </div>
+
+            <!-- Current Logo Display -->
+            @if($business->logo)
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Current Logo</label>
+                    <div class="flex items-center space-x-4">
+                        <img src="{{ asset('storage/' . $business->logo) }}" 
+                             alt="{{ $business->name }}" 
+                             class="h-20 w-20 rounded-lg border-2 border-gray-200 object-cover">
+                        <div class="text-sm text-gray-600">
+                            <p class="font-medium">Logo is currently set</p>
+                            <p class="text-xs text-gray-500">Upload a new image to replace it</p>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            <!-- Logo Upload -->
+            <div class="mb-6">
+                <label for="logo" class="block text-sm font-medium text-gray-700 mb-2">
+                    Business Logo {{ $business->logo ? '(Optional - Replace)' : '(Optional)' }}
+                </label>
+                <input type="file" 
+                       id="logo" 
+                       name="logo" 
+                       accept="image/*"
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 @error('logo') border-red-500 @enderror">
+                <p class="text-gray-500 text-xs mt-1">Maximum file size: 2MB. Supported formats: JPG, PNG, GIF</p>
+                @error('logo')
+                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <!-- Business Info Summary -->
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                    <i class="fas fa-info-circle text-blue-500 mr-2"></i>Business Information
+                </h3>
+                <dl class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <dt class="text-gray-500 font-medium">Business ID</dt>
+                        <dd class="text-gray-900 font-semibold">#{{ $business->id }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500 font-medium">Total Branches</dt>
+                        <dd class="text-gray-900 font-semibold">{{ $business->branches->count() }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500 font-medium">Total Staff</dt>
+                        <dd class="text-gray-900 font-semibold">{{ \App\Models\User::where('business_id', $business->id)->count() }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500 font-medium">Created</dt>
+                        <dd class="text-gray-900 font-semibold">{{ $business->created_at->format('M d, Y') }}</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- Branches Management -->
+            <div class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-700 flex items-center">
+                        <i class="fas fa-building text-green-500 mr-2"></i>Branches Management
+                    </h3>
+                    <button type="button" 
+                            onclick="showAddBranchModal()"
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg inline-flex items-center text-sm">
+                        <i class="fas fa-plus mr-2"></i>Add Branch
+                    </button>
+                </div>
+
+                @if($business->branches->isEmpty())
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-building text-4xl mb-3 opacity-50"></i>
+                        <p class="text-sm">No branches yet. Click "Add Branch" to create one.</p>
+                    </div>
+                @else
+                    <div class="space-y-3">
+                        @foreach($business->branches as $branch)
+                            <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <h4 class="font-semibold text-gray-800 mb-1">{{ $branch->name }}</h4>
+                                        <div class="text-sm text-gray-600 space-y-1">
+                                            @if($branch->address)
+                                                <p><i class="fas fa-map-marker-alt text-gray-400 mr-2"></i>{{ $branch->address }}</p>
+                                            @endif
+                                            @if($branch->region)
+                                                <p><i class="fas fa-map-marked-alt text-gray-400 mr-2"></i>{{ $branch->region }}</p>
+                                            @endif
+                                            @if($branch->contact)
+                                                <p><i class="fas fa-phone text-gray-400 mr-2"></i>{{ $branch->contact }}</p>
+                                            @endif
+                                            <p class="text-xs text-gray-500 mt-2">
+                                                <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                                    {{ \App\Models\User::where('branch_id', $branch->id)->whereIn('role', ['manager', 'cashier'])->count() }} Staff
+                                                </span>
+                                                <span class="bg-purple-100 text-purple-700 px-2 py-1 rounded ml-2">
+                                                    {{ $branch->branchProducts()->count() }} Products
+                                                </span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="flex space-x-2 ml-4">
+                                        <button type="button" 
+                                                onclick="editBranch({{ $branch->id }}, '{{ $branch->name }}', '{{ $branch->address }}', '{{ $branch->contact }}', '{{ $branch->region }}')"
+                                                class="text-blue-600 hover:text-blue-800 px-3 py-1 rounded text-sm">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>
+                                        <button type="button" 
+                                                onclick="deleteBranch({{ $branch->id }}, '{{ $branch->name }}')"
+                                                class="text-red-600 hover:text-red-800 px-3 py-1 rounded text-sm">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center justify-between pt-4 border-t">
+                <a href="{{ route('businesses.index') }}" 
+                   class="text-gray-600 hover:text-gray-800 inline-flex items-center">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Businesses
+                </a>
+                <div class="space-x-3">
+                    <a href="{{ route('businesses.show', $business->id) }}" 
+                       class="text-blue-600 hover:text-blue-800 inline-flex items-center">
+                        <i class="fas fa-eye mr-2"></i>View Details
+                    </a>
+                    <button type="submit" 
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg inline-flex items-center"
+                            {{ $availableAdmins->isEmpty() ? 'disabled' : '' }}>
+                        <i class="fas fa-save mr-2"></i>Update Business
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Branch Modal -->
+<div id="addBranchModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">Add New Branch</h3>
+        </div>
+        <form id="addBranchForm" action="{{ route('branches.store') }}" method="POST">
+            @csrf
+            <input type="hidden" name="business_id" value="{{ $business->id }}">
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Branch Name *</label>
+                <input type="text" name="name" required
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                <textarea name="address" rows="2"
+                          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"></textarea>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Contact</label>
+                <input type="text" name="contact"
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Region</label>
+                <select name="region" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500">
+                    <option value="">Select Region</option>
+                    <option value="Greater Accra">Greater Accra</option>
+                    <option value="Ashanti">Ashanti</option>
+                    <option value="Western">Western</option>
+                    <option value="Eastern">Eastern</option>
+                    <option value="Central">Central</option>
+                    <option value="Northern">Northern</option>
+                    <option value="Upper East">Upper East</option>
+                    <option value="Upper West">Upper West</option>
+                    <option value="Volta">Volta</option>
+                    <option value="Brong-Ahafo">Brong-Ahafo</option>
+                    <option value="Western North">Western North</option>
+                    <option value="Bono East">Bono East</option>
+                    <option value="Ahafo">Ahafo</option>
+                    <option value="Savannah">Savannah</option>
+                    <option value="North East">North East</option>
+                    <option value="Oti">Oti</option>
+                </select>
+            </div>
+            
+            <div class="flex justify-end space-x-2">
+                <button type="button" onclick="hideAddBranchModal()"
+                        class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
+                    Add Branch
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Branch Modal -->
+<div id="editBranchModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">Edit Branch</h3>
+        </div>
+        <form id="editBranchForm" method="POST">
+            @csrf
+            @method('PUT')
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Branch Name *</label>
+                <input type="text" id="edit_name" name="name" required
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                <textarea id="edit_address" name="address" rows="2"
+                          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Contact</label>
+                <input type="text" id="edit_contact" name="contact"
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Region</label>
+                <select id="edit_region" name="region" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">Select Region</option>
+                    <option value="Greater Accra">Greater Accra</option>
+                    <option value="Ashanti">Ashanti</option>
+                    <option value="Western">Western</option>
+                    <option value="Eastern">Eastern</option>
+                    <option value="Central">Central</option>
+                    <option value="Northern">Northern</option>
+                    <option value="Upper East">Upper East</option>
+                    <option value="Upper West">Upper West</option>
+                    <option value="Volta">Volta</option>
+                    <option value="Brong-Ahafo">Brong-Ahafo</option>
+                    <option value="Western North">Western North</option>
+                    <option value="Bono East">Bono East</option>
+                    <option value="Ahafo">Ahafo</option>
+                    <option value="Savannah">Savannah</option>
+                    <option value="North East">North East</option>
+                    <option value="Oti">Oti</option>
+                </select>
+            </div>
+            
+            <div class="flex justify-end space-x-2">
+                <button type="button" onclick="hideEditBranchModal()"
+                        class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                    Update Branch
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showAddBranchModal() {
+    document.getElementById('addBranchModal').classList.remove('hidden');
+}
+
+function hideAddBranchModal() {
+    document.getElementById('addBranchModal').classList.add('hidden');
+    document.getElementById('addBranchForm').reset();
+}
+
+function editBranch(id, name, address, contact, region) {
+    const form = document.getElementById('editBranchForm');
+    form.action = `/branches/${id}`;
+    
+    document.getElementById('edit_name').value = name;
+    document.getElementById('edit_address').value = address || '';
+    document.getElementById('edit_contact').value = contact || '';
+    document.getElementById('edit_region').value = region || '';
+    
+    document.getElementById('editBranchModal').classList.remove('hidden');
+}
+
+function hideEditBranchModal() {
+    document.getElementById('editBranchModal').classList.add('hidden');
+}
+
+function deleteBranch(id, name) {
+    if (confirm(`Are you sure you want to delete the branch "${name}"?\n\nThis will also remove all associated staff assignments and inventory data. This action cannot be undone.`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/branches/${id}`;
+        
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = '_token';
+        csrfToken.value = '{{ csrf_token() }}';
+        
+        const methodField = document.createElement('input');
+        methodField.type = 'hidden';
+        methodField.name = '_method';
+        methodField.value = 'DELETE';
+        
+        form.appendChild(csrfToken);
+        form.appendChild(methodField);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+@endsection

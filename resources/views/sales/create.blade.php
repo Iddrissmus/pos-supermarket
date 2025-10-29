@@ -29,7 +29,32 @@
                     </div>
                 @endif
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <!-- Customer Selection (Optional) -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Customer (Optional)</label>
+                        <select name="customer_id" id="customer-select" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-green-500 focus:border-green-500">
+                            <option value="">Walk-in Customer</option>
+                            @foreach($customers as $customer)
+                                <option value="{{ $customer->id }}" 
+                                        data-name="{{ $customer->display_name }}"
+                                        data-email="{{ $customer->email }}"
+                                        data-phone="{{ $customer->phone }}"
+                                        data-credit-limit="{{ $customer->credit_limit }}"
+                                        data-outstanding="{{ $customer->outstanding_balance }}"
+                                        {{ old('customer_id', request('customer_id')) == $customer->id ? 'selected' : '' }}>
+                                    {{ $customer->display_name }} (#{{ $customer->customer_number }})
+                                </option>
+                            @endforeach
+                        </select>
+                        <div id="customer-info" class="mt-2 text-xs text-gray-500 hidden">
+                            <div class="bg-blue-50 border border-blue-200 rounded p-2">
+                                <p class="customer-details"></p>
+                                <p class="credit-info"></p>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Branch Selection -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Branch *</label>
@@ -37,7 +62,7 @@
                             <option value="">Select Branch</option>
                             @foreach($branches as $branch)
                                 <option value="{{ $branch->id }}" {{ old('branch_id') == $branch->id ? 'selected' : '' }}>
-                                    {{ $branch->name }}
+                                    {{ $branch->display_label }}
                                 </option>
                             @endforeach
                         </select>
@@ -88,7 +113,7 @@
                                 <input type="number" name="items[0][price]" step="0.01" min="0" required
                                        class="price-input w-full border border-gray-300 rounded px-2 py-1 text-sm">
                             </div>
-                            <div class="col-span-1">
+                            <div class="col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Total</label>
                                 <input type="text" class="total-display w-full border border-gray-200 rounded px-2 py-1 text-sm bg-gray-100" readonly>
                             </div>
@@ -103,9 +128,12 @@
                     <div class="mt-4 p-3 bg-green-50 rounded-lg">
                         <div class="flex justify-between items-center">
                             <span class="font-medium text-gray-700">Total Sale Amount:</span>
-                            <span id="grand-total" class="text-xl font-bold text-green-600">$0.00</span>
+                            <span id="grand-total" class="text-xl font-bold text-green-600">0.00</span>
                         </div>
                     </div>
+
+                    <!-- Credit Warning -->
+                    <div id="credit-warning" class="mt-4"></div>
                 </div>
 
                 <!-- Actions -->
@@ -222,7 +250,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.available) {
                     row.querySelector('.stock-display').value = data.stock_quantity;
                     row.querySelector('.price-input').value = data.selling_price;
-                    row.querySelector('.product-info').textContent = `SKU: ${data.sku} | Cost: $${data.cost_price}`;
+                    row.querySelector('.product-info').textContent = `SKU: ${data.sku} | Cost: ₵${data.cost_price}`;
                     row.querySelector('.quantity-input').max = data.stock_quantity;
                 } else {
                     clearProductInfo(row);
@@ -254,7 +282,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const quantity = parseFloat(row.querySelector('.quantity-input').value) || 0;
         const price = parseFloat(row.querySelector('.price-input').value) || 0;
         const total = quantity * price;
-        row.querySelector('.total-display').value = '$' + total.toFixed(2);
+        row.querySelector('.total-display').value = '₵' + total.toFixed(2);
     }
 
     function calculateGrandTotal() {
@@ -264,8 +292,77 @@ document.addEventListener('DOMContentLoaded', function() {
             const price = parseFloat(row.querySelector('.price-input').value) || 0;
             grandTotal += quantity * price;
         });
-        document.getElementById('grand-total').textContent = '$' + grandTotal.toFixed(2);
+        document.getElementById('grand-total').textContent = '₵' + grandTotal.toFixed(2);
+        
+        // Check customer credit limit if customer is selected
+        checkCustomerCredit(grandTotal);
     }
+
+    function checkCustomerCredit(orderTotal) {
+        const customerSelect = document.getElementById('customer-select');
+        const selectedOption = customerSelect.options[customerSelect.selectedIndex];
+        
+        if (!selectedOption.value) return; // No customer selected
+        
+        const creditLimit = parseFloat(selectedOption.dataset.creditLimit) || 0;
+        const outstanding = parseFloat(selectedOption.dataset.outstanding) || 0;
+        const availableCredit = creditLimit - outstanding;
+        
+        if (creditLimit > 0 && orderTotal > availableCredit) {
+            const warningDiv = document.getElementById('credit-warning');
+            if (warningDiv) {
+                warningDiv.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded p-3 text-red-800">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        Order total (₵${orderTotal.toFixed(2)}) exceeds available credit (₵${availableCredit.toFixed(2)})
+                    </div>
+                `;
+            }
+        } else {
+            const warningDiv = document.getElementById('credit-warning');
+            if (warningDiv) {
+                warningDiv.innerHTML = '';
+            }
+        }
+    }
+
+    // Customer selection handler
+    document.getElementById('customer-select').addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const customerInfo = document.getElementById('customer-info');
+        
+        if (selectedOption.value) {
+            const name = selectedOption.dataset.name;
+            const email = selectedOption.dataset.email;
+            const phone = selectedOption.dataset.phone;
+            const creditLimit = parseFloat(selectedOption.dataset.creditLimit) || 0;
+            const outstanding = parseFloat(selectedOption.dataset.outstanding) || 0;
+            
+            let details = `${name}`;
+            if (email) details += ` • ${email}`;
+            if (phone) details += ` • ${phone}`;
+            
+            let creditInfo = '';
+            if (creditLimit > 0) {
+                const available = creditLimit - outstanding;
+                creditInfo = `Credit: ₵${available.toFixed(2)} available (₵${creditLimit.toFixed(2)} limit)`;
+                if (outstanding > 0) {
+                    creditInfo += ` • Outstanding: ₵${outstanding.toFixed(2)}`;
+                }
+            } else {
+                creditInfo = 'No credit terms';
+            }
+            
+            customerInfo.querySelector('.customer-details').textContent = details;
+            customerInfo.querySelector('.credit-info').textContent = creditInfo;
+            customerInfo.classList.remove('hidden');
+        } else {
+            customerInfo.classList.add('hidden');
+        }
+        
+        // Recalculate to check credit limits
+        calculateGrandTotal();
+    });
 
     // Initial setup
     updateRemoveButtons();
@@ -276,6 +373,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (initialBranchId) {
         populateProductSelect(document.querySelector('.product-select'), initialBranchId);
     }
+    
+    // Trigger customer info display if customer is pre-selected
+    document.getElementById('customer-select').dispatchEvent(new Event('change'));
 });
 </script>
 @endsection

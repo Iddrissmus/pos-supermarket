@@ -10,8 +10,16 @@ class CashierDashboardController extends Controller
 {
     public function index()
     {
-        $user = Auth::user();
-        $recent_sales = $user->sales()->with(['branch', 'items.product'])->latest()->take(10)->get();
+    /** @var \App\Models\User $user */
+    $user = Auth::user();
+        $recent_sales = $user->sales()
+            ->with([
+                'branch' => fn ($query) => $query->with('business:id,name'),
+                'items.product',
+            ])
+            ->latest()
+            ->take(10)
+            ->get();
         
         $stats = [
             'total_sales' => $user->sales()->count(),

@@ -15,8 +15,8 @@ class ManagerDashboardController extends Controller
     {
         $user = Auth::user();
         // Assuming managers are assigned to specific branches
-        $branchesQuery = Branch::where('manager_id', $user->id);
-        $branches = $branchesQuery->with('business')->get();
+        $branchesQuery = Branch::where('id', $user->branch_id);
+        $branches = $branchesQuery->with(['business:id,name', 'branchProducts'])->get();
 
         $businessCount = Business::count();
         $branchCount = $branchesQuery->count();
@@ -25,7 +25,7 @@ class ManagerDashboardController extends Controller
 
         // Compute total products across the manager's branches via aggregate query
         $branchIds = $branchesQuery->pluck('id');
-        $productCount = \App\Models\BranchProduct::whereIn('branch_id', $branchIds)->count();
+        $productCount = \App\Models\BranchProduct::where('branch_id', $user->branch_id)->count();
 
         $stats = [
             'total_businesses' => $businessCount,
@@ -33,7 +33,10 @@ class ManagerDashboardController extends Controller
             'total_users' => $userCount,
             'total_sales' => $saleCount,
             'total_products' => $productCount,
-            'recent_sales' => Sale::with(['branch', 'cashier'])->latest()->take(5)->get(),
+            'recent_sales' => Sale::with([
+                'branch' => fn ($query) => $query->with('business:id,name'),
+                'cashier',
+            ])->latest()->take(5)->get(),
         ];
 
         return view('dashboard.manager', compact('stats', 'branches'));

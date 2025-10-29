@@ -16,14 +16,14 @@ class StockReorderServiceTest extends TestCase
 
     public function test_creates_transfer_when_stock_below_reorder()
     {
-        $user = \App\Models\User::create([
+        $user = User::create([
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => 'password',
-            'role' => 'owner',
+            'role' => 'business_admin',
         ]);
 
-        $business = \App\Models\Business::create(['name' => 'Test Business', 'owner_id' => $user->id]);
+        $business = \App\Models\Business::create(['name' => 'Test Business', 'business_admin_id' => $user->id]);
 
         $branch = Branch::create([
             'business_id' => $business->id,

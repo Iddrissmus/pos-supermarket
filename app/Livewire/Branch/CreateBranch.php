@@ -18,7 +18,7 @@ class CreateBranch extends Component
 
     public function mount(): void
     {
-        $this->business_id = Business::where('owner_id', Auth::id())->value('id');
+        $this->business_id = Business::where('business_admin_id', Auth::id())->value('id');
     }
 
     protected function rules(): array

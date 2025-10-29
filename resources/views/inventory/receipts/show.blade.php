@@ -53,7 +53,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-500">Branch</label>
-                        <p class="mt-1 text-sm text-gray-900">{{ $stockReceipt->branch->name }}</p>
+                        <p class="mt-1 text-sm text-gray-900">{{ optional($stockReceipt->branch)->display_label ?? 'Unassigned branch' }}</p>
                     </div>
                     @if($stockReceipt->createdBy)
                     <div>
@@ -98,10 +98,10 @@
                                     {{ number_format($item->quantity) }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    ${{ number_format($item->unit_cost, 2) }}
+                                    ₵{{ number_format($item->unit_cost, 2) }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    ${{ number_format($item->line_total, 2) }}
+                                    ₵{{ number_format($item->line_total, 2) }}
                                 </td>
                             </tr>
                             @endforeach
@@ -112,7 +112,7 @@
                                     Total Amount:
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                                    ${{ number_format($stockReceipt->total_amount, 2) }}
+                                    ₵{{ number_format($stockReceipt->total_amount, 2) }}
                                 </td>
                             </tr>
                         </tfoot>
@@ -137,12 +137,12 @@
                     </div>
                     <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-600">Total Value</span>
-                        <span class="text-sm font-medium text-gray-900">${{ number_format($stockReceipt->total_amount, 2) }}</span>
+                        <span class="text-sm font-medium text-gray-900">₵{{ number_format($stockReceipt->total_amount, 2) }}</span>
                     </div>
                     <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-600">Average Cost</span>
                         <span class="text-sm font-medium text-gray-900">
-                            ${{ number_format($stockReceipt->items->avg('unit_cost'), 2) }}
+                            ₵{{ number_format($stockReceipt->items->avg('unit_cost'), 2) }}
                         </span>
                     </div>
                 </div>

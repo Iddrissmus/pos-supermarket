@@ -3,88 +3,185 @@
 @section('title', 'Inventory Management')
 
 @section('content')
-<div class="p-6">
+<div class="p-6 space-y-6">
     <!-- Notification Container -->
     <div id="notification-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
 
+    <!-- Success/Error Messages -->
     @if (session('success'))
-        <div class="mb-4 p-4 bg-green-100 text-green-800 rounded-lg">
-            {{ session('success') }}
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
+            <span class="block sm:inline">{{ session('success') }}</span>
         </div>
     @endif
+    
     @if (session('error'))
-        <div class="mb-4 p-4 bg-red-100 text-red-800 rounded-lg">
-            {{ session('error') }}
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+            <span class="block sm:inline">{{ session('error') }}</span>
         </div>
     @endif
 
     @if ($errors->any())
-        <div class="mb-4 p-4 bg-yellow-100 text-yellow-800 rounded-lg">
-            <ul class="list-disc list-inside pl-5">
+        <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative" role="alert">
+            <ul class="list-disc list-inside">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
                 @endforeach
             </ul>
         </div>
     @endif
-    <!-- Green Header Bar -->
-    <div class="bg-green-600 text-white px-6 py-4 rounded-t-lg mb-6">
-        <div class="flex justify-between items-center">
-            <h1 class="text-2xl font-bold">Inventory Management</h1>
+
+    <!-- Header -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-semibold text-gray-800">Inventory Management</h1>
+                <p class="text-sm text-gray-600 mt-1">Manage your products and track inventory across branches</p>
+            </div>
             <div class="flex space-x-3">
-                <button class="bg-green-700 hover:bg-green-800 px-4 py-2 rounded-lg font-medium transition-colors">
-                    Add
-                </button>
-                <button class="bg-green-700 hover:bg-green-800 px-4 py-2 rounded-lg font-medium transition-colors">
-                    Edit
-                </button>
+                <a href="{{ route('product.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center">
+                    <i class="fas fa-plus mr-2"></i>Add Product
+                </a>
+                {{-- <a href="{{route('layouts.assign')}}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center">
+                    <i class="fas fa-download mr-2"></i>Assign to Branch
+                </a> --}}
             </div>
         </div>
     </div>
 
-    <!-- Product Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <!-- All Products Card -->
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-2">Product Summary</h3>
-            <div class="grid grid-cols-3 gap-4">
-                <div class="text-center">
-                    <div class="text-2xl font-bold text-blue-600">350</div>
-                    <div class="text-sm text-gray-600">All Products</div>
+    <!-- Financial Metrics Cards -->
+    @php
+        $totalSellingPrice = 0;
+        $totalCostPrice = 0;
+        foreach($products as $item) {
+            $branchProduct = $item->product ? $item : null;
+            $sellingPrice = $branchProduct->price ?? 0;
+            $costPrice = $branchProduct->cost_price ?? 0;
+            $quantity = $branchProduct->stock_quantity ?? 0;
+            
+            $totalSellingPrice += ($sellingPrice * $quantity);
+            $totalCostPrice += ($costPrice * $quantity);
+        }
+        $totalMargin = $totalSellingPrice - $totalCostPrice;
+        $marginPercentage = $totalCostPrice > 0 ? (($totalMargin / $totalCostPrice) * 100) : 0;
+    @endphp
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Total Selling Price -->
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Total Selling Price</p>
+                    <p class="text-3xl font-bold text-gray-800 mt-2">
+                        GH₵{{ number_format($totalSellingPrice, 2) }}
+                    </p>
+                    <p class="text-xs text-gray-500 mt-1">Value of all inventory at selling price</p>
                 </div>
-                <div class="text-center">
-                    <div class="text-2xl font-bold text-green-600">102</div>
-                    <div class="text-sm text-gray-600">In Store</div>
-                </div>
-                <div class="text-center border-2 border-red-500 rounded-lg p-2">
-                    <div class="text-2xl font-bold text-red-600">12</div>
-                    <div class="text-sm text-gray-600">Low In Stock</div>
+                <div class="bg-blue-100 rounded-full p-4">
+                    <i class="fas fa-tag text-blue-600 text-2xl"></i>
                 </div>
             </div>
         </div>
 
-        <!-- Categories Card -->
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-2">Categories</h3>
-            <div class="text-gray-500 text-center py-8">
-                <i class="fas fa-folder-open text-4xl mb-2"></i>
-                <p>No categories available</p>
+        <!-- Total Cost Price -->
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-orange-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Total Cost Price</p>
+                    <p class="text-3xl font-bold text-gray-800 mt-2">
+                        GH₵{{ number_format($totalCostPrice, 2) }}
+                    </p>
+                    <p class="text-xs text-gray-500 mt-1">Total cost of all inventory</p>
+                </div>
+                <div class="bg-orange-100 rounded-full p-4">
+                    <i class="fas fa-dollar-sign text-orange-600 text-2xl"></i>
+                </div>
             </div>
         </div>
 
-        <!-- Quick Actions Card -->
+        <!-- Total Margin -->
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Total Margin</p>
+                    <p class="text-3xl font-bold text-gray-800 mt-2">
+                        GH₵{{ number_format($totalMargin, 2) }}
+                    </p>
+                    <p class="text-xs text-gray-500 mt-1">Potential profit from inventory</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-4">
+                    <i class="fas fa-chart-line text-green-600 text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Margin Percentage -->
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Margin Percentage</p>
+                    <p class="text-3xl font-bold text-gray-800 mt-2">
+                        {{ number_format($marginPercentage, 1) }}%
+                    </p>
+                    <p class="text-xs text-gray-500 mt-1">Average profit margin</p>
+                </div>
+                <div class="bg-purple-100 rounded-full p-4">
+                    <i class="fas fa-percent text-purple-600 text-2xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <!-- Total Products -->
         <div class="bg-white rounded-lg shadow-md p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-2">Quick Actions</h3>
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Total Products</p>
+                    <p class="text-3xl font-bold text-blue-600 mt-2">{{$stats['total_products'] ?? 0}}</p>
+                </div>
+                <div class="bg-blue-100 rounded-full p-3">
+                    <i class="fas fa-boxes text-blue-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- In Store -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">In Store</p>
+                    <p class="text-3xl font-bold text-green-600 mt-2">{{$stats['in_store_products'] ?? 0}}</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-3">
+                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Low Stock -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Low Stock</p>
+                    <p class="text-3xl font-bold text-red-600 mt-2">{{$stats['low_stock_products'] ?? 0}}</p>
+                </div>
+                <div class="bg-red-100 rounded-full p-3">
+                    <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <p class="text-gray-500 text-sm font-medium mb-3">Quick Actions</p>
             <div class="space-y-2">
-                <a href="{{ route('product.create') }}" class="w-full inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">
-                    <i class="fas fa-plus mr-2"></i>Add New Product
+                <a href="{{route('stock-receipts.index')}}" class="block text-center bg-purple-100 hover:bg-purple-200 text-purple-700 py-2 px-3 rounded-lg text-sm font-medium transition-colors">
+                    <i class="fas fa-truck mr-1"></i>Receive Stock
                 </a>
-                <a href="{{route('layouts.assign')}}" class="w-full inline-flex items-center justify-center bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">
-                    <i class="fas fa-download mr-2"></i>Assign Product to Branch
+                <a href="{{route('sales.report')}}" class="block text-center bg-yellow-100 hover:bg-yellow-200 text-yellow-700 py-2 px-3 rounded-lg text-sm font-medium transition-colors">
+                    <i class="fas fa-chart-bar mr-1"></i>Sales Report
                 </a>
-                <button class="w-full bg-yellow-600 hover:bg-yellow-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">
-                    <i class="fas fa-chart-bar mr-2"></i>Generate Report
-                </button>
             </div>
         </div>
     </div>
@@ -144,14 +241,22 @@
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                    @forelse($products as $product)
+                    @forelse($products as $item)
+                        @php
+                            // Handle both BranchProduct and Product objects
+                            $product = $item->product ?? $item;
+                            $branchProduct = $item->product ? $item : null;
+                        @endphp
                         <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $product->name }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ \Illuminate\Support\Str::limit($product->description, 80) }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${{ number_format($product->price ?? 0, 2) }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $product->stock ?? 0 }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $product->cost_price ?? '-' }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $product->name ?? 'N/A' }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ \Illuminate\Support\Str::limit($product->description ?? 'No description', 80) }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">GH₵{{ number_format($branchProduct->price ?? $product->price ?? 0, 2) }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $branchProduct->stock_quantity ?? $product->stock ?? 0 }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">GH₵{{ number_format($branchProduct->cost_price ?? $product->cost_price ?? 0, 2) }}</td>
                             <td class="px-4 py-2 whitespace-nowrap text-right space-x-2">
+                                @if($branchProduct)
+                                    <span class="text-xs text-gray-500">{{ $branchProduct->branch->name ?? 'Branch' }}</span><br>
+                                @endif
                                 <button type="button" class="px-3 py-1 border rounded-lg">Edit</button>
                                 <button type="button" class="px-3 py-1 border rounded-lg text-red-600">Delete</button>
                             </td>
@@ -163,24 +268,29 @@
                     @endforelse
                 </tbody>
             </table>
-            {{-- <div class="p-4">{{ $products->links() }}</div> --}}
         </div>
 
         <!-- Pagination -->
-        <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
-            <div class="flex items-center justify-between">
-                <div class="text-sm text-gray-700">
-                    Showing <span class="font-medium">1</span> to <span class="font-medium">4</span> of <span class="font-medium">350</span> results
-                </div>
-                <div class="flex space-x-2">
-                    <button class="px-3 py-1 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Previous</button>
-                    <button class="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm">1</button>
-                    <button class="px-3 py-1 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">2</button>
-                    <button class="px-3 py-1 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">3</button>
-                    <button class="px-3 py-1 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Next</button>
+        @if($products->hasPages())
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-gray-700">
+                        Showing <span class="font-medium">{{ $products->firstItem() }}</span> 
+                        to <span class="font-medium">{{ $products->lastItem() }}</span> 
+                        of <span class="font-medium">{{ $products->total() }}</span> results
+                    </div>
+                    <div>
+                        {{ $products->links() }}
+                    </div>
                 </div>
             </div>
-        </div>
+        @else
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div class="text-sm text-gray-700 text-center">
+                    Showing all <span class="font-medium">{{ $products->count() }}</span> results
+                </div>
+            </div>
+        @endif
     </div>
 </div>
 

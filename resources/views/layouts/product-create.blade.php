@@ -38,12 +38,19 @@
                         <label class="block text-sm font-medium text-gray-700">Branch</label>
                         <select id="product_branch" name="branch_id" class="mt-1 block w-full border rounded-md p-2">
                             <option value="">-- Select branch (optional) --</option>
-                            @if(isset($branches) && $branches->count())
+                            @if(isset($branches) && $branches->count() > 0)
                                 @foreach($branches as $branch)
-                                    <option value="{{ $branch->id }}">{{ $branch->name }}</option>
+                                    <option value="{{ $branch->id }}">{{ $branch->display_label }}</option>
                                 @endforeach
+                            @else
+                                <option disabled>No branches available</option>
                             @endif
                         </select>
+                        @if(isset($branches))
+                            <small class="text-gray-500">{{ $branches->count() }} branch(es) available</small>
+                        @else
+                            <small class="text-red-500">Branches data not loaded</small>
+                        @endif
                     </div>
                 </div>
 

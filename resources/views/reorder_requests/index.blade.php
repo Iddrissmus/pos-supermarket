@@ -19,7 +19,7 @@
             <tbody>
                 @foreach($transfers as $t)
                 <tr>
-                    <td>{{ $t->toBranch->name ?? 'Branch '.$t->to_branch_id }}</td>
+                    <td>{{ optional($t->toBranch)->display_label ?? 'Branch '.$t->to_branch_id }}</td>
                     <td>{{ $t->product->name ?? 'Product '.$t->product_id }}</td>
                     <td>{{ $t->quantity }}</td>
                     <td>{{ $t->created_at->format('Y-m-d H:i') }}</td>

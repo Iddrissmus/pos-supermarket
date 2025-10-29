@@ -64,7 +64,7 @@
                     </div>
                     <div>
                         <p class="text-sm font-medium text-gray-600">Total Revenue</p>
-                        <p class="text-2xl font-bold text-gray-900">${{ number_format($summary['total_revenue'], 2) }}</p>
+                        <p class="text-2xl font-bold text-gray-900">₵{{ number_format($summary['total_revenue'], 2) }}</p>
                     </div>
                 </div>
             </div>
@@ -76,7 +76,7 @@
                     </div>
                     <div>
                         <p class="text-sm font-medium text-gray-600">Total COGS</p>
-                        <p class="text-2xl font-bold text-gray-900">${{ number_format($summary['total_cogs'], 2) }}</p>
+                        <p class="text-2xl font-bold text-gray-900">₵{{ number_format($summary['total_cogs'], 2) }}</p>
                     </div>
                 </div>
             </div>
@@ -88,7 +88,7 @@
                     </div>
                     <div>
                         <p class="text-sm font-medium text-gray-600">Gross Profit</p>
-                        <p class="text-2xl font-bold text-gray-900">${{ number_format($summary['total_profit'], 2) }}</p>
+                        <p class="text-2xl font-bold text-gray-900">₵{{ number_format($summary['total_profit'], 2) }}</p>
                         <p class="text-sm text-gray-500">{{ number_format($summary['average_margin'], 1) }}% margin</p>
                     </div>
                 </div>
@@ -197,17 +197,17 @@
                                         <div class="text-sm text-gray-500">{{ $sale->cashier->name }}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-900">{{ $sale->branch->name }}</div>
+                                        <div class="text-sm text-gray-900">{{ optional($sale->branch)->display_label ?? 'Unassigned branch' }}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm font-medium text-gray-900">${{ number_format($sale->total, 2) }}</div>
+                                        <div class="text-sm font-medium text-gray-900">₵{{ number_format($sale->total, 2) }}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-900">${{ number_format($cogs, 2) }}</div>
+                                        <div class="text-sm text-gray-900">{{ number_format($cogs, 2) }}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm font-medium {{ $profit >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                            ${{ number_format($profit, 2) }}
+                                            ₵{{ number_format($profit, 2) }}
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
@@ -292,7 +292,7 @@
                 y: {
                     ticks: {
                         color: '#4b5563',
-                        callback: (value) => '$' + Number(value).toLocaleString()
+                        callback: (value) => '₵' + Number(value).toLocaleString()
                     },
                     grid: { color: 'rgba(209, 213, 219, 0.3)' }
                 }
@@ -306,7 +306,7 @@
                         label: (context) => {
                             const label = context.dataset.label || '';
                             const value = context.parsed.y ?? context.parsed;
-                            return `${label}: $${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+                            return `${label}: ₵${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
                         }
                     }
                 }
@@ -467,7 +467,7 @@
                                 color: '#4b5563',
                                 callback: (value) => {
                                     const amount = Math.abs(Number(value)).toLocaleString(undefined, { minimumFractionDigits: 2 });
-                                    return `${value < 0 ? '-$' : '$'}${amount}`;
+                                    return `${value < 0 ? '-₵' : '₵'}${amount}`;
                                 }
                             },
                             grid: { color: 'rgba(209, 213, 219, 0.3)' },
@@ -489,7 +489,7 @@
                                     const label = context.dataset.label || '';
                                     const raw = context.parsed.y ?? context.parsed;
                                     const formatted = Math.abs(raw).toLocaleString(undefined, { minimumFractionDigits: 2 });
-                                    return `${label}: ${raw < 0 ? '-$' : '$'}${formatted}`;
+                                    return `${label}: ${raw < 0 ? '-₵' : '₵'}${formatted}`;
                                 }
                             }
                         }

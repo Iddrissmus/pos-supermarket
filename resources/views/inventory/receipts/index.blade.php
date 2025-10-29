@@ -59,7 +59,7 @@
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-900">{{ $receipt->branch->name }}</div>
+                                        <div class="text-sm text-gray-900">{{ optional($receipt->branch)->display_label ?? 'Unassigned branch' }}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm text-gray-900">{{ $receipt->supplier->name }}</div>
@@ -74,7 +74,7 @@
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm font-medium text-gray-900">
-                                            ${{ number_format($receipt->total_amount, 2) }}
+                                            ₵{{ number_format($receipt->total_amount, 2) }}
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">

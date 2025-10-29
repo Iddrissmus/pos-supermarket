@@ -6,11 +6,40 @@ use Illuminate\Database\Eloquent\Model;
 
 class Branch extends Model
 {
-    protected $fillable = ['business_id', 'manager_id', 'name', 'contact', 'latitude', 'longitude', 'address'];
+    protected $fillable = ['business_id', 'manager_id', 'name', 'contact', 'latitude', 'longitude', 'address', 'region'];
+
+    public static $ghanaRegions = [
+        'Greater Accra',
+        'Ashanti',
+        'Western',
+        'Eastern',
+        'Central',
+        'Northern',
+        'Upper East',
+        'Upper West',
+        'Volta',
+        'Brong-Ahafo',
+        'Western North',
+        'Bono East',
+        'Ahafo',
+        'Savannah',
+        'North East',
+        'Oti',
+    ];
 
     public function business()
     {
         return $this->belongsTo(Business::class);
+    }
+
+    public function manager()
+    {
+        return $this->hasOne(User::class)->where('role', 'manager');
+    }
+
+    public function cashier()
+    {
+        return $this->hasOne(User::class)->where('role', 'cashier');
     }
 
     public function products() 
@@ -33,5 +62,16 @@ class Branch extends Model
     public function stockLogs()
     {
         return $this->hasMany(StockLog::class);
+    }
+
+    public function getDisplayLabelAttribute(): string
+    {
+        $this->loadMissing('business:id,name');
+
+        if ($this->business && $this->business->name) {
+            return sprintf('%s — %s', $this->name, $this->business->name);
+        }
+
+        return $this->name ?? 'Unnamed branch';
     }
 }

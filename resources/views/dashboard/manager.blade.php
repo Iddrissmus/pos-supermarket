@@ -4,130 +4,200 @@
 
 @section('content')
 <div class="p-6">
-    <!-- Green Header Bar -->
-    <div class="bg-green-600 text-white px-6 py-4 rounded-t-lg mb-6">
-        <div class="flex justify-between items-center">
-            <h1 class="text-2xl font-bold">Manager Dashboard</h1>
-            <div class="flex space-x-3">
-                <button class="bg-green-700 hover:bg-green-800 px-4 py-2 rounded-lg font-medium transition-colors">
-                    <i class="fas fa-plus mr-2"></i>Manage Branch
-                </button>
+    @php
+        $branch = Auth::user()->branch;
+        $cashiers = $branch ? \App\Models\User::where('role', 'cashier')->where('branch_id', $branch->id)->count() : 0;
+    @endphp
+
+    <!-- Welcome Header -->
+    <div class="bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg shadow-lg p-8 mb-8 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold mb-2">Branch Manager Dashboard</h1>
+                <p class="text-green-100">Branch: <span class="font-semibold">{{ $branch->name ?? 'No Branch Assigned' }}</span></p>
+                <p class="text-green-100 text-sm mt-1">Welcome back, {{ Auth::user()->name }}!</p>
+            </div>
+            <div class="text-6xl opacity-50">
+                <i class="fas fa-users-cog"></i>
             </div>
         </div>
     </div>
 
-    <!-- Welcome Section -->
-    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">Welcome, {{ auth()->user()->name }}!</h2>
-        <p class="text-gray-600">This is your manager dashboard. You can manage your assigned branches, monitor inventory, and view sales performance.</p>
-    </div>
-
-    <!-- Quick Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <div class="flex items-center">
-                <div class="p-3 rounded-full bg-blue-100 text-blue-600">
-                    <i class="fas fa-store text-xl"></i>
+    @if(!$branch)
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg mb-8">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-exclamation-triangle text-yellow-400 text-xl"></i>
                 </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Managed Branches</p>
-                    <p class="text-2xl font-semibold text-gray-900">{{ $stats['total_branches'] ?? 0 }}</p>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">No Branch Assigned</h3>
+                    <p class="text-sm text-yellow-700 mt-1">
+                        You are not currently assigned to any branch. Please contact the Business Administrator.
+                    </p>
                 </div>
             </div>
         </div>
-
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <div class="flex items-center">
-                <div class="p-3 rounded-full bg-green-100 text-green-600">
-                    <i class="fas fa-box text-xl"></i>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Total Products</p>
-                    <p class="text-2xl font-semibold text-gray-900">{{ $stats['total_products'] ?? 0 }}</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <div class="flex items-center">
-                <div class="p-3 rounded-full bg-purple-100 text-purple-600">
-                    <i class="fas fa-chart-line text-xl"></i>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Performance</p>
-                    <p class="text-2xl font-semibold text-gray-900">Good</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Branches Overview -->
-    @if(isset($branches) && $branches->count() > 0)
-    <div class="bg-white rounded-lg shadow-md mb-8">
-        <div class="p-6 border-b border-gray-200">
-            <h2 class="text-xl font-semibold text-gray-800">Your Branches</h2>
-        </div>
-        <div class="p-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                @foreach($branches as $branch)
-                <div class="border rounded-lg p-4">
-                    <h3 class="font-semibold text-gray-900 mb-2">{{ $branch->name }}</h3>
-                    <p class="text-sm text-gray-600 mb-2">{{ $branch->business->name ?? 'Unknown Business' }}</p>
-                    <p class="text-sm text-gray-500 mb-2">{{ $branch->address ?? 'No address' }}</p>
-                    <div class="flex justify-between text-sm text-gray-500">
-                        <span>{{ $branch->branchProducts->count() }} products</span>
-                        <span>{{ $branch->status ?? 'Active' }}</span>
+    @else
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Branch</p>
+                        <p class="text-3xl font-bold text-green-600 mt-2">{{ $branch->name }}</p>
+                    </div>
+                    <div class="bg-green-100 rounded-full p-4">
+                        <i class="fas fa-store text-green-600 text-2xl"></i>
                     </div>
                 </div>
-                @endforeach
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Cashiers</p>
+                        <p class="text-3xl font-bold text-blue-600 mt-2">{{ $cashiers }}</p>
+                    </div>
+                    <div class="bg-blue-100 rounded-full p-4">
+                        <i class="fas fa-user-friends text-blue-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Today's Sales</p>
+                        <p class="text-3xl font-bold text-purple-600 mt-2">{{ $stats['today_sales'] ?? 0 }}</p>
+                    </div>
+                    <div class="bg-purple-100 rounded-full p-4">
+                        <i class="fas fa-chart-line text-purple-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Products</p>
+                        <p class="text-3xl font-bold text-orange-600 mt-2">{{ $stats['total_products'] ?? 0 }}</p>
+                    </div>
+                    <div class="bg-orange-100 rounded-full p-4">
+                        <i class="fas fa-box text-orange-600 text-2xl"></i>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">
+                <i class="fas fa-bolt text-yellow-500 mr-2"></i>Quick Actions
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <a href="{{ route('manager.cashiers.index') }}" class="flex items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors border-2 border-green-200">
+                    <div class="bg-green-600 rounded-full p-3 mr-4">
+                        <i class="fas fa-user-friends text-white"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800">Manage Cashiers</p>
+                        <p class="text-sm text-gray-600">Assign and manage staff</p>
+                    </div>
+                </a>
+
+                <a href="{{ route('manager.item-requests.index') }}" class="flex items-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border-2 border-blue-200">
+                    <div class="bg-blue-600 rounded-full p-3 mr-4">
+                        <i class="fas fa-box-open text-white"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800">Request Items</p>
+                        <p class="text-sm text-gray-600">Request stock from admin</p>
+                    </div>
+                </a>
+
+                <a href="{{ route('customers.index') }}" class="flex items-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors border-2 border-purple-200">
+                    <div class="bg-purple-600 rounded-full p-3 mr-4">
+                        <i class="fas fa-address-book text-white"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800">Customers</p>
+                        <p class="text-sm text-gray-600">View customer list</p>
+                    </div>
+                </a>
+
+                <a href="{{ route('reorder.requests') }}" class="flex items-center p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors border-2 border-orange-200">
+                    <div class="bg-orange-600 rounded-full p-3 mr-4">
+                        <i class="fas fa-redo text-white"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800">Reorder Requests</p>
+                        <p class="text-sm text-gray-600">View stock requests</p>
+                    </div>
+                </a>
+
+                <a href="{{ route('notifications.index') }}" class="flex items-center p-4 bg-cyan-50 hover:bg-cyan-100 rounded-lg transition-colors border-2 border-cyan-200">
+                    <div class="bg-cyan-600 rounded-full p-3 mr-4">
+                        <i class="fas fa-bell text-white"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800">Notifications</p>
+                        <p class="text-sm text-gray-600">View alerts</p>
+                    </div>
+                </a>
+
+                <a href="{{ route('manager.daily-sales') }}" class="flex items-center p-4 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border-2 border-red-200">
+                    <div class="bg-red-600 rounded-full p-3 mr-4">
+                        <i class="fas fa-cash-register text-white"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800">Daily Sales</p>
+                        <p class="text-sm text-gray-600">Monitor sales activity</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Branch Info -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">
+                <i class="fas fa-info-circle text-green-600 mr-2"></i>Branch Information
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="border-2 border-gray-200 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-800 mb-3">Branch Details</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Name:</span>
+                            <span class="font-medium">{{ $branch->name }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Location:</span>
+                            <span class="font-medium">{{ $branch->location ?? 'N/A' }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Status:</span>
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                Active
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-2 border-gray-200 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-800 mb-3">Staff Summary</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Total Cashiers:</span>
+                            <span class="font-medium">{{ $cashiers }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Manager:</span>
+                            <span class="font-medium">{{ Auth::user()->name }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     @endif
-
-    <!-- Recent Sales -->
-    <div class="bg-white rounded-lg shadow-md">
-        <div class="p-6 border-b border-gray-200">
-            <h2 class="text-xl font-semibold text-gray-800">Recent Sales</h2>
-        </div>
-        <div class="p-6">
-            @if(isset($stats['recent_sales']) && $stats['recent_sales']->count() > 0)
-                <div class="space-y-4">
-                    @foreach($stats['recent_sales'] as $sale)
-                    <div class="flex items-center space-x-4">
-                        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-receipt text-green-600"></i>
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-sm font-medium text-gray-900">Sale #{{ $sale->id }} - {{ $sale->branch->name ?? 'Unknown Branch' }}</p>
-                            <p class="text-sm text-gray-500">{{ $sale->created_at->diffForHumans() }}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-sm font-medium text-gray-900">${{ number_format($sale->total ?? 0, 2) }}</p>
-                        </div>
-                    </div>
-                    @endforeach
-                </div>
-            @else
-                <div class="text-center py-8">
-                    <i class="fas fa-shopping-cart text-gray-400 text-4xl mb-4"></i>
-                    <p class="text-gray-500">No recent sales found.</p>
-                </div>
-            @endif
-        </div>
-    </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Update the active sidebar item to "Dashboard"
-    const sidebarItems = document.querySelectorAll('.sidebar-item');
-    sidebarItems.forEach(item => {
-        item.classList.remove('active');
-        if (item.textContent.includes('Dashboard')) {
-            item.classList.add('active');
-        }
-    });
-});
-</script>
 @endsection 

@@ -13,7 +13,7 @@
         <form method="POST" action="{{ route('register.post') }}">
             @csrf
             <div class="mb-4">
-                <label class="block mb-1">Name</label>
+                <label class="block mb-1">Full Name</label>
                 <input type="text" 
                        name="name" 
                        value="{{ old('name') }}"
@@ -47,11 +47,11 @@
             </div>
             <div class="mb-4">
                 <label class="block mb-1">Role</label>
-                <select name="role" 
+                <select id="role" name="role" 
                         class="w-full border rounded px-3 py-2 @error('role') border-red-500 @enderror" 
                         required>
                     <option value="">Select Role</option>
-                    <option value="owner" {{ old('role') == 'owner' ? 'selected' : '' }}>Owner</option>
+                    <option value="business_admin" {{ old('role') == 'business_admin' ? 'selected' : '' }}>Business Admin</option>
                     <option value="manager" {{ old('role') == 'manager' ? 'selected' : '' }}>Manager</option>
                     <option value="cashier" {{ old('role') == 'cashier' ? 'selected' : '' }}>Cashier</option>
                 </select>
@@ -69,5 +69,6 @@
             </a>
         </div>
     </div>
+
 </body>
 </html>

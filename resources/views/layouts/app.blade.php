@@ -12,30 +12,6 @@
     {{-- If on older WireUI, use: @wireUiScripts --}}
     @stack('styles')
     <style>
-        .sidebar-item {
-            transition: all 0.3s ease;
-        }
-        .sidebar-item:hover {
-            background-color: #e0f2fe;
-        }
-        .sidebar-item.active {
-            background-color: #e0f2fe;
-            color: #1e40af;
-        }
-        .sidebar-item.active i {
-            color: #1e40af;
-        }
-        .badge {
-            background-color: #ef4444;
-            color: white;
-            border-radius: 50%;
-            padding: 2px 6px;
-            font-size: 10px;
-            font-weight: bold;
-        }
-        .content-area {
-            margin-left: 280px;
-        }
         .sidebar {
             width: 280px;
             height: calc(100vh - 60px);
@@ -44,7 +20,68 @@
             top: 60px;
             z-index: 40;
             overflow-y: auto;
+            transition: width 0.3s ease;
         }
+        
+        body.collapsed .sidebar {
+            width: 64px;
+        }
+        
+        body.collapsed .sidebar-text {
+            display: none;
+        }
+        
+        body.collapsed .sidebar-footer {
+            display: none;
+        }
+        
+        body.collapsed .sidebar-item {
+            justify-content: center;
+        }
+        
+        .sidebar-icon {
+            min-width: 20px;
+            text-align: center;
+        }
+        
+        .sidebar-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .sidebar-item {
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar-item:hover {
+            background-color: #e0f2fe;
+        }
+        
+        .sidebar-item.active {
+            background-color: #dbeafe;
+            border-left: 3px solid #2563eb;
+        }
+        
+        .sidebar-item.active i {
+            color: #2563eb;
+        }
+        
+        .sidebar-item.active a,
+        .sidebar-item.active span {
+            color: #2563eb;
+            font-weight: 600;
+        }
+        
+        .badge {
+            background-color: #ef4444;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
         .top-bar {
             height: 60px;
             background-color: #374151;
@@ -54,17 +91,17 @@
             right: 0;
             z-index: 50;
         }
+        
         .main-content {
             margin-top: 60px;
             margin-left: 0;
-            transition: margin-left 0.2s ease;
+            transition: margin-left 0.3s ease;
         }
+        
         body.auth .main-content {
             margin-left: 280px;
         }
-        body.collapsed .sidebar {
-            width: 64px;
-        }
+        
         body.auth.collapsed .main-content {
             margin-left: 64px;
         }

@@ -25,7 +25,7 @@ class StockReceiptController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        $receipts = StockReceipt::with(['branch', 'supplier', 'createdBy'])
+    $receipts = StockReceipt::with(['branch.business', 'supplier', 'createdBy'])
             ->when($user->branch_id, function ($query) use ($user) {
                 // If user is tied to a specific branch, only show their receipts
                 return $query->where('branch_id', $user->branch_id);
@@ -43,8 +43,8 @@ class StockReceiptController extends Controller
     {
         $user = Auth::user();
         $branches = $user->branch_id 
-            ? Branch::where('id', $user->branch_id)->get()
-            : Branch::all();
+            ? Branch::with('business:id,name')->where('id', $user->branch_id)->get()
+            : Branch::with('business:id,name')->get();
         
         $suppliers = Supplier::where('is_active', true)->get();
         $products = Product::with('branchProducts')->get();
@@ -85,7 +85,7 @@ class StockReceiptController extends Controller
      */
     public function show(StockReceipt $stockReceipt)
     {
-        $stockReceipt->load(['items.product', 'supplier', 'branch', 'createdBy']);
+    $stockReceipt->load(['items.product', 'supplier', 'branch.business', 'createdBy']);
         
         return view('inventory.receipts.show', compact('stockReceipt'));
     }

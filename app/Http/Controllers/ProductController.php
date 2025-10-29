@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Business;
+use App\Models\BranchProduct;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 
 class ProductController extends Controller
@@ -14,10 +17,55 @@ class ProductController extends Controller
      */
     public function index()
     {
-        $perPage = request()->query('per_page', 25);
-        $products = Product::with('business')
-            ->orderBy('created_at', 'desc')
-            ->paginate((int)$perPage);
+        $user = Auth::user();
+        
+        if ($user->role === 'manager' && $user->branch_id) {
+            // Manager - show only their branch's products with pagination
+            $products = BranchProduct::where('branch_id', $user->branch_id)
+                ->with('product')
+                ->paginate(15);
+                
+            $totalProducts = BranchProduct::where('branch_id', $user->branch_id)->count();
+            $inStoreProducts = BranchProduct::where('branch_id', $user->branch_id)
+                ->where('stock_quantity', '>', 0)->count();
+            $lowStockProducts = BranchProduct::where('branch_id', $user->branch_id)
+                ->where(function($query) {
+                    $query->whereColumn('stock_quantity', '<=', 'reorder_level')
+                          ->orWhere('stock_quantity', '<=', 10);
+                })->count();
+            
+        } elseif ($user->role === 'business_admin' && $user->branch_id) {
+            // Business Admin - show only their branch's products with pagination
+            $products = BranchProduct::where('branch_id', $user->branch_id)
+                ->with('product')
+                ->paginate(15);
+                
+            $totalProducts = BranchProduct::where('branch_id', $user->branch_id)->count();
+            $inStoreProducts = BranchProduct::where('branch_id', $user->branch_id)
+                ->where('stock_quantity', '>', 0)->count();
+            $lowStockProducts = BranchProduct::where('branch_id', $user->branch_id)
+                ->where(function($query) {
+                    $query->whereColumn('stock_quantity', '<=', 'reorder_level')
+                          ->orWhere('stock_quantity', '<=', 10);
+                })->count();
+            
+        } else {
+            // SuperAdmin - show all products from all branches with pagination
+            $products = BranchProduct::with(['product', 'branch'])->paginate(15);
+            
+            $totalProducts = Product::count();
+            $inStoreProducts = Product::whereHas('branchProducts')->count();
+            $lowStockProducts = BranchProduct::where(function($query) {
+                $query->whereColumn('stock_quantity', '<=', 'reorder_level')
+                      ->orWhere('stock_quantity', '<=', 10);
+            })->distinct('product_id')->count('product_id');
+        }
+        
+        $stats = [
+            'total_products' => $totalProducts,
+            'in_store_products' => $inStoreProducts,
+            'low_stock_products' => $lowStockProducts,
+        ];
 
         // If request expects JSON (API/AJAX), return JSON
         if (request()->wantsJson() || request()->ajax() || request()->expectsJson()) {
@@ -25,7 +73,7 @@ class ProductController extends Controller
         }
 
         // Otherwise return the blade view and pass products for server-side rendering
-        return view('layouts.product', compact('products'));
+        return view('layouts.product', compact('products', 'stats'));
     }
 
     /**
@@ -62,15 +110,25 @@ class ProductController extends Controller
         try {
             $validatedData = $validator->validated();
 
-            // Resolve business_id for the authenticated owner
-            $businessId = Business::where('owner_id', auth()->id())->value('id');
+            // Get business_id from the selected branch or default to the first available business
+            $businessId = null;
+            
+            if (!empty($validatedData['branch_id'])) {
+                // Get business_id from the selected branch
+                $businessId = \App\Models\Branch::where('id', $validatedData['branch_id'])->value('business_id');
+            } else {
+                // If no branch selected, get the first available business (for admin/general products)
+                $businessId = \App\Models\Business::first()?->id;
+            }
+            
             if (!$businessId) {
-                $error_message = 'No business found for the authenticated owner.';
+                $error_message = 'No business found. Please ensure branches and businesses are properly set up.';
                 if ($request->wantsJson()|| $request->ajax() || $request->expectsJson()) {
                     return response()->json(['error' => $error_message], 422);
                 }
-            return redirect()->back()->with('error',$error_message)->withInput();
+                return redirect()->back()->with('error',$error_message)->withInput();
             }
+            
             $validatedData['business_id'] = $businessId;
 
             // Handle product image upload (stored in 'image' field)
@@ -110,7 +168,7 @@ class ProductController extends Controller
 
             return redirect()->route('layouts.product')->with('success', 'Product created successfully');
         } catch (\Exception $e) {
-            \Log::error('Product creation failed: ' . $e->getMessage());
+            Log::error('Product creation failed: ' . $e->getMessage());
 
             if ($request->wantsJson() || $request->ajax() || $request->expectsJson()) {
                 return response()->json(['error' => 'Failed to create product'], 500);
@@ -137,7 +195,7 @@ class ProductController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
-            'owner_id' => 'sometimes|required|exists:users,id',
+            'business_admin_id' => 'sometimes|required|exists:users,id',
             'logo' => 'nullable|image|max:2048', // Optional logo, max size 2MB
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
