@@ -12,7 +12,14 @@ class Product extends Model
         'sku',
         'image',
         'business_id',
-        'category_id'
+        'category_id',
+        'primary_supplier_id',
+        'is_local_supplier_product',
+        'added_by',
+    ];
+
+    protected $casts = [
+        'is_local_supplier_product' => 'boolean',
     ];
 
     protected static function boot()
@@ -59,6 +66,16 @@ class Product extends Model
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function primarySupplier()
+    {
+        return $this->belongsTo(Supplier::class, 'primary_supplier_id');
+    }
+
+    public function addedBy()
+    {
+        return $this->belongsTo(User::class, 'added_by');
     }
 
     public function branchProducts()

@@ -105,6 +105,56 @@
                     </div>
                 </a>
 
+                <a href="{{ route('sales.index') }}" class="flex items-center p-4 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border-2 border-indigo-200">
+                    <div class="bg-indigo-600 rounded-full p-3 mr-4">
+                        <i class="fas fa-receipt text-white"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800">Branch Sales</p>
+                        <p class="text-sm text-gray-600">View all branch sales</p>
+                    </div>
+                </a>
+
+                <a href="{{ route('sales.report') }}" class="flex items-center p-4 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border-2 border-emerald-200">
+                    <div class="bg-emerald-600 rounded-full p-3 mr-4">
+                        <i class="fas fa-chart-line text-white"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800">Sales Reports</p>
+                        <p class="text-sm text-gray-600">Analytics & insights</p>
+                    </div>
+                </a>
+
+                <a href="{{ route('layouts.product') }}" class="flex items-center p-4 bg-teal-50 hover:bg-teal-100 rounded-lg transition-colors border-2 border-teal-200">
+                    <div class="bg-teal-600 rounded-full p-3 mr-4">
+                        <i class="fas fa-boxes text-white"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800">Product Inventory</p>
+                        <p class="text-sm text-gray-600">Manage stock levels</p>
+                    </div>
+                </a>
+
+                <a href="{{ route('stock-receipts.index') }}" class="flex items-center p-4 bg-sky-50 hover:bg-sky-100 rounded-lg transition-colors border-2 border-sky-200">
+                    <div class="bg-sky-600 rounded-full p-3 mr-4">
+                        <i class="fas fa-truck-loading text-white"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800">Receive Stock</p>
+                        <p class="text-sm text-gray-600">Add inventory from suppliers</p>
+                    </div>
+                </a>
+
+                <a href="{{ route('suppliers.index') }}" class="flex items-center p-4 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors border-2 border-amber-200">
+                    <div class="bg-amber-600 rounded-full p-3 mr-4">
+                        <i class="fas fa-people-carry text-white"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800">Local Suppliers</p>
+                        <p class="text-sm text-gray-600">Manage local vendors</p>
+                    </div>
+                </a>
+
                 <a href="{{ route('manager.item-requests.index') }}" class="flex items-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border-2 border-blue-200">
                     <div class="bg-blue-600 rounded-full p-3 mr-4">
                         <i class="fas fa-box-open text-white"></i>
@@ -132,26 +182,6 @@
                     <div>
                         <p class="font-semibold text-gray-800">Reorder Requests</p>
                         <p class="text-sm text-gray-600">View stock requests</p>
-                    </div>
-                </a>
-
-                <a href="{{ route('notifications.index') }}" class="flex items-center p-4 bg-cyan-50 hover:bg-cyan-100 rounded-lg transition-colors border-2 border-cyan-200">
-                    <div class="bg-cyan-600 rounded-full p-3 mr-4">
-                        <i class="fas fa-bell text-white"></i>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800">Notifications</p>
-                        <p class="text-sm text-gray-600">View alerts</p>
-                    </div>
-                </a>
-
-                <a href="{{ route('manager.daily-sales') }}" class="flex items-center p-4 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border-2 border-red-200">
-                    <div class="bg-red-600 rounded-full p-3 mr-4">
-                        <i class="fas fa-cash-register text-white"></i>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800">Daily Sales</p>
-                        <p class="text-sm text-gray-600">Monitor sales activity</p>
                     </div>
                 </a>
             </div>

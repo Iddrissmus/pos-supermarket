@@ -125,14 +125,30 @@
                         <a href="{{ route('manager.cashiers.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('manager.cashiers.*') ? 'text-green-600 font-semibold' : 'text-gray-700' }}">Manage Cashiers</a>
                     </div>
                     
-                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer hover:bg-gray-50">
-                        <i class="fas fa-calendar-alt sidebar-icon text-gray-500"></i>
-                        <span class="sidebar-text ml-3 text-sm text-gray-700">Staff Schedules</span>
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('sales.index') ? 'active bg-green-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-receipt sidebar-icon {{ request()->routeIs('sales.index') ? 'text-green-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('sales.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('sales.index') ? 'text-green-600 font-semibold' : 'text-gray-700' }}">Branch Sales</a>
                     </div>
                     
-                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer hover:bg-gray-50">
-                        <i class="fas fa-cash-register sidebar-icon text-gray-500"></i>
-                        <span class="sidebar-text ml-3 text-sm text-gray-700">Daily Sales</span>
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('sales.report*') ? 'active bg-green-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-chart-line sidebar-icon {{ request()->routeIs('sales.report*') ? 'text-green-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('sales.report') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('sales.report*') ? 'text-green-600 font-semibold' : 'text-gray-700' }}">Sales Reports</a>
+                    </div>
+                    
+                    <div class="mt-4 mb-2 px-3">
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider sidebar-text">Inventory</p>
+                    </div>
+                    
+                    
+                    
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('stock-receipts.*') ? 'active bg-green-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-truck-loading sidebar-icon {{ request()->routeIs('stock-receipts.*') ? 'text-green-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('stock-receipts.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('stock-receipts.*') ? 'text-green-600 font-semibold' : 'text-gray-700' }}">Receive Stock</a>
+                    </div>
+                    
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('suppliers.*') ? 'active bg-green-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-people-carry sidebar-icon {{ request()->routeIs('suppliers.*') ? 'text-green-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('suppliers.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('suppliers.*') ? 'text-green-600 font-semibold' : 'text-gray-700' }}">Local Suppliers</a>
                     </div>
                     
                     <div class="mt-4 mb-2 px-3">

@@ -191,7 +191,26 @@
     <!-- Inventory Summary Section -->
     <div class="bg-white rounded-lg shadow-md overflow-x-auto">
         <div class="p-6 border-b border-gray-200">
-            <h2 class="text-xl font-semibold text-gray-800">Inventory Summary</h2>
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-800">Inventory Summary</h2>
+                    @if($selectedCategory)
+                        @php
+                            $selectedCat = $categories->firstWhere('id', $selectedCategory);
+                        @endphp
+                        <p class="text-sm text-gray-600 mt-1">
+                            Filtered by: 
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                <i class="fas {{ $selectedCat->icon ?? 'fa-tag' }} mr-1"></i>
+                                {{ $selectedCat->name ?? 'Category' }}
+                            </span>
+                        </p>
+                    @endif
+                </div>
+                <div class="text-sm text-gray-600">
+                    Showing {{ $products->total() }} {{ $selectedCategory ? 'filtered' : 'total' }} products
+                </div>
+            </div>
         </div>
         
         <!-- Action Bar -->
@@ -204,14 +223,23 @@
                     </div>
                 </div>
                 <div class="flex space-x-3">
-                    <button class="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                        <i class="fas fa-filter mr-2 text-gray-600"></i>
-                        <span class="text-gray-700">Filter</span>
-                    </button>
-                    <button class="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                        <i class="fas fa-sort mr-2 text-gray-600"></i>
-                        <span class="text-gray-700">Sort</span>
-                    </button>
+                    <!-- Category filter-->
+                    <form method="GET" action="{{ route('product.index') }}" id="categoryFilterForm">
+                        <select name="category_id" id="categoryFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" onchange="this.form.submit()">
+                            <option value="">All Categories</option>
+                            @foreach($categories as $cat)
+                                <option value="{{ $cat->id }}" @if($selectedCategory == $cat->id) selected @endif>
+                                    {{ $cat->name }} ({{ $cat->products_count }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </form>
+                    @if($selectedCategory)
+                        <a href="{{ route('product.index') }}" class="flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors">
+                            <i class="fas fa-times mr-2"></i>
+                            <span>Clear Filter</span>
+                        </a>
+                    @endif
                 </div>
             </div>
         </div>
@@ -224,18 +252,24 @@
                             Product Name
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            SKU
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Category
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Description
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Unit Price
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Selling Price
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            In Stock
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Cost Price
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Stock Qty
+                        </th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Actions
                         </th>
                     </tr>
@@ -246,24 +280,81 @@
                             // Handle both BranchProduct and Product objects
                             $product = $item->product ?? $item;
                             $branchProduct = $item->product ? $item : null;
+                            $stockQty = $branchProduct->stock_quantity ?? $product->stock ?? 0;
+                            $stockClass = $stockQty <= 10 ? 'text-red-600 font-semibold' : ($stockQty <= 50 ? 'text-yellow-600' : 'text-green-600');
                         @endphp
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $product->name ?? 'N/A' }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ \Illuminate\Support\Str::limit($product->description ?? 'No description', 80) }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">GH₵{{ number_format($branchProduct->price ?? $product->price ?? 0, 2) }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $branchProduct->stock_quantity ?? $product->stock ?? 0 }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">GH₵{{ number_format($branchProduct->cost_price ?? $product->cost_price ?? 0, 2) }}</td>
-                            <td class="px-4 py-2 whitespace-nowrap text-right space-x-2">
-                                @if($branchProduct)
-                                    <span class="text-xs text-gray-500">{{ $branchProduct->branch->name ?? 'Branch' }}</span><br>
+                        <tr class="hover:bg-gray-50 transition-colors" data-category-id="{{ $product->category->id ?? '' }}">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    @if($product->image)
+                                        <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" class="w-10 h-10 rounded-lg object-cover mr-3">
+                                    @else
+                                        <div class="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center mr-3">
+                                            <i class="fas fa-box text-gray-400"></i>
+                                        </div>
+                                    @endif
+                                    <span class="text-sm font-medium text-gray-900">{{ $product->name ?? 'N/A' }}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="text-sm text-gray-600 font-mono">{{ $product->sku ?? 'N/A' }}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                @if($product->category)
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-{{ $product->category->color ?? 'gray' }}-100 text-{{ $product->category->color ?? 'gray' }}-800">
+                                        <i class="fas {{ $product->category->icon ?? 'fa-tag' }} mr-1"></i>
+                                        {{ $product->category->name }}
+                                    </span>
+                                @else
+                                    <span class="text-xs text-gray-400">Uncategorized</span>
                                 @endif
-                                <button type="button" class="px-3 py-1 border rounded-lg">Edit</button>
-                                <button type="button" class="px-3 py-1 border rounded-lg text-red-600">Delete</button>
+                            </td>
+                            <td class="px-6 py-4 max-w-xs">
+                                <span class="text-sm text-gray-600">{{ \Illuminate\Support\Str::limit($product->description ?? 'No description', 50) }}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right">
+                                <span class="text-sm font-medium text-gray-900">₵{{ number_format($branchProduct->price ?? $product->price ?? 0, 2) }}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right">
+                                <span class="text-sm text-gray-600">₵{{ number_format($branchProduct->cost_price ?? $product->cost_price ?? 0, 2) }}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right">
+                                <span class="text-sm {{ $stockClass }}">{{ $stockQty }}</span>
+                                @if($stockQty <= 10)
+                                    <span class="block text-xs text-red-500">Low stock!</span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <div class="flex items-center justify-center space-x-2">
+                                    @if($branchProduct)
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                                            <i class="fas fa-store mr-1"></i>
+                                            {{ \Illuminate\Support\Str::limit($branchProduct->branch->name ?? 'Branch', 15) }}
+                                        </span>
+                                    @endif
+                                    <button type="button" class="text-blue-600 hover:text-blue-800 transition-colors" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="text-red-600 hover:text-red-800 transition-colors" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-4 py-6 text-center text-gray-500">No products found.</td>
+                            <td colspan="8" class="px-4 py-12 text-center">
+                                <div class="flex flex-col items-center justify-center text-gray-500">
+                                    <i class="fas fa-box-open text-6xl mb-4 text-gray-300"></i>
+                                    <p class="text-lg font-medium">No products found</p>
+                                    <p class="text-sm mt-1">Try adjusting your filters or add a new product</p>
+                                    @if($selectedCategory)
+                                        <a href="{{ route('product.index') }}" class="mt-4 text-blue-600 hover:text-blue-800">
+                                            <i class="fas fa-times-circle mr-1"></i>Clear category filter
+                                        </a>
+                                    @endif
+                                </div>
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -341,9 +432,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Modal/form handlers moved to dedicated product-create page
+    // Modal/form handlers moved to dedicated product-create page
 
-// Listen for Livewire notification events
+    // Listen for Livewire notification events
     window.addEventListener('notify', function(event) {
         showNotification(event.detail.message, event.detail.type);
     });
@@ -431,7 +522,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function showError(message) {
         showNotification(message, 'error');
     }
-});
+
+    // Remove the old client-side category filter since we're now using server-side filtering
+
 </script>
 
 <style>

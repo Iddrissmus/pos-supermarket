@@ -22,11 +22,44 @@
     <div class="bg-blue-600 text-white px-6 py-4 rounded-t-lg mb-6">
         <div class="flex justify-between items-center">
             <h1 class="text-2xl font-bold">Supplier Management</h1>
-            <a href="{{ route('suppliers.create') }}" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded-lg font-medium transition-colors">
-                <i class="fas fa-plus mr-2"></i>Add Supplier
-            </a>
+            <div class="flex space-x-2">
+                @if(auth()->user()->role === 'manager')
+                    <a href="{{ route('manager.local-product.create') }}" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-medium transition-colors">
+                        <i class="fas fa-box-open mr-2"></i>Add Local Product
+                    </a>
+                @endif
+                <a href="{{ route('suppliers.create') }}" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded-lg font-medium transition-colors">
+                    <i class="fas fa-plus mr-2"></i>Add Supplier
+                </a>
+            </div>
         </div>
     </div>
+
+    @if(auth()->user()->role === 'manager')
+        <div class="bg-green-50 border-l-4 border-green-400 p-4 mb-6 rounded-r-lg">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-info-circle text-green-600 text-lg"></i>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-green-800">Local Suppliers Only</h3>
+                    <p class="text-sm text-green-700 mt-1">
+                        You can add and manage inventory only for <strong>local suppliers</strong> (e.g., plantain chips sellers, local vendors). 
+                        Central suppliers (large companies) are managed by business administrators.
+                    </p>
+                    <p class="text-sm text-green-700 mt-2">
+                        <i class="fas fa-lightbulb mr-1"></i><strong>Quick Actions:</strong> 
+                        <span class="inline-flex items-center ml-1">
+                            <i class="fas fa-box-open text-purple-600 mx-1"></i> = Create new product
+                        </span>
+                        <span class="inline-flex items-center ml-2">
+                            <i class="fas fa-truck-loading text-green-600 mx-1"></i> = Receive existing products
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    @endif
 
     <!-- Supplier Summary Cards -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -170,10 +203,24 @@
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                <a href="{{ route('suppliers.show', $supplier) }}" class="text-blue-600 hover:text-blue-900">
+                                <a href="{{ route('suppliers.show', $supplier) }}" class="text-blue-600 hover:text-blue-900" title="View Details">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <a href="{{ route('suppliers.edit', $supplier) }}" class="text-indigo-600 hover:text-indigo-900">
+                                
+                                @if(auth()->user()->role === 'manager' && !$supplier->is_central)
+                                    <a href="{{ route('manager.local-product.create', ['supplier_id' => $supplier->id]) }}" 
+                                       class="text-purple-600 hover:text-purple-900" 
+                                       title="Add New Product from this Supplier">
+                                        <i class="fas fa-box-open"></i>
+                                    </a>
+                                    <a href="{{ route('stock-receipts.create', ['supplier_id' => $supplier->id]) }}" 
+                                       class="text-green-600 hover:text-green-900" 
+                                       title="Receive Stock (Existing Products)">
+                                        <i class="fas fa-truck-loading"></i>
+                                    </a>
+                                @endif
+                                
+                                <a href="{{ route('suppliers.edit', $supplier) }}" class="text-indigo-600 hover:text-indigo-900" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 <form action="{{ route('suppliers.toggle-status', $supplier) }}" method="POST" class="inline">
@@ -189,7 +236,7 @@
                                           onsubmit="return confirm('Are you sure you want to delete this supplier?')">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="text-red-600 hover:text-red-900">
+                                        <button type="submit" class="text-red-600 hover:text-red-900" title="Delete">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </form>

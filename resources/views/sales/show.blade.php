@@ -60,22 +60,28 @@
                     <div class="bg-gray-50 p-4 rounded-lg">
                         <h3 class="text-lg font-semibold text-gray-800 mb-3">Financial Summary</h3>
                         <div class="space-y-2">
-                            @if(isset($totals['tax_breakdown']) && $totals['tax_breakdown']['subtotal'])
+                            @if(isset($totals['subtotal']))
                                 <div class="flex justify-between">
                                     <span class="text-gray-600">Subtotal:</span>
                                     <span class="font-medium text-blue-600">₵{{ number_format($totals['subtotal'], 2) }}</span>
                                 </div>
-                                @if(!empty($totals['tax_breakdown']['tax_components']))
-                                    @foreach($totals['tax_breakdown']['tax_components'] as $taxComponent)
+                                @if(isset($totals['tax_components']) && is_array($totals['tax_components']) && !empty($totals['tax_components']))
+                                    @foreach($totals['tax_components'] as $taxComponent)
                                         <div class="flex justify-between">
-                                            <span class="text-gray-600">{{ $taxComponent['name'] }} ({{ number_format($taxComponent['rate'], 1) }}%):</span>
-                                            <span class="font-medium text-orange-600">₵{{ number_format($taxComponent['amount'], 2) }}</span>
+                                            <span class="text-gray-600">{{ $taxComponent['name'] ?? 'Tax' }} ({{ number_format($taxComponent['rate'] ?? 0, 1) }}%):</span>
+                                            <span class="font-medium text-orange-600">₵{{ number_format($taxComponent['amount'] ?? 0, 2) }}</span>
                                         </div>
                                     @endforeach
                                 @endif
+                                @if(isset($totals['tax_amount']) && $totals['tax_amount'] > 0)
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Total Tax:</span>
+                                        <span class="font-medium text-orange-600">₵{{ number_format($totals['tax_amount'], 2) }}</span>
+                                    </div>
+                                @endif
                                 <div class="flex justify-between">
                                     <span class="text-gray-600 font-semibold">Total Revenue (incl. tax):</span>
-                                    <span class="font-bold text-lg text-green-600">₵{{ number_format($totals['total'], 2) }}</span>
+                                    <span class="font-bold text-lg text-green-600">₵{{ number_format($totals['total'] ?? 0, 2) }}</span>
                                 </div>
                             @else
                                 <div class="flex justify-between">

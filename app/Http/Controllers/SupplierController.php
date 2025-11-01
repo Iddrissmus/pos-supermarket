@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Supplier;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 class SupplierController extends Controller
@@ -13,7 +14,15 @@ class SupplierController extends Controller
      */
     public function index()
     {
-        $suppliers = Supplier::orderBy('name')->paginate(20);
+        $user = Auth::user();
+        
+        // Managers can only see local suppliers (non-central)
+        $suppliers = Supplier::when($user->role === 'manager', function ($query) {
+                $query->where('is_central', false);
+            })
+            ->orderBy('name')
+            ->paginate(20);
+            
         return view('suppliers.index', compact('suppliers'));
     }
 

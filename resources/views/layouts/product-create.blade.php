@@ -29,34 +29,49 @@
                     <textarea id="product_description" name="description" class="mt-1 block w-full border rounded-md p-2" rows="4"></textarea>
                 </div>
 
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Category *</label>
+                    <select id="product_category" name="category_id" required class="mt-1 block w-full border rounded-md p-2">
+                        <option value="">-- Select Category --</option>
+                        @php
+                            $user = auth()->user();
+                            $categories = \App\Models\Category::where('business_id', $user->business_id)
+                                ->active()
+                                ->parents()
+                                ->with('subcategories')
+                                ->orderBy('display_order')
+                                ->get();
+                        @endphp
+                        @foreach($categories as $category)
+                            <optgroup label="{{ $category->name }}">
+                                @if($category->subcategories->isEmpty())
+                                    <option value="{{ $category->id }}">
+                                        {{ $category->name }}
+                                    </option>
+                                @else
+                                    @foreach($category->subcategories as $subcategory)
+                                        <option value="{{ $subcategory->id }}">
+                                            {{ $subcategory->name }}
+                                        </option>
+                                    @endforeach
+                                @endif
+                            </optgroup>
+                        @endforeach
+                    </select>
+                    <small class="text-gray-500">Select the most specific category for this product</small>
+                </div>
+
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Price</label>
                         <input id="product_price" name="price" type="number" step="0.01" class="mt-1 block w-full border rounded-md p-2" />
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Branch</label>
-                        <select id="product_branch" name="branch_id" class="mt-1 block w-full border rounded-md p-2">
-                            <option value="">-- Select branch (optional) --</option>
-                            @if(isset($branches) && $branches->count() > 0)
-                                @foreach($branches as $branch)
-                                    <option value="{{ $branch->id }}">{{ $branch->display_label }}</option>
-                                @endforeach
-                            @else
-                                <option disabled>No branches available</option>
-                            @endif
-                        </select>
-                        @if(isset($branches))
-                            <small class="text-gray-500">{{ $branches->count() }} branch(es) available</small>
-                        @else
-                            <small class="text-red-500">Branches data not loaded</small>
-                        @endif
-                    </div>
+                    
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Stock Quantity (for selected branch)</label>
+                        <label class="block text-sm font-medium text-gray-700">Stock Quantity</label>
                         <input id="product_stock_quantity" name="stock_quantity" type="number" min="0" class="mt-1 block w-full border rounded-md p-2" />
                     </div>
                     <div>

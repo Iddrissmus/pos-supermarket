@@ -37,6 +37,11 @@ Route::get('/', function () {
 
 // Authentication - Role-specific login pages
 Route::middleware('guest')->group(function () {
+    // Default login route - redirects to role selection or landing
+    Route::get('/login', function () {
+        return redirect('/');
+    })->name('login');
+    
     // SuperAdmin login
     Route::get('/login/superadmin', [LoginController::class, 'showSuperAdminLoginForm'])->name('login.superadmin');
     Route::post('/login/superadmin', [LoginController::class, 'loginSuperAdmin'])->name('login.superadmin.post');
@@ -238,9 +243,36 @@ Route::middleware('auth')->group(function () {
         })->name('manager.daily-sales');
         
         // Manager can view sales reports for their branch
-        Route::get('/manager/sales/report', [SalesController::class, 'report'])->name('manager.sales.report');
-        Route::get('/manager/sales/export/csv', [SalesController::class, 'exportCsv'])->name('manager.sales.export.csv');
-        Route::get('/manager/sales/export/pdf', [SalesController::class, 'exportPdf'])->name('manager.sales.export.pdf');
+        Route::get('/sales/report', [SalesController::class, 'report'])->name('sales.report');
+        Route::get('/sales/export/csv', [SalesController::class, 'exportCsv'])->name('sales.export.csv');
+        Route::get('/sales/export/pdf', [SalesController::class, 'exportPdf'])->name('sales.export.pdf');
+        
+        // Manager can view product inventory for their branch
+        Route::get('/product', [ProductController::class, 'index'])->name('layouts.product');
+        
+        // Manager can manage local suppliers and receive stock from them
+        Route::resource('suppliers', SupplierController::class);
+        Route::patch('/suppliers/{supplier}/toggle-status', [SupplierController::class, 'toggleStatus'])
+            ->name('suppliers.toggle-status');
+        Route::resource('stock-receipts', StockReceiptController::class);
+        Route::get('/api/product-info', [StockReceiptController::class, 'getProductInfo'])
+            ->name('api.product.info');
+        Route::get('/api/current-cost', [StockReceiptController::class, 'getCurrentCost'])
+            ->name('api.current.cost');
+            
+        // Manager can create products from local suppliers
+        Route::get('/manager/local-product/create', [\App\Http\Controllers\Manager\LocalProductController::class, 'create'])
+            ->name('manager.local-product.create');
+        Route::post('/manager/local-product', [\App\Http\Controllers\Manager\LocalProductController::class, 'store'])
+            ->name('manager.local-product.store');
+    });
+
+    // Manager & Cashier - Both can view sales (filtered by controller)
+    Route::middleware('role:manager,cashier')->group(function () {
+        // View sales (filtered in controller by role: cashiers see own, managers see branch)
+        Route::get('/sales', [SalesController::class, 'index'])->name('sales.index');
+        Route::get('/sales/{sale}', [SalesController::class, 'show'])->name('sales.show');
+        Route::get('/sales/{sale}/receipt', [SalesController::class, 'receipt'])->name('sales.receipt');
     });
 
     // Cashier only - ONLY role that can make sales
@@ -248,8 +280,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/cashier/dashboard', [CashierDashboardController::class, 'index'])->name('dashboard.cashier');
 
         // Sales - ONLY cashiers can create sales
-        Route::resource('sales', SalesController::class)->only(['index', 'create', 'store', 'show']);
-        Route::get('/sales/{sale}/receipt', [SalesController::class, 'receipt'])->name('sales.receipt');
+        Route::get('/sales/create', [SalesController::class, 'create'])->name('sales.create');
+        Route::post('/sales', [SalesController::class, 'store'])->name('sales.store');
         Route::get('/api/product-stock', [SalesController::class, 'getProductStock'])
             ->name('api.product.stock');
         Route::post('/api/calculate-taxes', [SalesController::class, 'calculateTaxes'])

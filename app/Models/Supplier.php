@@ -15,11 +15,13 @@ class Supplier extends Model
         'email',
         'contact_person',
         'notes',
-        'is_active'
+        'is_active',
+        'is_central'
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_central' => 'boolean',
     ];
 
     public function stockReceipts(): HasMany
@@ -35,5 +37,15 @@ class Supplier extends Model
     public function scopeByType($query, $type)
     {
         return $query->where('type', $type);
+    }
+
+    public function scopeCentral($query)
+    {
+        return $query->where('is_central', true);
+    }
+
+    public function scopeLocal($query)
+    {
+        return $query->where('is_central', false);
     }
 }

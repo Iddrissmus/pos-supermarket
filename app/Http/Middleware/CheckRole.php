@@ -15,7 +15,8 @@ class CheckRole
                 return response()->json(['message' => 'Unauthorized'], 403);
             }
             
-            return redirect('/login')->with('error', 'You do not have permission to access this area.');
+            // Redirect back with error message
+            return redirect()->back()->with('error', 'You do not have permission to access this page.');
         }
 
         return $next($request);

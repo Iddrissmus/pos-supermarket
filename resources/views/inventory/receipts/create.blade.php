@@ -45,15 +45,26 @@
 
                     <!-- Supplier Selection -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Supplier *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Supplier *
+                            @if(auth()->user()->role === 'manager')
+                                <span class="text-xs text-gray-500">(Local suppliers only)</span>
+                            @endif
+                        </label>
                         <select name="supplier_id" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
                             <option value="">Select Supplier</option>
                             @foreach($suppliers as $supplier)
-                                <option value="{{ $supplier->id }}" {{ old('supplier_id') == $supplier->id ? 'selected' : '' }}>
-                                    {{ $supplier->name }}
+                                <option value="{{ $supplier->id }}" 
+                                    {{ (old('supplier_id') == $supplier->id || (isset($selectedSupplierId) && $selectedSupplierId == $supplier->id)) ? 'selected' : '' }}>
+                                    {{ $supplier->name }}{{ $supplier->is_central ? ' [Central]' : ' [Local]' }}
                                 </option>
                             @endforeach
                         </select>
+                        @if(auth()->user()->role === 'manager')
+                            <p class="text-xs text-amber-600 mt-1">
+                                <i class="fas fa-info-circle mr-1"></i>You can only add inventory for local suppliers (e.g., plantain chips sellers)
+                            </p>
+                        @endif
                     </div>
 
                     <!-- Receipt Number -->

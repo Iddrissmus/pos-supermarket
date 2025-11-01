@@ -45,10 +45,15 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-500">Supplier</label>
-                        <p class="mt-1 text-sm text-gray-900">
+                        <p class="mt-1 text-sm text-gray-900 flex items-center gap-2">
                             <a href="{{ route('suppliers.show', $stockReceipt->supplier) }}" class="text-blue-600 hover:text-blue-800">
                                 {{ $stockReceipt->supplier->name }}
                             </a>
+                            @if($stockReceipt->supplier->is_central)
+                                <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">Central</span>
+                            @else
+                                <span class="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">Local</span>
+                            @endif
                         </p>
                     </div>
                     <div>

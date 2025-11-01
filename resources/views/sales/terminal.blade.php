@@ -59,11 +59,12 @@
 
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <section class="bg-white rounded-xl shadow p-6 xl:col-span-2 space-y-4">
-                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                {{-- <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div>
                         <h2 class="text-lg font-semibold text-gray-900">Product Catalog</h2>
                         <p id="catalog-branch-label" class="text-sm text-gray-500">Select a branch to view available stock.</p>
                     </div>
+                    
                     <div class="relative w-full lg:w-80">
                         <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
                             <i class="fas fa-search"></i>
@@ -75,13 +76,44 @@
                             class="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                         >
                     </div>
-                </div>
-
-                <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 min-h-[200px]">
-                    <div class="col-span-full text-center text-sm text-gray-500 py-10">
-                        Loading products...
+                </div> --}}
+                <div class="p-6 border-b border-gray-200 bg-gray-50">
+                    <div class="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div>
+                            <h2 class="text-lg font-semibold text-gray-900">Product Catalog</h2>
+                            <p id="catalog-branch-label" class="text-sm text-gray-500">Select a branch to view available stock. <span id="catalog-count" class="ml-2 text-sm text-gray-600"></span></p>
+                        </div>
+                        <div class="relative w-full lg:w-80">
+                            <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input
+                                id="product-search"
+                                type="search"
+                                placeholder="Search by name or SKU"
+                                class="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            >
+                        </div>
+                        <div class="flex space-x-3">
+                            <!-- Category filter-->
+                            <select id="categoryFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="">All Categories</option>
+                                @foreach($categories as $cat)
+                                    <option value="{{ $cat->id }}" @if($selectedCategory == $cat->id) selected @endif>
+                                        {{ $cat->name }} ({{ $cat->products_count }})
+                                    </option>
+                                @endforeach
+                            </select>
+                            <button class="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                <i class="fas fa-filter mr-2 text-gray-600"></i>
+                                <span class="text-gray-700">Filter</span>
+                            </button>
+                            
+                        </div>
                     </div>
                 </div>
+
+                <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 min-h-[200px]"></div>
             </section>
 
             <section class="bg-white rounded-xl shadow p-6 space-y-6">
@@ -143,6 +175,11 @@
                     </div>
 
                     <div id="checkout-error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg text-sm"></div>
+                    <div class="mt-4">
+                        <label for="amount-tendered" class="block text-sm font-medium text-gray-700">Amount Tendered</label>
+                        <input type="number" id="amount-tendered" min="0" step="0.01" class="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter amount tendered">
+                        <div id="change-display" class="mt-2 text-green-600 font-bold text-lg"></div>
+                    </div>
 
                     <button id="checkout-button" type="button" class="w-full inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white rounded-lg py-3 font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
                         <i class="fas fa-cash-register"></i>
@@ -172,11 +209,11 @@
             <div id="receipt-summary" class="space-y-3 text-sm text-gray-700"></div>
 
             <div class="flex flex-col sm:flex-row sm:justify-end gap-3 pt-2">
-                <a id="print-receipt-link" href="#" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-2 border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50">
+                <a id="print-receipt-link" href="#" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-2 border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 hidden">
                     <i class="fas fa-receipt"></i>
                     <span>Open full receipt</span>
                 </a>
-                <button type="button" class="inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg" data-close-modal>
+                <button type="button" class="inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg" data-close-modal id="done-receipt-btn">
                     <i class="fas fa-check"></i>
                     <span>Done</span>
                 </button>
@@ -186,6 +223,60 @@
 </div>
 
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const amountTenderedInput = document.getElementById('amount-tendered');
+    const changeDisplay = document.getElementById('change-display');
+    const checkoutButton = document.getElementById('checkout-button');
+    const cartTotalEl = document.getElementById('cart-total');
+
+    function getCartTotal() {
+        // Remove currency symbol and parse
+        return parseFloat(cartTotalEl.textContent.replace(/[^\d.]/g, '')) || 0;
+    }
+
+    function updateChange() {
+        const tendered = parseFloat(amountTenderedInput.value) || 0;
+        const total = getCartTotal();
+        const change = tendered - total;
+        changeDisplay.textContent = change >= 0 ? `Change: GH₵${change.toFixed(2)}` : 'Insufficient amount';
+        checkoutButton.disabled = tendered < total || total === 0;
+    }
+
+    if (amountTenderedInput) {
+        amountTenderedInput.addEventListener('input', updateChange);
+    }
+    // Update change on cart total change (if cart updates)
+    if (cartTotalEl) {
+        const observer = new MutationObserver(updateChange);
+        observer.observe(cartTotalEl, { childList: true });
+    }
+    // Refresh page after sale completion and clear receipt modal
+    const doneReceiptBtn = document.getElementById('done-receipt-btn');
+    if (doneReceiptBtn) {
+        doneReceiptBtn.addEventListener('click', function() {
+            window.location.reload();
+        });
+    }
+
+    // Clear receipt modal content on close
+    const receiptModal = document.getElementById('receipt-modal');
+    const receiptSummary = document.getElementById('receipt-summary');
+    document.querySelectorAll('[data-close-modal]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (receiptModal) receiptModal.classList.add('hidden');
+            if (receiptSummary) receiptSummary.innerHTML = '';
+        });
+    });
+});
+document.addEventListener('DOMContentLoaded', function() {
+    const doneReceiptBtn = document.getElementById('done-receipt-btn');
+    const printReceiptLink = document.getElementById('print-receipt-link');
+    if (doneReceiptBtn && printReceiptLink) {
+        doneReceiptBtn.addEventListener('click', function() {
+            printReceiptLink.classList.remove('hidden');
+        });
+    }
+});
     window.POS_TERMINAL = {
         branches: @json($branchOptions),
         catalog: @json($catalog),
@@ -203,6 +294,13 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const posData = window.POS_TERMINAL;
+    // debug: ensure catalog exists and is an array
+    console.debug('POS_TERMINAL', posData);
+    if (!posData) {
+        console.warn('POS_TERMINAL not found on window');
+    }
+    posData.catalog = Array.isArray(posData.catalog) ? posData.catalog : (posData.catalog ? Object.values(posData.catalog) : []);
+    console.debug('POS catalog length', posData.catalog.length);
 
     const branchSelect = document.getElementById('pos-branch');
     const searchInput = document.getElementById('product-search');
@@ -223,12 +321,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const receiptSummary = document.getElementById('receipt-summary');
     const printReceiptLink = document.getElementById('print-receipt-link');
 
+    const categorySelect = document.getElementById('categoryFilter');
     const state = {
         branchId: Number.isFinite(parseInt(posData.defaultBranchId, 10)) ? parseInt(posData.defaultBranchId, 10) : (posData.branches[0]?.id ?? null),
         cart: [],
         search: '',
         paymentMethod: paymentRadios.length ? paymentRadios[0].value : 'cash',
         currentTaxData: null,
+        selectedCategory: categorySelect ? categorySelect.value : '',
     };
 
     const formatMoney = (value) => `₵${(Number(value ?? 0)).toFixed(2)}`;
@@ -260,14 +360,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         productGrid.innerHTML = '';
 
-        if (!state.branchId) {
-            productGrid.innerHTML = '<div class="col-span-full text-center text-sm text-gray-500 py-10">Please select a branch to view products.</div>';
-            return;
-        }
+        try {
+            if (!state.branchId) {
+                productGrid.innerHTML = '<div class="col-span-full text-center text-sm text-gray-500 py-10">Please select a branch to view products.</div>';
+                return;
+            }
 
-        const searchTerm = state.search.trim().toLowerCase();
-        const filtered = posData.catalog.filter(product => {
+            const searchTerm = state.search.trim().toLowerCase();
+            const filtered = posData.catalog.filter(product => {
+            // Branch must match
             if (Number(product.branch_id) !== Number(state.branchId)) {
+                return false;
+            }
+
+            // Category filter (if selected)
+            if (state.selectedCategory && String(product.category_id) !== String(state.selectedCategory)) {
                 return false;
             }
 
@@ -311,6 +418,58 @@ document.addEventListener('DOMContentLoaded', () => {
 
             productGrid.appendChild(card);
         });
+        } catch (err) {
+            console.error('Failed to render products', err);
+            productGrid.innerHTML = '<div class="col-span-full text-center text-sm text-red-500 py-10">Failed to render products. Check console for errors.</div>';
+        } finally {
+            // update catalog count indicator
+            const catalogCountEl = document.getElementById('catalog-count');
+            if (catalogCountEl) {
+                const branchProducts = posData.catalog.filter(p => Number(p.branch_id) === Number(state.branchId));
+                catalogCountEl.textContent = `(${branchProducts.length} products in this branch)`;
+            }
+        }
+    };
+
+    const updateCategoryFilter = () => {
+        if (!categorySelect) return;
+
+        // Get unique categories for products in the selected branch
+        const branchProducts = posData.catalog.filter(p => Number(p.branch_id) === Number(state.branchId));
+        const categoriesInBranch = {};
+        
+        branchProducts.forEach(product => {
+            if (product.category_id && product.category_name) {
+                if (!categoriesInBranch[product.category_id]) {
+                    categoriesInBranch[product.category_id] = {
+                        id: product.category_id,
+                        name: product.category_name,
+                        count: 0
+                    };
+                }
+                categoriesInBranch[product.category_id].count++;
+            }
+        });
+
+        // Rebuild category select options
+        const currentValue = state.selectedCategory;
+        categorySelect.innerHTML = '<option value="">All Categories</option>';
+        
+        Object.values(categoriesInBranch).sort((a, b) => a.name.localeCompare(b.name)).forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.id;
+            option.textContent = `${cat.name} (${cat.count})`;
+            if (String(cat.id) === String(currentValue)) {
+                option.selected = true;
+            }
+            categorySelect.appendChild(option);
+        });
+
+        // Reset category filter if current category not in this branch
+        if (currentValue && !categoriesInBranch[currentValue]) {
+            state.selectedCategory = '';
+            categorySelect.value = '';
+        }
     };
 
     const updateCartUI = async () => {
@@ -597,12 +756,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="font-medium text-gray-900">${formatMoney(subtotal)}</span>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-gray-600">Tax${taxRate > 0 ? ` (${taxRate}%)` : ''}</span>
+                    <span class="text-gray-600">Tax${taxRate > 0 ? ' (' + taxRate + '%)' : ''}</span>
                     <span class="text-gray-500">${formatMoney(taxAmount)}</span>
                 </div>
                 <div class="flex justify-between text-lg font-semibold text-gray-900">
                     <span>Total</span>
                     <span>${formatMoney(calculatedTotal)}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Amount Tendered</span>
+                    <span>${formatMoney(sale.amount_tendered ?? 0)}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Change</span>
+                    <span>${formatMoney(sale.change ?? 0)}</span>
                 </div>
             </div>
         `;
@@ -625,6 +792,8 @@ document.addEventListener('DOMContentLoaded', () => {
         clearError();
         toggleCheckoutLoading(true);
 
+        const amountTenderedInput = document.getElementById('amount-tendered');
+        const amountTendered = amountTenderedInput ? parseFloat(amountTenderedInput.value) || 0 : 0;
         const payload = {
             branch_id: state.branchId,
             payment_method: state.paymentMethod,
@@ -633,6 +802,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 quantity: item.quantity,
                 price: item.price,
             })),
+            amount_tendered: amountTendered,
         };
 
         try {
@@ -676,12 +846,21 @@ document.addEventListener('DOMContentLoaded', () => {
             state.branchId = Number.isFinite(selected) ? selected : null;
             await clearCart();
             renderProducts();
+            updateCategoryFilter(); // Update categories based on selected branch
         });
     }
 
     if (searchInput) {
         searchInput.addEventListener('input', (event) => {
             state.search = event.target.value;
+            renderProducts();
+        });
+    }
+
+    // Category select change -> client-side filter
+    if (categorySelect) {
+        categorySelect.addEventListener('change', (event) => {
+            state.selectedCategory = event.target.value;
             renderProducts();
         });
     }
@@ -769,6 +948,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     renderProducts();
     renderCart();
+    updateCategoryFilter(); // Initialize category filter on page load
+
+    // category filter handled above with client-side filtering
 });
 </script>
 @endsection

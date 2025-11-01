@@ -241,6 +241,14 @@
                     <span>Total Paid</span>
                     <span>₵{{ number_format($totals['total'] ?? $sale->total, 2) }}</span>
                 </div>
+                <div class="totals-row">
+                    <span>Amount Tendered</span>
+                    <span>₵{{ number_format($totals['amount_tendered'] ?? $sale->amount_tendered, 2) }}</span>
+                </div>
+                <div class="totals-row">
+                    <span>Change</span>
+                    <span>₵{{ number_format($totals['change'] ?? $sale->change, 2) }}</span>
+                </div>
             </div>
         </div>
         <div class="receipt-footer">

@@ -39,17 +39,26 @@ class StockReceiptController extends Controller
     /**
      * Show the form for creating a new stock receipt
      */
-    public function create()
+    public function create(Request $request)
     {
         $user = Auth::user();
         $branches = $user->branch_id 
             ? Branch::with('business:id,name')->where('id', $user->branch_id)->get()
             : Branch::with('business:id,name')->get();
         
-        $suppliers = Supplier::where('is_active', true)->get();
+        // Managers can only see local suppliers (non-central suppliers)
+        $suppliers = Supplier::where('is_active', true)
+            ->when($user->role === 'manager', function ($query) {
+                $query->where('is_central', false);
+            })
+            ->get();
+            
         $products = Product::with('branchProducts')->get();
+        
+        // Get selected supplier from query parameter if provided
+        $selectedSupplierId = $request->query('supplier_id');
 
-        return view('inventory.receipts.create', compact('branches', 'suppliers', 'products'));
+        return view('inventory.receipts.create', compact('branches', 'suppliers', 'products', 'selectedSupplierId'));
     }
 
     /**
@@ -68,6 +77,16 @@ class StockReceiptController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit_cost' => 'required|numeric|min:0',
         ]);
+
+        // Check if manager is trying to add inventory for central supplier
+        $user = Auth::user();
+        if ($user->role === 'manager') {
+            $supplier = Supplier::find($validated['supplier_id']);
+            if ($supplier && $supplier->is_central) {
+                return back()->withInput()
+                    ->with('error', 'Managers cannot add inventory for central suppliers. Only local suppliers (e.g., plantain chips sellers) are allowed.');
+            }
+        }
 
         try {
             $receipt = $this->receiveStockService->receiveStock($validated);

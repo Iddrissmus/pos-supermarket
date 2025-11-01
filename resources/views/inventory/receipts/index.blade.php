@@ -62,7 +62,14 @@
                                         <div class="text-sm text-gray-900">{{ optional($receipt->branch)->display_label ?? 'Unassigned branch' }}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-900">{{ $receipt->supplier->name }}</div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="text-sm text-gray-900">{{ $receipt->supplier->name }}</div>
+                                            @if($receipt->supplier->is_central)
+                                                <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">Central</span>
+                                            @else
+                                                <span class="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">Local</span>
+                                            @endif
+                                        </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm text-gray-900">

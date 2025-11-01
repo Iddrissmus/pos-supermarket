@@ -2,19 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Exports\SalesReportExport;
-use Barryvdh\DomPDF\Facade\Pdf;
-use Maatwebsite\Excel\Facades\Excel;
 use App\Models\Sale;
-use App\Models\SaleItem;
-use App\Models\Product;
 use App\Models\Branch;
-use App\Models\BranchProduct;
-use App\Services\ReceiveStockService;
+use App\Models\Product;
+use App\Models\Category;
+use App\Models\SaleItem;
 use Illuminate\Http\Request;
+use App\Models\BranchProduct;
+use Illuminate\Support\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Exports\SalesReportExport;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Services\ReceiveStockService;
 
 class SalesController extends Controller
 {
@@ -31,8 +32,13 @@ class SalesController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-    $sales = Sale::with(['branch.business', 'cashier', 'items.product'])
-            ->when($user->branch_id, function ($query) use ($user) {
+        $sales = Sale::with(['branch.business', 'cashier', 'items.product'])
+            ->when($user->role === 'cashier', function ($query) use ($user) {
+                // Cashiers can only see their own sales
+                return $query->where('cashier_id', $user->id);
+            })
+            ->when($user->branch_id && $user->role !== 'cashier', function ($query) use ($user) {
+                // Managers see all sales from their branch
                 return $query->where('branch_id', $user->branch_id);
             })
             ->orderBy('created_at', 'desc')
@@ -78,9 +84,57 @@ class SalesController extends Controller
         $branches = $this->resolveBranchesForUser();
         $catalog = $this->buildProductCatalog($branches, false);
 
+        $user = Auth::user();
+        $categoryId = request()->input('category_id');
+        $branchIds = $branches->pluck('id');
+
+        // Get categories that have products available in the accessible branches
+        // This ensures only relevant categories are shown in the filter
+        $categories = Category::forBusiness($user->business_id)
+            ->active()
+            ->parents()
+            ->whereHas('products', function ($query) use ($branchIds) {
+                $query->whereHas('branchProducts', function ($q) use ($branchIds) {
+                    $q->whereIn('branch_id', $branchIds);
+                });
+            })
+            ->withCount([
+                'products' => function ($query) use ($branchIds) {
+                    $query->whereHas('branchProducts', function ($q) use ($branchIds) {
+                        $q->whereIn('branch_id', $branchIds);
+                    });
+                }
+            ])
+            ->orderBy('display_order')
+            ->orderBy('name')
+            ->get();
+
+        if ($user->role === 'cashier' && $user->branch_id) {
+            $productsQuery = BranchProduct::where('branch_id', $user->branch_id)
+                ->with(['product.category']);
+            if ($categoryId) {
+                $productsQuery->whereHas('product', function($q) use ($categoryId) {
+                    $q->where('category_id', $categoryId);
+                });
+            }
+            $products = $productsQuery->paginate(15);
+
+        } else {
+            $productsQuery = BranchProduct::with(['product.category', 'branch']);
+            if ($categoryId) {
+                $productsQuery->whereHas('product', function($q) use ($categoryId) {
+                    $q->where('category_id', $categoryId);
+                });
+            }
+            $products = $productsQuery->paginate(15);
+        }
+
         return view('sales.terminal', [
             'branches' => $branches,
             'catalog' => $catalog,
+            'categories' => $categories,
+            'selectedCategory' => $categoryId,
+            'products' => $products,
         ]);
     }
 
@@ -97,10 +151,11 @@ class SalesController extends Controller
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.price' => 'required|numeric|min:0',
+            'amount_tendered' => 'required|numeric|min:0',
         ]);
 
-        try {
-        $sale = DB::transaction(function () use ($validated) {
+    try {
+    $sale = DB::transaction(function () use ($validated) {
                 $sale = Sale::create([
                     'branch_id' => $validated['branch_id'],
                     'customer_id' => $validated['customer_id'] ?? null,
@@ -136,6 +191,11 @@ class SalesController extends Controller
                 // Calculate taxes automatically after all items are added
                 $sale->calculateTotals();
 
+                // Store amount tendered and change
+                $sale->amount_tendered = $validated['amount_tendered'];
+                $sale->change = max(0, $validated['amount_tendered'] - $sale->total);
+                $sale->save();
+
                 return $sale->fresh(['items.product', 'branch.business', 'cashier']);
             });
 
@@ -150,6 +210,8 @@ class SalesController extends Controller
                         'total' => $taxBreakdown['total'],
                         'tax_components' => $taxBreakdown['tax_components'],
                         'payment_method' => $sale->payment_method,
+                        'amount_tendered' => $sale->amount_tendered,
+                        'change' => $sale->change,
                         'created_at' => $sale->created_at->toDateTimeString(),
                         'branch' => optional($sale->branch)->display_label,
                         'cashier' => optional($sale->cashier)->name,
@@ -181,16 +243,32 @@ class SalesController extends Controller
      */
     public function show(Sale $sale)
     {
-        $sale->load(['items.product', 'branch.business', 'cashier', 'customer']);
+        $user = Auth::user();
         
+        // Authorization: Cashiers can only view their own sales
+        if ($user->role === 'cashier' && $sale->cashier_id !== $user->id) {
+            return redirect()->back()->with('error', 'You can only view your own sales.');
+        }
+        
+        // Managers can only view sales from their branch
+        if ($user->role === 'manager' && $sale->branch_id !== $user->branch_id) {
+            return redirect()->back()->with('error', 'You can only view sales from your branch.');
+        }
+
+        $sale->load(['items.product', 'branch.business', 'cashier', 'customer']);
         // Get comprehensive analysis including tax breakdown
         $profitAnalysis = $sale->getProfitAnalysis();
         $taxBreakdown = $sale->getTaxBreakdown();
         
-        $totals = array_merge($profitAnalysis, [
-            'tax_breakdown' => $taxBreakdown,
+        // Ensure tax_components is always an array
+        if (!isset($taxBreakdown['tax_components']) || !is_array($taxBreakdown['tax_components'])) {
+            $taxBreakdown['tax_components'] = [];
+        }
+        
+        $totals = array_merge($profitAnalysis, $taxBreakdown, [
+            'amount_tendered' => $sale->amount_tendered,
+            'change' => $sale->change,
         ]);
-
         return view('sales.show', compact('sale', 'totals'));
     }
 
@@ -199,8 +277,19 @@ class SalesController extends Controller
      */
     public function receipt(Sale $sale)
     {
-        $sale->load(['items.product', 'branch.business', 'cashier', 'customer']);
+        $user = Auth::user();
+        
+        // Authorization: Cashiers can only view receipts for their own sales
+        if ($user->role === 'cashier' && $sale->cashier_id !== $user->id) {
+            return redirect()->back()->with('error', 'You can only view receipts for your own sales.');
+        }
+        
+        // Managers can only view receipts from their branch
+        if ($user->role === 'manager' && $sale->branch_id !== $user->branch_id) {
+            return redirect()->back()->with('error', 'You can only view receipts from your branch.');
+        }
 
+        $sale->load(['items.product', 'branch.business', 'cashier', 'customer']);
         $taxBreakdown = $sale->getTaxBreakdown();
         $totals = [
             'subtotal' => $taxBreakdown['subtotal'],
@@ -208,8 +297,9 @@ class SalesController extends Controller
             'tax_amount' => $taxBreakdown['tax_amount'],
             'total' => $taxBreakdown['total'],
             'cogs' => $sale->items->sum('total_cost'),
+            'amount_tendered' => $sale->amount_tendered,
+            'change' => $sale->change,
         ];
-
         return view('sales.receipt', [
             'sale' => $sale,
             'totals' => $totals,
@@ -282,6 +372,12 @@ class SalesController extends Controller
     //export sales report methods
     public function exportCsv(Request $request)
     {
+        // Prevent cashiers from accessing sales reports
+        $user = Auth::user();
+        if ($user->role === 'cashier') {
+            return redirect()->back()->with('error', 'You do not have permission to export sales reports.');
+        }
+
         $data = $this->buildReportData($request);
 
         $filename = sprintf(
@@ -291,22 +387,50 @@ class SalesController extends Controller
         );
 
         return Excel::download(
-            new SalesReportExport($data['sales'], $data['summary'], $data['startDate'], $data['endDate']),
+            new SalesReportExport(
+                $data['sales'], 
+                $data['summary'], 
+                $data['startDate'], 
+                $data['endDate'],
+                $data['branchComparison'],
+                $data['topProducts']
+            ),
             $filename
         );
     }
 
     public function exportPdf(Request $request)
     {
+        // Prevent cashiers from accessing sales reports
+        $user = Auth::user();
+        if ($user->role === 'cashier') {
+            return redirect()->back()->with('error', 'You do not have permission to export sales reports.');
+        }
+
+        // $data = $this->buildReportData($request);
+
+        // $pdf = Pdf::loadView('sales.pdf', [
+        //     'sales' => $data['sales'],
+        //     'summary' => $data['summary'],
+        //     'startDate' => $data['startDate'],
+        //     'endDate' => $data['endDate'],
+        //     'chartData' => $data['chartData'],
+        // ])->setPaper('a4', 'portrait');
+
+        // return $pdf->download(sprintf(
+        //     'sales-report-%s-%s.pdf',
+        //     $data['startDate']->format('Ymd'),
+        //     $data['endDate']->format('Ymd')
+        // ));
         $data = $this->buildReportData($request);
 
-        $pdf = Pdf::loadView('sales.pdf', [
-            'sales' => $data['sales'],
-            'summary' => $data['summary'],
-            'startDate' => $data['startDate'],
-            'endDate' => $data['endDate'],
-            'chartData' => $data['chartData'],
-        ])->setPaper('a4', 'portrait');
+        $pdf = Pdf::loadView('sales.pdf', $data)
+            ->setPaper('a4', 'landscape') // Changed to landscape for better table fit
+            ->setOptions([
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'defaultFont' => 'sans-serif'
+            ]);
 
         return $pdf->download(sprintf(
             'sales-report-%s-%s.pdf',
@@ -355,6 +479,9 @@ class SalesController extends Controller
                 'price' => $price,
                 'cost_price' => $branchProduct->cost_price,
                 'image' => optional($branchProduct->product)->image,
+                // expose category info for client-side filtering
+                'category_id' => optional($branchProduct->product)->category_id,
+                'category_name' => optional(optional($branchProduct->product)->category)->name,
             ];
         })->values();
     }
@@ -363,12 +490,93 @@ class SalesController extends Controller
     /**
      * Sales report with margin analysis
      */
+    // protected function buildReportData(Request $request): array
+    // {
+    //     $user = Auth::user();
+    //     $startDateInput = $request->input('start_date');
+    //     $endDateInput = $request->input('end_date');
+
+    //     $startDate = $startDateInput
+    //         ? Carbon::parse($startDateInput)->startOfDay()
+    //         : now()->startOfMonth();
+
+    //     $endDate = $endDateInput
+    //         ? Carbon::parse($endDateInput)->endOfDay()
+    //         : now()->endOfMonth();
+
+    //     $sales = Sale::with(['items', 'branch.business', 'cashier'])
+    //         ->when($user->branch_id, function ($query) use ($user) {
+    //             return $query->where('branch_id', $user->branch_id);
+    //         })
+    //         ->whereBetween('created_at', [$startDate, $endDate])
+    //         ->orderBy('created_at')
+    //         ->get();
+
+    //     $summary = [
+    //         'total_sales' => $sales->count(),
+    //         'total_revenue' => $sales->sum('total'),
+    //         'total_cogs' => $sales->sum(function ($sale) {
+    //             return $sale->items->sum('total_cost');
+    //         }),
+    //         'total_profit' => 0,
+    //         'average_margin' => 0,
+    //     ];
+
+    //     $summary['total_profit'] = $summary['total_revenue'] - $summary['total_cogs'];
+    //     if ($summary['total_revenue'] > 0) {
+    //         $summary['average_margin'] = ($summary['total_profit'] / $summary['total_revenue']) * 100;
+    //     }
+
+    //     $dailyData = $sales->groupBy(fn ($sale) => $sale->created_at->format('Y-m-d'))
+    //         ->sortKeys();
+
+    //     $chartData = [
+    //         'labels' => $dailyData->keys()->values()->all(),
+    //         'revenue' => $dailyData->map(fn ($daySales) => (float) $daySales->sum('total'))->values()->all(),
+    //         'cogs' => $dailyData->map(fn ($daySales) => (float) $daySales->sum(fn ($sale) => $sale->items->sum('total_cost')))->values()->all(),
+    //         'profit' => $dailyData->map(function ($daySales) {
+    //             $revenue = $daySales->sum('total');
+    //             $cogs = $daySales->sum(fn ($sale) => $sale->items->sum('total_cost'));
+    //             return (float) ($revenue - $cogs);
+    //         })->values()->all(),
+    //         'loss' => $dailyData->map(function ($daySales) {
+    //             $revenue = $daySales->sum('total');
+    //             $cogs = $daySales->sum(fn ($sale) => $sale->items->sum('total_cost'));
+    //             $net = (float) ($revenue - $cogs);
+    //             return $net < 0 ? abs($net) : 0.0;
+    //         })->values()->all(),
+    //         'margin' => $dailyData->map(function ($daySales) {
+    //             $revenue = $daySales->sum('total');
+    //             if ($revenue <= 0) {
+    //                 return 0.0;
+    //             }
+
+    //             $cogs = $daySales->sum(fn ($sale) => $sale->items->sum('total_cost'));
+    //             $profit = $revenue - $cogs;
+
+    //             return round(($profit / $revenue) * 100, 2);
+    //         })->values()->all(),
+    //     ];
+
+    //     return [
+    //         'startDate' => $startDate,
+    //         'endDate' => $endDate,
+    //         'sales' => $sales,
+    //         'summary' => $summary,
+    //         'chartData' => $chartData,
+    //     ];
+    // }
+
+    /**
+     * Build comprehensive report data with optimized queries
+     */
     protected function buildReportData(Request $request): array
     {
         $user = Auth::user();
         $startDateInput = $request->input('start_date');
         $endDateInput = $request->input('end_date');
 
+        // Date range handling
         $startDate = $startDateInput
             ? Carbon::parse($startDateInput)->startOfDay()
             : now()->startOfMonth();
@@ -377,59 +585,41 @@ class SalesController extends Controller
             ? Carbon::parse($endDateInput)->endOfDay()
             : now()->endOfMonth();
 
-    $sales = Sale::with(['items', 'branch.business', 'cashier'])
+        // Base query - respect branch restrictions
+        $baseQuery = Sale::with(['items.product.primarySupplier', 'branch', 'cashier'])
             ->when($user->branch_id, function ($query) use ($user) {
                 return $query->where('branch_id', $user->branch_id);
             })
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->orderBy('created_at')
+            ->whereBetween('created_at', [$startDate, $endDate]);
+
+        // Get detailed sales for table
+        $sales = (clone $baseQuery)
+            ->orderBy('created_at', 'desc')
             ->get();
 
-        $summary = [
-            'total_sales' => $sales->count(),
-            'total_revenue' => $sales->sum('total'),
-            'total_cogs' => $sales->sum(function ($sale) {
-                return $sale->items->sum('total_cost');
-            }),
-            'total_profit' => 0,
-            'average_margin' => 0,
-        ];
+        // Calculate summary metrics (optimized aggregation)
+        $summary = $this->calculateSummary($sales);
 
-        $summary['total_profit'] = $summary['total_revenue'] - $summary['total_cogs'];
-        if ($summary['total_revenue'] > 0) {
-            $summary['average_margin'] = ($summary['total_profit'] / $summary['total_revenue']) * 100;
+        // Generate chart data
+        $chartData = $this->generateChartData($sales);
+
+        // Branch comparison (only for users with access to multiple branches)
+        $branchComparison = null;
+        if (!$user->branch_id) {
+            $branchComparison = $this->generateBranchComparison($startDate, $endDate);
         }
 
-        $dailyData = $sales->groupBy(fn ($sale) => $sale->created_at->format('Y-m-d'))
-            ->sortKeys();
+        // Top products analysis
+        $topProducts = $this->getTopProducts($sales);
 
-        $chartData = [
-            'labels' => $dailyData->keys()->values()->all(),
-            'revenue' => $dailyData->map(fn ($daySales) => (float) $daySales->sum('total'))->values()->all(),
-            'cogs' => $dailyData->map(fn ($daySales) => (float) $daySales->sum(fn ($sale) => $sale->items->sum('total_cost')))->values()->all(),
-            'profit' => $dailyData->map(function ($daySales) {
-                $revenue = $daySales->sum('total');
-                $cogs = $daySales->sum(fn ($sale) => $sale->items->sum('total_cost'));
-                return (float) ($revenue - $cogs);
-            })->values()->all(),
-            'loss' => $dailyData->map(function ($daySales) {
-                $revenue = $daySales->sum('total');
-                $cogs = $daySales->sum(fn ($sale) => $sale->items->sum('total_cost'));
-                $net = (float) ($revenue - $cogs);
-                return $net < 0 ? abs($net) : 0.0;
-            })->values()->all(),
-            'margin' => $dailyData->map(function ($daySales) {
-                $revenue = $daySales->sum('total');
-                if ($revenue <= 0) {
-                    return 0.0;
-                }
+        // Supplier breakdown
+        $supplierBreakdown = $this->getSupplierBreakdown($sales);
 
-                $cogs = $daySales->sum(fn ($sale) => $sale->items->sum('total_cost'));
-                $profit = $revenue - $cogs;
+        // Cashier performance
+        $cashierStats = $this->getCashierPerformance($sales);
 
-                return round(($profit / $revenue) * 100, 2);
-            })->values()->all(),
-        ];
+        // Period comparison
+        $periodComparison = $this->compareToPreviousPeriod($startDate, $endDate, $user);
 
         return [
             'startDate' => $startDate,
@@ -437,11 +627,331 @@ class SalesController extends Controller
             'sales' => $sales,
             'summary' => $summary,
             'chartData' => $chartData,
+            'branchComparison' => $branchComparison,
+            'topProducts' => $topProducts,
+            'supplierBreakdown' => $supplierBreakdown,
+            'cashierStats' => $cashierStats,
+            'periodComparison' => $periodComparison,
+            'userBranchId' => $user->branch_id,
+        ];
+    }
+
+     /**
+     * Calculate summary metrics with optimized aggregation
+     */
+    protected function calculateSummary($sales): array
+    {
+        // Single pass through sales collection
+        $metrics = $sales->reduce(function ($carry, $sale) {
+            $cogs = $sale->items->sum('total_cost');
+            $carry['revenue'] += $sale->total;
+            $carry['cogs'] += $cogs;
+            $carry['items'] += $sale->items->count();
+            $carry['quantity'] += $sale->items->sum('quantity');
+            return $carry;
+        }, ['revenue' => 0, 'cogs' => 0, 'items' => 0, 'quantity' => 0]);
+
+        $totalRevenue = $metrics['revenue'];
+        $totalCogs = $metrics['cogs'];
+        $totalProfit = $totalRevenue - $totalCogs;
+        $averageMargin = $totalRevenue > 0 ? ($totalProfit / $totalRevenue) * 100 : 0;
+        $salesCount = $sales->count();
+
+        return [
+            'total_sales' => $salesCount,
+            'total_revenue' => $totalRevenue,
+            'total_cogs' => $totalCogs,
+            'total_profit' => $totalProfit,
+            'average_margin' => $averageMargin,
+            'average_transaction' => $salesCount > 0 ? $totalRevenue / $salesCount : 0,
+            'total_items_sold' => $metrics['items'],
+            'total_quantity_sold' => $metrics['quantity'],
+        ];
+    }
+
+    /**
+     * Generate daily chart data using optimized aggregation
+     */
+    protected function generateChartData($sales): array
+    {
+        // Pre-calculate COGS for each sale to avoid nested loops
+        $salesWithCogs = $sales->map(function ($sale) {
+            $cogs = $sale->items->sum('total_cost');
+            return [
+                'date' => $sale->created_at->format('Y-m-d'),
+                'revenue' => (float) $sale->total,
+                'cogs' => (float) $cogs,
+                'profit' => (float) ($sale->total - $cogs),
+            ];
+        });
+
+        // Group by date and aggregate
+        $dailyData = $salesWithCogs->groupBy('date')
+            ->map(function ($dayData) {
+                $revenue = $dayData->sum('revenue');
+                $cogs = $dayData->sum('cogs');
+                $profit = $dayData->sum('profit');
+                $margin = $revenue > 0 ? round(($profit / $revenue) * 100, 2) : 0.0;
+                
+                return [
+                    'revenue' => $revenue,
+                    'cogs' => $cogs,
+                    'profit' => $profit,
+                    'margin' => $margin,
+                    'count' => $dayData->count(),
+                ];
+            })
+            ->sortKeys();
+
+        return [
+            'labels' => $dailyData->keys()->map(fn($date) => Carbon::parse($date)->format('M d'))->values()->all(),
+            'revenue' => $dailyData->pluck('revenue')->values()->all(),
+            'cogs' => $dailyData->pluck('cogs')->values()->all(),
+            'profit' => $dailyData->pluck('profit')->values()->all(),
+            'margin' => $dailyData->pluck('margin')->values()->all(),
+            'transaction_count' => $dailyData->pluck('count')->values()->all(),
+        ];
+    }
+
+    /**
+     * Generate branch comparison data with optimized queries
+     */
+    protected function generateBranchComparison(Carbon $startDate, Carbon $endDate): array
+    {
+        $branches = Branch::with(['business'])
+            ->whereHas('sales', function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('created_at', [$startDate, $endDate]);
+            })
+            ->get();
+
+        $comparison = [];
+
+        foreach ($branches as $branch) {
+            $sales = Sale::with('items')
+                ->where('branch_id', $branch->id)
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->get();
+
+            // Aggregate in single pass
+            $metrics = $sales->reduce(function ($carry, $sale) {
+                $cogs = $sale->items->sum('total_cost');
+                $carry['revenue'] += $sale->total;
+                $carry['cogs'] += $cogs;
+                $carry['count']++;
+                return $carry;
+            }, ['revenue' => 0, 'cogs' => 0, 'count' => 0]);
+
+            $revenue = $metrics['revenue'];
+            $cogs = $metrics['cogs'];
+            $profit = $revenue - $cogs;
+            $margin = $revenue > 0 ? ($profit / $revenue) * 100 : 0;
+
+            $comparison[] = [
+                'branch_name' => $branch->display_label,
+                'sales_count' => $metrics['count'],
+                'revenue' => $revenue,
+                'cogs' => $cogs,
+                'profit' => $profit,
+                'margin' => $margin,
+            ];
+        }
+
+        // Sort by revenue descending
+        usort($comparison, fn($a, $b) => $b['revenue'] <=> $a['revenue']);
+        
+        return $comparison;
+    }
+
+    /**
+     * Get top performing products with optimized aggregation
+     */
+    protected function getTopProducts($sales, $limit = 10): array
+    {
+        $productStats = [];
+
+        // Single pass through all sale items
+        foreach ($sales as $sale) {
+            foreach ($sale->items as $item) {
+                $productId = $item->product_id;
+                
+                if (!isset($productStats[$productId])) {
+                    $product = $item->product;
+                    $productStats[$productId] = [
+                        'product_name' => $product->name ?? 'Unknown',
+                        'quantity_sold' => 0,
+                        'revenue' => 0,
+                        'profit' => 0,
+                        'is_local' => $product->is_local_supplier_product ?? false,
+                        'supplier_name' => $product->primarySupplier->name ?? null,
+                    ];
+                }
+
+                $productStats[$productId]['quantity_sold'] += $item->quantity;
+                $productStats[$productId]['revenue'] += $item->total;
+                $productStats[$productId]['profit'] += ($item->total - $item->total_cost);
+            }
+        }
+
+        // Sort by revenue and limit results
+        usort($productStats, fn($a, $b) => $b['revenue'] <=> $a['revenue']);
+        
+        return array_slice($productStats, 0, $limit);
+    }
+
+    /**
+     * Generate supplier breakdown statistics
+     */
+    protected function getSupplierBreakdown($sales): array
+    {
+        $localStats = [
+            'quantity_sold' => 0,
+            'revenue' => 0,
+            'profit' => 0,
+            'products_count' => 0,
+        ];
+
+        $centralStats = [
+            'quantity_sold' => 0,
+            'revenue' => 0,
+            'profit' => 0,
+            'products_count' => 0,
+        ];
+
+        $productIds = ['local' => [], 'central' => []];
+
+        // Single pass through all sale items
+        foreach ($sales as $sale) {
+            foreach ($sale->items as $item) {
+                $product = $item->product;
+                $isLocal = $product->is_local_supplier_product ?? false;
+
+                if ($isLocal) {
+                    $localStats['quantity_sold'] += $item->quantity;
+                    $localStats['revenue'] += $item->total;
+                    $localStats['profit'] += ($item->total - $item->total_cost);
+                    if (!in_array($product->id, $productIds['local'])) {
+                        $productIds['local'][] = $product->id;
+                        $localStats['products_count']++;
+                    }
+                } else {
+                    $centralStats['quantity_sold'] += $item->quantity;
+                    $centralStats['revenue'] += $item->total;
+                    $centralStats['profit'] += ($item->total - $item->total_cost);
+                    if (!in_array($product->id, $productIds['central'])) {
+                        $productIds['central'][] = $product->id;
+                        $centralStats['products_count']++;
+                    }
+                }
+            }
+        }
+
+        // Calculate margins
+        $localMargin = $localStats['revenue'] > 0 
+            ? ($localStats['profit'] / $localStats['revenue']) * 100 
+            : 0;
+        $centralMargin = $centralStats['revenue'] > 0 
+            ? ($centralStats['profit'] / $centralStats['revenue']) * 100 
+            : 0;
+
+        return [
+            'local' => array_merge($localStats, ['margin' => $localMargin]),
+            'central' => array_merge($centralStats, ['margin' => $centralMargin]),
+            'total_revenue' => $localStats['revenue'] + $centralStats['revenue'],
+        ];
+    }
+
+    /**
+     * Get cashier performance statistics with optimized grouping
+     */
+    protected function getCashierPerformance($sales): array
+    {
+        $cashierStats = [];
+
+        // Single pass aggregation
+        foreach ($sales as $sale) {
+            $cashierId = $sale->cashier_id;
+            $cogs = $sale->items->sum('total_cost');
+            
+            if (!isset($cashierStats[$cashierId])) {
+                $cashierStats[$cashierId] = [
+                    'cashier_name' => $sale->cashier->name ?? 'Unknown',
+                    'branch_name' => optional($sale->branch)->display_label ?? 'No Branch',
+                    'sales_count' => 0,
+                    'revenue' => 0,
+                    'cogs' => 0,
+                ];
+            }
+            
+            $cashierStats[$cashierId]['sales_count']++;
+            $cashierStats[$cashierId]['revenue'] += $sale->total;
+            $cashierStats[$cashierId]['cogs'] += $cogs;
+        }
+
+        // Calculate profit and avg_transaction, then sort by revenue
+        $results = array_map(function ($stats) {
+            $profit = $stats['revenue'] - $stats['cogs'];
+            $avgTransaction = $stats['sales_count'] > 0 ? $stats['revenue'] / $stats['sales_count'] : 0;
+            
+            return [
+                'cashier_name' => $stats['cashier_name'],
+                'branch_name' => $stats['branch_name'],
+                'sales_count' => $stats['sales_count'],
+                'revenue' => $stats['revenue'],
+                'profit' => $profit,
+                'avg_transaction' => $avgTransaction,
+            ];
+        }, $cashierStats);
+
+        usort($results, fn($a, $b) => $b['revenue'] <=> $a['revenue']);
+        
+        return $results;
+    }
+
+    /**
+     * Compare current period to previous period with optimized queries
+     */
+    protected function compareToPreviousPeriod(Carbon $startDate, Carbon $endDate, $user): array
+    {
+        // Calculate the duration of the current period
+        $days = $startDate->diffInDays($endDate) + 1; // +1 to include both start and end dates
+        
+        // Previous period ends one day before current period starts
+        $previousEnd = $startDate->copy()->subDay()->endOfDay();
+        // Previous period starts N days before that
+        $previousStart = $previousEnd->copy()->subDays($days - 1)->startOfDay();
+
+        $previousSales = Sale::with('items')
+            ->when($user->branch_id, function ($query) use ($user) {
+                return $query->where('branch_id', $user->branch_id);
+            })
+            ->whereBetween('created_at', [$previousStart, $previousEnd])
+            ->get();
+
+        // Single pass aggregation
+        $metrics = $previousSales->reduce(function ($carry, $sale) {
+            $cogs = $sale->items->sum('total_cost');
+            $carry['revenue'] += $sale->total;
+            $carry['cogs'] += $cogs;
+            return $carry;
+        }, ['revenue' => 0, 'cogs' => 0]);
+
+        return [
+            'previous_revenue' => $metrics['revenue'],
+            'previous_profit' => $metrics['revenue'] - $metrics['cogs'],
+            'previous_sales_count' => $previousSales->count(),
+            'previous_start' => $previousStart,
+            'previous_end' => $previousEnd,
         ];
     }
 
     public function report(Request $request)
     {
+        // Prevent cashiers from accessing sales reports
+        $user = Auth::user();
+        if ($user->role === 'cashier') {
+            return redirect()->back()->with('error', 'You do not have permission to access sales reports.');
+        }
+
         $data = $this->buildReportData($request);
 
         return view('sales.report', $data);
