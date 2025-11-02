@@ -206,7 +206,7 @@
                             <tr>
                                 <td>
                                     <div style="font-weight: 600; color: #111827;">{{ $item->product->name ?? 'Product' }}</div>
-                                    <div style="font-size: 12px; color: #6b7280;">SKU: {{ $item->product->sku ?? 'N/A' }}</div>
+                                    <div style="font-size: 12px; color: #6b7280;">Barcode: {{ $item->product->barcode ?? 'N/A' }}</div>
                                 </td>
                                 <td class="text-right">{{ $item->quantity }}</td>
                                 <td class="text-right">₵{{ number_format($item->price, 2) }}</td>

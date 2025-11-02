@@ -103,28 +103,38 @@
                     <div id="items-container">
                         <!-- Initial item row -->
                         <div class="item-row grid grid-cols-12 gap-3 mb-3 p-3 bg-gray-50 rounded-lg">
-                            <div class="col-span-5">
+                            <div class="col-span-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Product *</label>
                                 <select name="items[0][product_id]" required class="product-select w-full border border-gray-300 rounded px-2 py-1 text-sm">
                                     <option value="">Select Product</option>
                                     @foreach($products as $product)
-                                        <option value="{{ $product->id }}" data-name="{{ $product->name }}" data-sku="{{ $product->sku }}">
-                                            {{ $product->name }} ({{ $product->sku }})
+                                        <option value="{{ $product->id }}" data-name="{{ $product->name }}" data-barcode="{{ $product->barcode }}">
+                                            {{ $product->name }} ({{ $product->barcode }})
                                         </option>
                                     @endforeach
                                 </select>
                             </div>
+                            <div class="col-span-1">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Boxes *</label>
+                                <input type="number" name="items[0][quantity_of_boxes]" min="0" required
+                                       class="boxes-input w-full border border-gray-300 rounded px-2 py-1 text-sm" placeholder="0">
+                            </div>
+                            <div class="col-span-1">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Units/Box *</label>
+                                <input type="number" name="items[0][quantity_per_box]" min="1" required
+                                       class="units-per-box-input w-full border border-gray-300 rounded px-2 py-1 text-sm" placeholder="1">
+                            </div>
                             <div class="col-span-2">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Total Units</label>
                                 <input type="number" name="items[0][quantity]" min="1" required
-                                       class="quantity-input w-full border border-gray-300 rounded px-2 py-1 text-sm">
+                                       class="quantity-input w-full border border-gray-300 rounded px-2 py-1 text-sm bg-blue-50" readonly>
                             </div>
                             <div class="col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Unit Cost *</label>
                                 <input type="number" name="items[0][unit_cost]" step="0.01" min="0" required
                                        class="unit-cost-input w-full border border-gray-300 rounded px-2 py-1 text-sm">
                             </div>
-                            <div class="col-span-2">
+                            <div class="col-span-1">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Total Cost</label>
                                 <input type="text" class="total-cost-display w-full border border-gray-200 rounded px-2 py-1 text-sm bg-gray-100" readonly>
                             </div>
@@ -186,18 +196,40 @@ document.addEventListener('DOMContentLoaded', function() {
             calculateRowTotal(e.target.closest('.item-row'));
             calculateGrandTotal();
         }
+        
+        // Handle box quantity calculations
+        if (e.target.matches('.boxes-input, .units-per-box-input')) {
+            const row = e.target.closest('.item-row');
+            calculateTotalUnits(row);
+            calculateRowTotal(row);
+            calculateGrandTotal();
+        }
     });
+    
+    function calculateTotalUnits(row) {
+        const boxes = parseFloat(row.querySelector('.boxes-input').value) || 0;
+        const unitsPerBox = parseFloat(row.querySelector('.units-per-box-input').value) || 0;
+        const totalUnits = boxes * unitsPerBox;
+        
+        if (totalUnits > 0) {
+            row.querySelector('.quantity-input').value = totalUnits;
+        }
+    }
 
     function createItemRow(index) {
         const template = document.querySelector('.item-row').cloneNode(true);
         
         // Update name attributes
         template.querySelector('select').setAttribute('name', `items[${index}][product_id]`);
+        template.querySelector('.boxes-input').setAttribute('name', `items[${index}][quantity_of_boxes]`);
+        template.querySelector('.units-per-box-input').setAttribute('name', `items[${index}][quantity_per_box]`);
         template.querySelector('.quantity-input').setAttribute('name', `items[${index}][quantity]`);
         template.querySelector('.unit-cost-input').setAttribute('name', `items[${index}][unit_cost]`);
         
         // Clear values
         template.querySelector('select').value = '';
+        template.querySelector('.boxes-input').value = '';
+        template.querySelector('.units-per-box-input').value = '';
         template.querySelector('.quantity-input').value = '';
         template.querySelector('.unit-cost-input').value = '';
         template.querySelector('.total-cost-display').value = '';

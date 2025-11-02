@@ -9,13 +9,15 @@ class Product extends Model
     protected $fillable = [
         'name',
         'description',
-        'sku',
         'image',
         'business_id',
         'category_id',
         'primary_supplier_id',
         'is_local_supplier_product',
         'added_by',
+        'barcode',
+        'qr_code_path',
+        'quantity_per_box'
     ];
 
     protected $casts = [
@@ -27,35 +29,21 @@ class Product extends Model
         parent::boot();
         
         static::creating(function ($product) {
-            if (empty($product->sku)) {
-                $product->sku = self::generateSKU($product->name);
-                
-                // Ensure SKU is unique
-                while (self::where('sku', $product->sku)->exists()) {
-                    $product->sku = self::generateSKU($product->name);
-                }
+            // Auto-generate barcode if not provided
+            if (empty($product->barcode)) {
+                $barcodeService = new \App\Services\BarcodeService();
+                $product->barcode = $barcodeService->generateBarcodeNumber();
             }
         });
-    }
-
-    public static function generateSKU($name)
-    {
-        // Convert name to uppercase and remove spaces
-        $namePart = strtoupper(str_replace(' ', '', $name));
-        // Take first 3 characters
-        $namePart = substr($namePart, 0, 3);
-        // Add random numbers
-        $randomPart = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         
-        $sku = $namePart . $randomPart;
-        
-        // Check if SKU exists and regenerate if needed
-        while (self::where('sku', $sku)->exists()) {
-            $randomPart = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-            $sku = $namePart . $randomPart;
-        }
-        
-        return $sku;
+        // Generate QR code after product is created (needs product ID)
+        static::created(function ($product) {
+            if (empty($product->qr_code_path)) {
+                $barcodeService = new \App\Services\BarcodeService();
+                $qrPath = $barcodeService->generateQRCode($product);
+                $product->update(['qr_code_path' => $qrPath]);
+            }
+        });
     }
 
     public function business()

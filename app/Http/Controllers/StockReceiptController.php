@@ -76,6 +76,8 @@ class StockReceiptController extends Controller
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit_cost' => 'required|numeric|min:0',
+            'items.*.quantity_of_boxes' => 'required|integer|min:0',
+            'items.*.quantity_per_box' => 'required|integer|min:1',
         ]);
 
         // Check if manager is trying to add inventory for central supplier

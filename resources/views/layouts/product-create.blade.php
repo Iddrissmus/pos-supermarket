@@ -63,16 +63,8 @@
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Price</label>
-                        <input id="product_price" name="price" type="number" step="0.01" class="mt-1 block w-full border rounded-md p-2" />
-                    </div>
-                    
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Stock Quantity</label>
-                        <input id="product_stock_quantity" name="stock_quantity" type="number" min="0" class="mt-1 block w-full border rounded-md p-2" />
+                        <label class="block text-sm font-medium text-gray-700">Selling Price *</label>
+                        <input id="product_price" name="price" type="number" step="0.01" required class="mt-1 block w-full border rounded-md p-2" />
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Cost Price (optional)</label>
@@ -80,9 +72,32 @@
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">SKU</label>
-                    <input id="product_sku" name="sku" type="text" class="mt-1 block w-full border rounded-md p-2" />
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h3 class="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                        <i class="fas fa-box"></i>
+                        Box Quantity Tracking
+                    </h3>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Quantity of Boxes *</label>
+                            <input id="quantity_of_boxes" name="quantity_of_boxes" type="number" min="0" required class="mt-1 block w-full border rounded-md p-2" placeholder="e.g., 5" />
+                            <p class="text-xs text-gray-500 mt-1">Number of boxes</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Units per Box *</label>
+                            <input id="quantity_per_box" name="quantity_per_box" type="number" min="1" required class="mt-1 block w-full border rounded-md p-2" placeholder="e.g., 24" />
+                            <p class="text-xs text-gray-500 mt-1">Units in each box</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Total Units</label>
+                            <input id="total_units" name="stock_quantity" type="number" class="mt-1 block w-full border rounded-md p-2 bg-gray-100" readonly />
+                            <p class="text-xs text-gray-500 mt-1">Auto-calculated</p>
+                        </div>
+                    </div>
+                    <p class="text-xs text-blue-700 mt-2">
+                        <i class="fas fa-info-circle"></i>
+                        Example: 5 boxes × 24 units/box = 120 total units
+                    </p>
                 </div>
 
                 <div>
@@ -110,6 +125,22 @@ document.addEventListener('DOMContentLoaded', function() {
     const nameInput = document.getElementById('product_name');
     const skuInput = document.getElementById('product_sku');
     const form = document.getElementById('productForm');
+
+    // Box quantity calculation
+    const quantityOfBoxesInput = document.getElementById('quantity_of_boxes');
+    const quantityPerBoxInput = document.getElementById('quantity_per_box');
+    const totalUnitsInput = document.getElementById('total_units');
+
+    function calculateTotalUnits() {
+        const boxes = parseInt(quantityOfBoxesInput.value) || 0;
+        const perBox = parseInt(quantityPerBoxInput.value) || 0;
+        const total = boxes * perBox;
+        
+        totalUnitsInput.value = total > 0 ? total : '';
+    }
+
+    quantityOfBoxesInput.addEventListener('input', calculateTotalUnits);
+    quantityPerBoxInput.addEventListener('input', calculateTotalUnits);
 
     nameInput.addEventListener('blur', function() {
         if (this.value && !skuInput.value) {

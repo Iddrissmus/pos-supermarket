@@ -235,7 +235,7 @@ document.addEventListener('DOMContentLoaded', function() {
             branchProducts.forEach(product => {
                 const option = document.createElement('option');
                 option.value = product.id;
-                option.textContent = `${product.name} (${product.sku})`;
+                option.textContent = `${product.name} (${product.barcode})`;
                 option.dataset.stock = product.stock_quantity;
                 option.dataset.price = product.selling_price;
                 selectElement.appendChild(option);
@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.available) {
                     row.querySelector('.stock-display').value = data.stock_quantity;
                     row.querySelector('.price-input').value = data.selling_price;
-                    row.querySelector('.product-info').textContent = `SKU: ${data.sku} | Cost: ₵${data.cost_price}`;
+                    row.querySelector('.product-info').textContent = `Barcode: ${data.barcode} | Cost: ₵${data.cost_price}`;
                     row.querySelector('.quantity-input').max = data.stock_quantity;
                 } else {
                     clearProductInfo(row);

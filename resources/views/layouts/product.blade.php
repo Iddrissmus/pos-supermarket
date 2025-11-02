@@ -37,13 +37,16 @@
                 <h1 class="text-2xl font-semibold text-gray-800">Inventory Management</h1>
                 <p class="text-sm text-gray-600 mt-1">Manage your products and track inventory across branches</p>
             </div>
-            <div class="flex space-x-3">
+            <div class="flex flex-wrap gap-3">
                 <a href="{{ route('product.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center">
                     <i class="fas fa-plus mr-2"></i>Add Product
                 </a>
-                {{-- <a href="{{route('layouts.assign')}}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center">
-                    <i class="fas fa-download mr-2"></i>Assign to Branch
-                </a> --}}
+                <a href="{{ route('inventory.bulk-import') }}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center">
+                    <i class="fas fa-file-excel mr-2"></i>Bulk Import
+                </a>
+                <a href="{{ route('inventory.bulk-assignment') }}" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center">
+                    <i class="fas fa-tasks mr-2"></i>Bulk Assign
+                </a>
             </div>
         </div>
     </div>
@@ -224,7 +227,7 @@
                 </div>
                 <div class="flex space-x-3">
                     <!-- Category filter-->
-                    <form method="GET" action="{{ route('product.index') }}" id="categoryFilterForm">
+                    <form method="GET" action="{{ route('layouts.product') }}" id="categoryFilterForm">
                         <select name="category_id" id="categoryFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" onchange="this.form.submit()">
                             <option value="">All Categories</option>
                             @foreach($categories as $cat)
@@ -235,7 +238,7 @@
                         </select>
                     </form>
                     @if($selectedCategory)
-                        <a href="{{ route('product.index') }}" class="flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors">
+                        <a href="{{ route('layouts.product') }}" class="flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors">
                             <i class="fas fa-times mr-2"></i>
                             <span>Clear Filter</span>
                         </a>
@@ -349,7 +352,7 @@
                                     <p class="text-lg font-medium">No products found</p>
                                     <p class="text-sm mt-1">Try adjusting your filters or add a new product</p>
                                     @if($selectedCategory)
-                                        <a href="{{ route('product.index') }}" class="mt-4 text-blue-600 hover:text-blue-800">
+                                        <a href="{{ route('layouts.product') }}" class="mt-4 text-blue-600 hover:text-blue-800">
                                             <i class="fas fa-times-circle mr-1"></i>Clear category filter
                                         </a>
                                     @endif

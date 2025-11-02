@@ -112,8 +112,8 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">SKU (Optional)</label>
-                            <input type="text" name="sku" value="{{ old('sku') }}" 
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Barcode (Auto-generated if left empty)</label>
+                            <input type="text" name="barcode" value="{{ old('barcode') }}" 
                                    placeholder="Product code"
                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-green-500 focus:border-green-500">
                         </div>

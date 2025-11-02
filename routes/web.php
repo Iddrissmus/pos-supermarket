@@ -64,9 +64,6 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->midd
 Route::get('/register', [RegisterController::class, 'showRegistrationForm'])->name('register')->middleware('guest');
 Route::post('/register', [RegisterController::class, 'register'])->name('register.post')->middleware('guest');
 
-
-// Route::apiResource('businesses', BusinessController::class);
-
 Route::middleware('auth')->group(function () {
     // SuperAdmin Dashboard
     Route::middleware('role:superadmin')->group(function () {
@@ -137,16 +134,26 @@ Route::middleware('auth')->group(function () {
         Route::view('/manage', 'layouts.manage')->name('layouts.manage');
     });
 
-    // Business Admin only - Inventory & Product Management
-    Route::middleware('role:business_admin')->group(function () {
-        // Only Business Admin can manage regular inventory
+    // Business Admin & SuperAdmin & Manager - Inventory & Product Management
+    // Business Admin/SuperAdmin: Full control
+    // Manager: Can view and manage local suppliers only
+    Route::middleware('role:business_admin,superadmin,manager')->group(function () {
+        // Inventory management
         Route::resource('stock-receipts', StockReceiptController::class);
         Route::resource('suppliers', SupplierController::class);
         Route::patch('/suppliers/{supplier}/toggle-status', [SupplierController::class, 'toggleStatus'])
             ->name('suppliers.toggle-status');
+        Route::get('/api/product-info', [StockReceiptController::class, 'getProductInfo'])
+            ->name('api.product.info');
+        Route::get('/api/current-cost', [StockReceiptController::class, 'getCurrentCost'])
+            ->name('api.current.cost');
 
-        // Only Business Admin can add products to the system
+        // Product viewing (Business Admin/SuperAdmin can create, Manager can only view)
         Route::get('/product', [ProductController::class, 'index'])->name('layouts.product');
+    });
+    
+    // Business Admin & SuperAdmin ONLY - Product Creation/Editing
+    Route::middleware('role:business_admin,superadmin')->group(function () {
         Route::get('/product/create', function () {
             try {
                 $user = Auth::user();
@@ -164,14 +171,24 @@ Route::middleware('auth')->group(function () {
         })->name('product.create');
         Route::post('/product', [ProductController::class, 'store'])->name('product.store');
         Route::put('/product/{product}', [ProductController::class, 'update'])->name('product.update');
+        
+        // Bulk Import & Assignment
+        Route::get('/inventory/bulk-import', [ProductController::class, 'showBulkImport'])->name('inventory.bulk-import');
+        Route::post('/inventory/bulk-import', [ProductController::class, 'importProducts'])->name('inventory.import');
+        Route::get('/inventory/template', [ProductController::class, 'downloadTemplate'])->name('inventory.template');
+        
+        // Bulk Assignment (Excel Upload)
+        Route::get('/inventory/bulk-assignment', [ProductController::class, 'showBulkAssignment'])->name('inventory.bulk-assignment');
+        Route::post('/inventory/bulk-assignment', [ProductController::class, 'uploadBulkAssignment'])->name('inventory.bulk-assignment-upload');
+        Route::get('/inventory/assignment-template', [ProductController::class, 'downloadAssignmentTemplate'])->name('inventory.assignment-template');
+        
+        // Manual Assignment (Form)
+        Route::get('/inventory/assign', [ProductController::class, 'showAssign'])->name('inventory.assign');
+        Route::post('/inventory/bulk-assign', [ProductController::class, 'bulkAssign'])->name('inventory.bulk-assign');
     });
 
     // Business Admin only
     Route::middleware('role:business_admin')->group(function () {
-        Route::get('/api/product-info', [StockReceiptController::class, 'getProductInfo'])
-            ->name('api.product.info');
-        Route::get('/api/current-cost', [StockReceiptController::class, 'getCurrentCost'])
-            ->name('api.current.cost');
         Route::get('/admin/branch-assignments', [BranchAssignmentController::class, 'index'])
             ->name('admin.branch-assignments.index');
         Route::post('/admin/branch-assignments', [BranchAssignmentController::class, 'store'])
@@ -201,8 +218,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/business-admin/reports', function () {
             return view('reports.business-admin');
         })->name('business-admin.reports');
-        
-        // Sales Reports for Business Admin
+    });
+    
+    // Sales Reports - Business Admin, SuperAdmin, and Manager can view
+    Route::middleware('role:business_admin,superadmin,manager')->group(function () {
         Route::get('/sales/report', [SalesController::class, 'report'])->name('sales.report');
         Route::get('/sales/export/csv', [SalesController::class, 'exportCsv'])->name('sales.export.csv');
         Route::get('/sales/export/pdf', [SalesController::class, 'exportPdf'])->name('sales.export.pdf');
@@ -242,23 +261,8 @@ Route::middleware('auth')->group(function () {
             return view('manager.daily-sales');
         })->name('manager.daily-sales');
         
-        // Manager can view sales reports for their branch
-        Route::get('/sales/report', [SalesController::class, 'report'])->name('sales.report');
-        Route::get('/sales/export/csv', [SalesController::class, 'exportCsv'])->name('sales.export.csv');
-        Route::get('/sales/export/pdf', [SalesController::class, 'exportPdf'])->name('sales.export.pdf');
-        
-        // Manager can view product inventory for their branch
-        Route::get('/product', [ProductController::class, 'index'])->name('layouts.product');
-        
-        // Manager can manage local suppliers and receive stock from them
-        Route::resource('suppliers', SupplierController::class);
-        Route::patch('/suppliers/{supplier}/toggle-status', [SupplierController::class, 'toggleStatus'])
-            ->name('suppliers.toggle-status');
-        Route::resource('stock-receipts', StockReceiptController::class);
-        Route::get('/api/product-info', [StockReceiptController::class, 'getProductInfo'])
-            ->name('api.product.info');
-        Route::get('/api/current-cost', [StockReceiptController::class, 'getCurrentCost'])
-            ->name('api.current.cost');
+        // Note: Sales reports are in shared section above (business_admin, superadmin, manager)
+        // Note: Suppliers, stock-receipts, and product viewing are in shared section above
             
         // Manager can create products from local suppliers
         Route::get('/manager/local-product/create', [\App\Http\Controllers\Manager\LocalProductController::class, 'create'])

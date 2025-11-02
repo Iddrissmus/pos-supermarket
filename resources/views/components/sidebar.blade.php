@@ -45,10 +45,34 @@
                         <a href="{{ route('system-users.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('system-users.*') ? 'text-purple-600 font-semibold' : 'text-gray-700' }}">System Users</a>
                     </div>
                     
-                    {{-- <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer hover:bg-gray-50">
-                        <i class="fas fa-chart-line sidebar-icon text-gray-500"></i>
-                        <span class="sidebar-text ml-3 text-sm text-gray-700">System Reports</span>
-                    </div> --}}
+                    <div class="mt-4 mb-2 px-3">
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider sidebar-text">Inventory</p>
+                    </div>
+                    
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('layouts.product', 'product.*') ? 'active bg-purple-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-boxes sidebar-icon {{ request()->routeIs('layouts.product', 'product.*') ? 'text-purple-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('layouts.product') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('layouts.product', 'product.*') ? 'text-purple-600 font-semibold' : 'text-gray-700' }}">Products</a>
+                    </div>
+                    
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('inventory.bulk-import') ? 'active bg-purple-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-file-excel sidebar-icon {{ request()->routeIs('inventory.bulk-import') ? 'text-purple-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('inventory.bulk-import') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('inventory.bulk-import') ? 'text-purple-600 font-semibold' : 'text-gray-700' }}">Bulk Import</a>
+                    </div>
+                    
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('inventory.bulk-assignment') ? 'active bg-purple-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-upload sidebar-icon {{ request()->routeIs('inventory.bulk-assignment') ? 'text-purple-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('inventory.bulk-assignment') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('inventory.bulk-assignment') ? 'text-purple-600 font-semibold' : 'text-gray-700' }}">Bulk Assignment</a>
+                    </div>
+                    
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('inventory.assign') ? 'active bg-purple-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-tasks sidebar-icon {{ request()->routeIs('inventory.assign') ? 'text-purple-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('inventory.assign') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('inventory.assign') ? 'text-purple-600 font-semibold' : 'text-gray-700' }}">Manual Assignment</a>
+                    </div>
+                    
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('suppliers.*') ? 'active bg-purple-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-industry sidebar-icon {{ request()->routeIs('suppliers.*') ? 'text-purple-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('suppliers.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('suppliers.*') ? 'text-purple-600 font-semibold' : 'text-gray-700' }}">Suppliers</a>
+                    </div>
 
                 @elseif($role === 'business_admin')
                     <!-- Business Admin Menu -->
@@ -66,11 +90,6 @@
                         <a href="{{ route('my-branch') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('my-branch') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">My Branch</a>
                     </div>
                     
-                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('admin.branch-assignments.*') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
-                        <i class="fas fa-user-tag sidebar-icon {{ request()->routeIs('admin.branch-assignments.*') ? 'text-blue-600' : 'text-gray-500' }}"></i>
-                        <a href="{{ route('admin.branch-assignments.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('admin.branch-assignments.*') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">Assign Staff</a>
-                    </div>
-                    
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('admin.cashiers.*') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
                         <i class="fas fa-users sidebar-icon {{ request()->routeIs('admin.cashiers.*') ? 'text-blue-600' : 'text-gray-500' }}"></i>
                         <a href="{{ route('admin.cashiers.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('admin.cashiers.*') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">Manage Staff</a>
@@ -82,7 +101,22 @@
                     
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('layouts.product', 'product.*') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
                         <i class="fas fa-boxes sidebar-icon {{ request()->routeIs('layouts.product', 'product.*') ? 'text-blue-600' : 'text-gray-500' }}"></i>
-                        <a href="{{ route('layouts.product') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('layouts.product', 'product.*') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">Inventory Management</a>
+                        <a href="{{ route('layouts.product') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('layouts.product', 'product.*') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">Products</a>
+                    </div>
+                    
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('inventory.bulk-import') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-file-excel sidebar-icon {{ request()->routeIs('inventory.bulk-import') ? 'text-blue-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('inventory.bulk-import') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('inventory.bulk-import') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">Bulk Import</a>
+                    </div>
+                    
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('inventory.bulk-assignment') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-upload sidebar-icon {{ request()->routeIs('inventory.bulk-assignment') ? 'text-blue-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('inventory.bulk-assignment') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('inventory.bulk-assignment') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">Bulk Assignment</a>
+                    </div>
+                    
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('inventory.assign') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-tasks sidebar-icon {{ request()->routeIs('inventory.assign') ? 'text-blue-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('inventory.assign') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('inventory.assign') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">Manual Assignment</a>
                     </div>
                     
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('stock-receipts.*') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
@@ -139,7 +173,15 @@
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider sidebar-text">Inventory</p>
                     </div>
                     
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('layouts.product', 'product.*') ? 'active bg-green-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-boxes sidebar-icon {{ request()->routeIs('layouts.product', 'product.*') ? 'text-green-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('layouts.product') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('layouts.product', 'product.*') ? 'text-green-600 font-semibold' : 'text-gray-700' }}">Products</a>
+                    </div>
                     
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('inventory.assign') ? 'active bg-green-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-tasks sidebar-icon {{ request()->routeIs('inventory.assign') ? 'text-green-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('inventory.assign') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('inventory.assign') ? 'text-green-600 font-semibold' : 'text-gray-700' }}">Assign to Branch</a>
+                    </div>
                     
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('stock-receipts.*') ? 'active bg-green-50' : 'hover:bg-gray-50' }}">
                         <i class="fas fa-truck-loading sidebar-icon {{ request()->routeIs('stock-receipts.*') ? 'text-green-600' : 'text-gray-500' }}"></i>

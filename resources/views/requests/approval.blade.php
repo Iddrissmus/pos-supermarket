@@ -84,8 +84,8 @@
                         @foreach($pendingRequests as $request)
                             <tr>
                                 <td class="px-6 py-4">
-                                    <div class="text-sm font-medium text-gray-900">{{ $request->product->name ?? 'N/A' }}</div>
-                                    <div class="text-sm text-gray-500">SKU: {{ $request->product->sku ?? 'N/A' }}</div>
+                                    <div class="font-medium text-gray-900">{{ $request->product->name ?? 'N/A' }}</div>
+                                    <div class="text-sm text-gray-500">Barcode: {{ $request->product->barcode ?? 'N/A' }}</div>
                                     @if($request->reason)
                                         <div class="text-xs text-blue-600 mt-1 bg-blue-50 px-2 py-1 rounded">
                                             <i class="fas fa-comment-dots mr-1"></i>{{ $request->reason }}

@@ -13,6 +13,8 @@
         "laravel/tinker": "^2.10.1",
         "livewire/livewire": "^3.6",
         "maatwebsite/excel": "^3.1",
+        "picqer/php-barcode-generator": "^3.2",
+        "simplesoftwareio/simple-qrcode": "^4.2",
         "wireui/wireui": "^2.4"
     },
     "require-dev": {

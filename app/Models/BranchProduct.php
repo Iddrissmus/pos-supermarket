@@ -7,7 +7,17 @@ use Illuminate\Database\Eloquent\Model;
 class BranchProduct extends Model
 {
     protected $table = 'branch_products';
-    protected $fillable = ['branch_id', 'product_id', 'stock_quantity', 'reorder_level', 'price', 'cost_price'];
+    protected $fillable = [
+        'branch_id', 
+        'product_id', 
+        'stock_quantity', 
+        'reorder_level', 
+        'price',
+        'selling_price',
+        'cost_price',
+        'quantity_of_boxes',
+        'quantity_per_box'
+    ];
 
     public function branch()
     {

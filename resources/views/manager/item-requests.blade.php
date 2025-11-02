@@ -45,7 +45,7 @@
                     <select id="product_id" name="product_id" class="w-full border rounded px-3 py-2" required onchange="updateBranchOptions()">
                         <option value="">Select a product</option>
                         @foreach($availableProducts as $product)
-                            <option value="{{ $product->id }}">{{ $product->name }} ({{ $product->sku }})</option>
+                            <option value="{{ $product->id }}">{{ $product->name }} ({{ $product->barcode }})</option>
                         @endforeach
                     </select>
                 </div>

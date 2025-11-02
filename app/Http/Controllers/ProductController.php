@@ -4,10 +4,14 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Business;
 use App\Models\BranchProduct;
+use App\Models\Branch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\ProductsImport;
+use App\Exports\ProductTemplateExport;
 
 
 class ProductController extends Controller
@@ -110,15 +114,19 @@ class ProductController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
-            'sku' => 'nullable|string|unique:products,sku',
+            'category_id' => 'required|exists:categories,id',
             'image' => 'nullable|image|max:2048',
 
             // optional branch/stock fields
             'branch_id' => 'nullable|exists:branches,id',
-            'stock_quantity' => 'nullable|integer|min:0',
+            'stock_quantity' => 'required|integer|min:0',
             'price' => 'nullable|numeric|min:0',
             'cost_price' => 'nullable|numeric|min:0',
             'reorder_level' => 'nullable|integer|min:0',
+            
+            // Box quantity fields (now required)
+            'quantity_of_boxes' => 'required|integer|min:0',
+            'quantity_per_box' => 'required|integer|min:1',
         ]);
 
         if ($validator->fails()) {
@@ -156,6 +164,7 @@ class ProductController extends Controller
             }
             
             $validatedData['business_id'] = $businessId;
+            $validatedData['added_by'] = Auth::id();
 
             // Handle product image upload (stored in 'image' field)
             if ($request->hasFile('image')) {
@@ -173,6 +182,10 @@ class ProductController extends Controller
             if ($request->filled('price')) $bpData['price'] = $request->input('price');
             if ($request->filled('cost_price')) $bpData['cost_price'] = $request->input('cost_price');
             if ($request->filled('reorder_level')) $bpData['reorder_level'] = $request->input('reorder_level');
+            
+            // Add box quantity fields
+            if ($request->filled('quantity_of_boxes')) $bpData['quantity_of_boxes'] = $request->input('quantity_of_boxes');
+            if ($request->filled('quantity_per_box')) $bpData['quantity_per_box'] = $request->input('quantity_per_box');
 
             if ($branchId && count($bpData)) {
                 // create or update existing BranchProduct record
@@ -247,6 +260,311 @@ class ProductController extends Controller
         return response()->json(['message' => 'Business deleted successfully'], 204);
     }
 
+    /**
+     * Show bulk import page
+     */
+    public function showBulkImport()
+    {
+        $user = Auth::user();
+        // Only superadmins can import into any branch. Business admins and managers
+        // may only import into their assigned branch.
+        if ($user->role === 'superadmin') {
+            $branches = Branch::orderBy('name')->get();
+        } elseif (($user->role === 'business_admin' || $user->role === 'manager') && $user->branch_id) {
+            $branches = Branch::where('id', $user->branch_id)->get();
+        } else {
+            // No branch assigned or not permitted
+            abort(403, 'You do not have permission to access bulk import.');
+        }
+
+        return view('inventory.bulk-import', compact('branches'));
+    }
+
+    /**
+     * Download Excel template
+     */
+    public function downloadTemplate()
+    {
+        return Excel::download(new ProductTemplateExport, 'product_import_template.xlsx');
+    }
+
+    /**
+     * Import products from Excel
+     */
+    public function importProducts(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|mimes:xlsx,xls,csv|max:5120', // Max 5MB
+            'branch_id' => 'required|exists:branches,id',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $user = Auth::user();
+        $branchId = $request->branch_id;
+
+        // Verify user has access to this branch
+        $branch = Branch::findOrFail($branchId);
+        if ($user->role === 'superadmin') {
+            // allowed for any branch
+        } elseif ($user->role === 'business_admin' || $user->role === 'manager') {
+            // business admins and managers can only operate on their assigned branch
+            if (empty($user->branch_id) || (int)$user->branch_id !== (int)$branchId) {
+                return redirect()->back()->with('error', 'You do not have access to import into this branch.');
+            }
+            // also ensure branch belongs to same business
+            if ($branch->business_id !== $user->business_id) {
+                return redirect()->back()->with('error', 'You do not have access to this branch.');
+            }
+        } else {
+            return redirect()->back()->with('error', 'You do not have permission to perform imports.');
+        }
+
+        try {
+            $import = new ProductsImport($branchId, $user->business_id);
+            Excel::import($import, $request->file('file'));
+
+            $message = "Import completed! ";
+            $message .= "Successful: {$import->getSuccessCount()}, ";
+            $message .= "Skipped: {$import->getSkippedCount()}";
+
+            $errors = $import->getErrors();
+            if (!empty($errors)) {
+                $message .= ". Some rows had errors.";
+                return redirect()->back()
+                    ->with('warning', $message)
+                    ->with('import_errors', $errors);
+            }
+
+            return redirect()->back()->with('success', $message);
+
+        } catch (\Exception $e) {
+            Log::error('Product import failed: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Import failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Show bulk assignment page
+     */
+    /**
+     * Show bulk assignment page (Excel upload)
+     */
+    public function showBulkAssignment()
+    {
+        $user = Auth::user();
+        
+        $userRole = $user->role;
+        $userBranchName = null;
+        
+        if ($user->role === 'business_admin' || $user->role === 'manager') {
+            if (empty($user->branch_id)) {
+                abort(403, 'No branch assigned.');
+            }
+            $branch = Branch::find($user->branch_id);
+            $userBranchName = $branch ? $branch->name : 'Unknown';
+        }
+
+        return view('inventory.bulk-assignment', compact('userRole', 'userBranchName'));
+    }
+
+    /**
+     * Download bulk assignment template
+     */
+    public function downloadAssignmentTemplate()
+    {
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\BulkAssignmentTemplateExport(), 
+            'bulk_assignment_template.xlsx'
+        );
+    }
+
+    /**
+     * Upload and process bulk assignment Excel
+     */
+    public function uploadBulkAssignment(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv|max:5120',
+        ]);
+
+        $user = Auth::user();
+        
+        try {
+            Log::info('Starting bulk assignment upload', [
+                'user_id' => $user->id,
+                'business_id' => $user->business_id,
+                'role' => $user->role,
+                'branch_id' => $user->branch_id,
+            ]);
+
+            $import = new \App\Imports\BulkAssignmentImport(
+                $user->business_id,
+                $user->role,
+                $user->branch_id
+            );
+            
+            \Maatwebsite\Excel\Facades\Excel::import($import, $request->file('file'));
+
+            Log::info('Bulk assignment completed', [
+                'success_count' => $import->successCount,
+                'skipped_count' => $import->skippedCount,
+                'errors_count' => count($import->errors),
+            ]);
+
+            $message = "Bulk assignment completed!";
+            
+            if ($import->successCount > 0) {
+                $message .= " Successfully assigned {$import->successCount} products.";
+            }
+            
+            if ($import->skippedCount > 0) {
+                $message .= " Skipped {$import->skippedCount} rows.";
+            }
+
+            // If no products were successfully assigned, show error
+            if ($import->successCount === 0) {
+                return redirect()->route('inventory.bulk-assignment')
+                    ->with('error', 'No products were assigned. Please check the errors below.')
+                    ->with('import_errors', $import->errors);
+            }
+
+            return redirect()->route('inventory.bulk-assignment')
+                ->with('success', $message)
+                ->with('details', [
+                    'success' => $import->successCount,
+                    'skipped' => $import->skippedCount,
+                ])
+                ->with('import_errors', $import->errors);
+                
+        } catch (\Exception $e) {
+            Log::error('Bulk assignment import failed', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            return redirect()->route('inventory.bulk-assignment')
+                ->withErrors(['error' => 'Import failed: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Show manual assignment page (old bulk assignment form)
+     */
+    public function showAssign()
+    {
+        $user = Auth::user();
+        // Superadmins see all products/branches. Others see only their business/products
+        if ($user->role === 'superadmin') {
+            $products = Product::with(['category', 'branchProducts.branch'])->get();
+            $branches = Branch::with('manager')->orderBy('name')->get();
+        } elseif ($user->role === 'business_admin' || $user->role === 'manager') {
+            if (empty($user->branch_id)) {
+                abort(403, 'No branch assigned.');
+            }
+            $products = Product::where('business_id', $user->business_id)
+                ->with(['category', 'branchProducts.branch'])
+                ->get();
+            $branches = Branch::where('id', $user->branch_id)
+                ->with('manager')
+                ->get();
+        } else {
+            abort(403, 'You do not have permission to access assignment.');
+        }
+
+        return view('inventory.assign', compact('products', 'branches'));
+    }
+
+    /**
+     * Assign products to branch (manual form submission)
+     */
+    public function bulkAssign(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'branch_id' => 'required|exists:branches,id',
+            'products' => 'required|array|min:1',
+            'products.*.product_id' => 'required|exists:products,id',
+            'products.*.quantity_of_boxes' => 'required|integer|min:0',
+            'products.*.quantity_per_box' => 'required|integer|min:1',
+            'products.*.selling_price' => 'nullable|numeric|min:0',
+            'products.*.cost_price' => 'nullable|numeric|min:0',
+            'products.*.reorder_level' => 'nullable|integer|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $user = Auth::user();
+        $branchId = $request->branch_id;
+
+        // Verify access
+        $branch = Branch::findOrFail($branchId);
+        if ($user->role === 'superadmin') {
+            // allowed
+        } elseif ($user->role === 'business_admin' || $user->role === 'manager') {
+            if (empty($user->branch_id) || (int)$user->branch_id !== (int)$branchId) {
+                return response()->json(['error' => 'Access denied'], 403);
+            }
+            if ($branch->business_id !== $user->business_id) {
+                return response()->json(['error' => 'Access denied'], 403);
+            }
+        } else {
+            return response()->json(['error' => 'Access denied'], 403);
+        }
+
+        try {
+            $assignedCount = 0;
+            foreach ($request->products as $productData) {
+                $stockQuantity = $productData['quantity_of_boxes'] * $productData['quantity_per_box'];
+                
+                // Find or create branch product
+                $branchProduct = BranchProduct::firstOrNew([
+                    'product_id' => $productData['product_id'],
+                    'branch_id' => $branchId,
+                ]);
+
+                // Update quantities
+                $branchProduct->stock_quantity = $stockQuantity;
+                $branchProduct->quantity_of_boxes = $productData['quantity_of_boxes'];
+                $branchProduct->quantity_per_box = $productData['quantity_per_box'];
+
+                // Always set reorder level (default to 10 if not provided)
+                $branchProduct->reorder_level = $productData['reorder_level'] ?? 10;
+
+                // Update price if provided, or set default for new records
+                if (isset($productData['selling_price']) && $productData['selling_price'] !== '' && $productData['selling_price'] !== null) {
+                    $branchProduct->price = floatval($productData['selling_price']);
+                } elseif (!$branchProduct->exists) {
+                    // Price is required for new records
+                    $branchProduct->price = 0.00;
+                }
+
+                // Update cost price if provided
+                if (isset($productData['cost_price']) && $productData['cost_price'] !== '' && $productData['cost_price'] !== null) {
+                    $branchProduct->cost_price = floatval($productData['cost_price']);
+                }
+
+                $branchProduct->save();
+                $assignedCount++;
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "{$assignedCount} products assigned to branch successfully!",
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Bulk assignment failed: ' . $e->getMessage());
+            return response()->json(['error' => 'Assignment failed: ' . $e->getMessage()], 500);
+        }
+    }
 
     
 }

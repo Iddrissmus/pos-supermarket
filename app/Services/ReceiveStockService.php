@@ -46,7 +46,9 @@ class ReceiveStockService
                     $data['branch_id'],
                     $itemData['product_id'],
                     $itemData['quantity'],
-                    $itemData['unit_cost']
+                    $itemData['unit_cost'],
+                    $itemData['quantity_of_boxes'] ?? null,
+                    $itemData['quantity_per_box'] ?? null
                 );
 
                 // Log the stock movement
@@ -73,7 +75,9 @@ class ReceiveStockService
         int $branchId,
         int $productId,
         int $newQuantity,
-        float $newUnitCost
+        float $newUnitCost,
+        ?int $quantityOfBoxes = null,
+        ?int $quantityPerBox = null
     ): void {
         $branchProduct = BranchProduct::firstOrCreate(
             [
@@ -104,10 +108,20 @@ class ReceiveStockService
         $weightedAverageCost = $totalQuantity > 0 ? $totalValue / $totalQuantity : 0;
 
         // Update the branch product
-        $branchProduct->update([
+        $updateData = [
             'stock_quantity' => $totalQuantity,
             'cost_price' => round($weightedAverageCost, 4), // Keep 4 decimal places for precision
-        ]);
+        ];
+        
+        // Add box quantity tracking if provided
+        if ($quantityOfBoxes !== null && $quantityPerBox !== null) {
+            // Add to existing boxes if they exist
+            $currentBoxes = $branchProduct->quantity_of_boxes ?? 0;
+            $updateData['quantity_of_boxes'] = $currentBoxes + $quantityOfBoxes;
+            $updateData['quantity_per_box'] = $quantityPerBox;
+        }
+        
+        $branchProduct->update($updateData);
     }
 
     /**
