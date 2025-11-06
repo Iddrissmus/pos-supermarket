@@ -15,28 +15,8 @@ class ProductDashboardController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->role === 'manager' && $user->branch_id) {
-            // Manager - show only their branch's products
-            $branchProducts = BranchProduct::where('branch_id', $user->branch_id)
-                ->with('product')
-                ->get();
-            
-            // Calculate summary statistics for manager's branch
-            $totalProducts = $branchProducts->count();
-            $inStoreProducts = $branchProducts->where('stock_quantity', '>', 0)->count();
-            $lowStockProducts = $branchProducts->filter(function($item) {
-                return $item->stock_quantity <= $item->reorder_level || $item->stock_quantity <= 10;
-            })->count();
-            
-            // Calculate total value
-            $totalValue = $branchProducts->sum(function($item) {
-                return $item->stock_quantity * $item->cost_price;
-            });
-
-            $products = $branchProducts;
-            
-        } else {
-            // Admin - show all products across all branches
+        if ($user->role === 'superadmin') {
+            // SuperAdmin - show all products across all branches
             $totalProducts = Product::count();
             $inStoreProducts = Product::whereHas('branchProducts')->count();
             $lowStockProducts = BranchProduct::where(function($query) {
@@ -48,6 +28,34 @@ class ProductDashboardController extends Controller
             $totalValue = BranchProduct::sum(DB::raw('stock_quantity * cost_price'));
             
             $products = BranchProduct::with(['product', 'branch'])->get();
+            
+        } elseif (($user->role === 'business_admin' || $user->role === 'manager') && $user->branch_id) {
+            // Business Admin & Manager - show only their branch's products
+            $branchProducts = BranchProduct::where('branch_id', $user->branch_id)
+                ->with(['product', 'branch'])
+                ->get();
+            
+            // Calculate summary statistics for their branch
+            $totalProducts = $branchProducts->count();
+            $inStoreProducts = $branchProducts->where('stock_quantity', '>', 0)->count();
+            $lowStockProducts = $branchProducts->filter(function($item) {
+                return $item->stock_quantity <= ($item->reorder_level ?? 10) || $item->stock_quantity <= 10;
+            })->count();
+            
+            // Calculate total value
+            $totalValue = $branchProducts->sum(function($item) {
+                return $item->stock_quantity * ($item->cost_price ?? 0);
+            });
+
+            $products = $branchProducts;
+            
+        } else {
+            // No branch assigned - show empty
+            $totalProducts = 0;
+            $inStoreProducts = 0;
+            $lowStockProducts = 0;
+            $totalValue = 0;
+            $products = collect();
         }
         
         // Get recent stock activities

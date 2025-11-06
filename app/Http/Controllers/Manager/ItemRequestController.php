@@ -32,11 +32,10 @@ class ItemRequestController extends Controller
 
         // Get completed requests for reference
         $completedRequests = StockTransfer::where('to_branch_id', $manager->branch_id)
-            ->whereIn('status', ['approved', 'completed'])
+            ->whereIn('status', ['approved', 'completed', 'rejected', 'cancelled'])
             ->with(['product', 'fromBranch.business', 'toBranch.business'])
-            ->orderBy('created_at', 'desc')
-            ->limit(5)
-            ->get();
+            ->orderBy('updated_at', 'desc')
+            ->paginate(10, ['*'], 'completed_page');
 
         // Get available products from other branches for requesting
         $businessId = $manager->branch->business_id;
@@ -69,17 +68,29 @@ class ItemRequestController extends Controller
         $validated = $request->validate([
             'product_id' => 'required|exists:products,id',
             'from_branch_id' => 'required|exists:branches,id',
-            'quantity' => 'required|integer|min:1',
+            'quantity_of_boxes' => 'required|integer|min:1',
+            'quantity_per_box' => 'required|integer|min:1',
             'reason' => 'nullable|string|max:500',
         ]);
+
+        // Calculate total quantity
+        $totalQuantity = $validated['quantity_of_boxes'] * $validated['quantity_per_box'];
 
         // Validate that the product exists in the source branch with sufficient stock
         $sourceBranchProduct = \App\Models\BranchProduct::where('branch_id', $validated['from_branch_id'])
             ->where('product_id', $validated['product_id'])
             ->first();
 
-        if (!$sourceBranchProduct || $sourceBranchProduct->stock_quantity < $validated['quantity']) {
-            return back()->with('error', 'Insufficient stock in the selected branch.');
+        if (!$sourceBranchProduct) {
+            return back()->with('error', 'Product not found in the selected branch.');
+        }
+
+        if ($sourceBranchProduct->stock_quantity < $totalQuantity) {
+            return back()->with('error', 'Insufficient stock in the selected branch. Available: ' . $sourceBranchProduct->stock_quantity . ' units.');
+        }
+
+        if ($sourceBranchProduct->quantity_of_boxes < $validated['quantity_of_boxes']) {
+            return back()->with('error', 'Insufficient boxes in the selected branch. Available: ' . $sourceBranchProduct->quantity_of_boxes . ' boxes.');
         }
 
         // Check if there's already a pending request for the same product from the same branch
@@ -97,14 +108,16 @@ class ItemRequestController extends Controller
             'from_branch_id' => $validated['from_branch_id'],
             'to_branch_id' => $manager->branch_id,
             'product_id' => $validated['product_id'],
-            'quantity' => $validated['quantity'],
+            'quantity' => $totalQuantity,
+            'quantity_of_boxes' => $validated['quantity_of_boxes'],
+            'quantity_per_box' => $validated['quantity_per_box'],
             'reason' => $validated['reason'],
             'status' => 'pending',
             'requested_by' => $manager->id,
             'requested_at' => now(),
         ]);
 
-        return back()->with('success', 'Item request submitted successfully. It will be reviewed by an administrator.');
+        return back()->with('success', 'Item request submitted successfully. Requesting ' . $validated['quantity_of_boxes'] . ' boxes (' . $totalQuantity . ' units) for review by an administrator.');
     }
 
     /**

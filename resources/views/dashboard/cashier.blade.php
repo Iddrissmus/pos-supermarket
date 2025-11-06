@@ -61,7 +61,7 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-gray-500 text-sm font-medium">Today's Revenue</p>
-                        <p class="text-3xl font-bold text-green-600 mt-2">${{ number_format($todayRevenue, 2) }}</p>
+                        <p class="text-3xl font-bold text-green-600 mt-2">₵{{ number_format($todayRevenue, 2) }}</p>
                     </div>
                     <div class="bg-green-100 rounded-full p-4">
                         <i class="fas fa-dollar-sign text-green-600 text-2xl"></i>
@@ -99,7 +99,7 @@
             <h2 class="text-xl font-semibold text-gray-800 mb-4">
                 <i class="fas fa-bolt text-yellow-500 mr-2"></i>Quick Actions
             </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <a href="{{ route('sales.terminal') }}" class="flex items-center p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors border-2 border-orange-200">
                     <div class="bg-orange-600 rounded-full p-3 mr-4">
                         <i class="fas fa-cart-shopping text-white"></i>
@@ -107,16 +107,6 @@
                     <div>
                         <p class="font-semibold text-gray-800">POS Terminal</p>
                         <p class="text-sm text-gray-600">Open point of sale</p>
-                    </div>
-                </a>
-
-                <a href="{{ route('sales.create') }}" class="flex items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors border-2 border-green-200">
-                    <div class="bg-green-600 rounded-full p-3 mr-4">
-                        <i class="fas fa-plus-square text-white"></i>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800">New Sale</p>
-                        <p class="text-sm text-gray-600">Create new transaction</p>
                     </div>
                 </a>
 
@@ -160,7 +150,7 @@
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{{ $sale->id }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $sale->created_at->format('M d, Y H:i') }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${{ number_format($sale->total, 2) }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">₵{{ number_format($sale->total, 2) }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
                                             Completed
@@ -175,8 +165,8 @@
                 <div class="text-center py-8 text-gray-500">
                     <i class="fas fa-receipt text-4xl mb-3"></i>
                     <p>No sales yet today</p>
-                    <a href="{{ route('sales.create') }}" class="text-orange-600 hover:text-orange-800 text-sm mt-2 inline-block">
-                        Create your first sale
+                    <a href="{{ route('sales.terminal') }}" class="text-orange-600 hover:text-orange-800 text-sm mt-2 inline-block">
+                        Open POS Terminal
                     </a>
                 </div>
             @endif

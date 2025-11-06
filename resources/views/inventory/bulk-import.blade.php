@@ -63,12 +63,13 @@
                     <h3 class="font-medium text-blue-900 mb-2">How to use bulk import:</h3>
                     <ol class="list-decimal list-inside text-sm text-blue-800 space-y-1">
                         <li>Download the Excel template below</li>
-                        <li>Fill in your product data (Product Name, Category, Boxes, Units per Box, etc.)</li>
-                        <li>Select the destination branch</li>
+                        <li>Fill in your product data (Product Name, Category, Total Boxes, Units per Box)</li>
                         <li>Upload the completed Excel file</li>
+                        <li>Products will be created in your warehouse inventory</li>
+                        <li>Assign them to branches using the Bulk Assignment or Manual Assignment pages</li>
                     </ol>
                     <p class="text-sm text-blue-700 mt-3">
-                        <strong>Note:</strong> Products with the same name will have their quantities updated. New products will be created automatically.
+                        <strong>Note:</strong> This creates products ONLY. They won't appear in branches until you assign them.
                     </p>
                 </div>
             </div>
@@ -86,33 +87,6 @@
         <!-- Upload Form -->
         <form action="{{ route('inventory.import') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
             @csrf
-
-            <!-- Branch Selection -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                    {{ count($branches) > 1 ? 'Select Branch *' : 'Branch' }}
-                </label>
-                @if(count($branches) > 1)
-                    {{-- Superadmin can select any branch --}}
-                    <select name="branch_id" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">-- Select Branch --</option>
-                        @foreach($branches as $branch)
-                            <option value="{{ $branch->id }}">{{ $branch->name }}</option>
-                        @endforeach
-                    </select>
-                    <p class="text-xs text-gray-500 mt-1">Products will be added to the selected branch's inventory</p>
-                @else
-                    {{-- Business admin/manager has only one branch - show it as read-only --}}
-                    <input 
-                        type="text" 
-                        value="{{ $branches->first()->name }}" 
-                        readonly 
-                        class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-gray-50 text-gray-700 cursor-not-allowed"
-                    >
-                    <input type="hidden" name="branch_id" value="{{ $branches->first()->id }}">
-                    <p class="text-xs text-gray-500 mt-1">Products will be added to your assigned branch</p>
-                @endif
-            </div>
 
             <!-- File Upload -->
             <div>
@@ -143,37 +117,29 @@
                 <div class="grid grid-cols-2 gap-2 text-sm">
                     <div>
                         <span class="font-medium text-gray-700">Product Name *</span>
-                        <p class="text-xs text-gray-500">Required</p>
+                        <p class="text-xs text-gray-500">Required - Unique product name</p>
                     </div>
                     <div>
-                        <span class="font-medium text-gray-700">Category</span>
-                        <p class="text-xs text-gray-500">Optional (must exist)</p>
+                        <span class="font-medium text-gray-700">Category *</span>
+                        <p class="text-xs text-gray-500">Required - Must exist in system</p>
                     </div>
                     <div>
                         <span class="font-medium text-gray-700">Description</span>
                         <p class="text-xs text-gray-500">Optional</p>
                     </div>
                     <div>
-                        <span class="font-medium text-gray-700">Quantity of Boxes *</span>
-                        <p class="text-xs text-gray-500">Required</p>
+                        <span class="font-medium text-gray-700">Total Boxes</span>
+                        <p class="text-xs text-gray-500">Warehouse inventory</p>
                     </div>
                     <div>
                         <span class="font-medium text-gray-700">Units per Box *</span>
-                        <p class="text-xs text-gray-500">Required</p>
-                    </div>
-                    <div>
-                        <span class="font-medium text-gray-700">Selling Price</span>
-                        <p class="text-xs text-gray-500">Optional</p>
-                    </div>
-                    <div>
-                        <span class="font-medium text-gray-700">Cost Price</span>
-                        <p class="text-xs text-gray-500">Optional</p>
-                    </div>
-                    <div>
-                        <span class="font-medium text-gray-700">Reorder Level</span>
-                        <p class="text-xs text-gray-500">Optional</p>
+                        <p class="text-xs text-gray-500">Required - Default: 1</p>
                     </div>
                 </div>
+                <p class="text-xs text-gray-500 mt-3 italic">
+                    <i class="fas fa-lightbulb text-yellow-500 mr-1"></i>
+                    Total Units = Total Boxes × Units per Box (calculated automatically)
+                </p>
             </div>
 
             <!-- Submit Buttons -->

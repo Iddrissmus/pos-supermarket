@@ -69,9 +69,7 @@
                                 required onchange="updateBranchOptions()">
                             <option value="">Select a product</option>
                             @foreach($availableProducts as $product)
-                                <option value="{{ $product->id }}" data-units-per-box="{{ $product->quantity_per_box ?? 1 }}">
-                                    {{ $product->name }} ({{ $product->barcode }})
-                                </option>
+                                <option value="{{ $product->id }}">{{ $product->name }} ({{ $product->barcode }})</option>
                             @endforeach
                         </select>
                     </div>
@@ -102,8 +100,8 @@
                         </label>
                         <input type="number" id="quantity_per_box" name="quantity_per_box" min="1" 
                                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                               required>
-                        <p class="text-xs text-gray-500 mt-1">Auto-filled from product, can be adjusted</p>
+                               required readonly>
+                        <p class="text-xs text-gray-500 mt-1">Auto-filled from product settings</p>
                     </div>
                 </div>
                 <div class="grid grid-cols-1 gap-4">
@@ -256,8 +254,9 @@
         </div>
     </div>
 
-    <!-- Completed Requests -->
+    <!-- Recent Completed Requests -->
     @if($completedRequests->count() > 0)
+        <!-- Completed Requests -->
     <div class="bg-white shadow-md rounded-lg overflow-hidden">
         <div class="bg-gradient-to-r from-gray-600 to-gray-700 px-6 py-4 text-white">
             <div class="flex items-center justify-between">
@@ -268,12 +267,15 @@
                         <p class="text-sm text-gray-200">View approved, rejected, and canceled requests</p>
                     </div>
                 </div>
+                @if($completedRequests->count() > 0)
                 <span class="bg-white bg-opacity-20 text-white px-3 py-1 rounded-full text-xs font-medium">
                     {{ $completedRequests->total() }} Total
                 </span>
+                @endif
             </div>
         </div>
         <div class="p-6">
+        @if($completedRequests->count() > 0)
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
@@ -343,30 +345,50 @@
             <div class="mt-4">
                 {{ $completedRequests->links() }}
             </div>
+        @else
+            <div class="text-center py-12">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+                    <i class="fas fa-history text-gray-400 text-3xl"></i>
+                </div>
+                <p class="text-gray-600 font-medium mb-2">No Request History</p>
+                <p class="text-sm text-gray-500">Completed requests (approved, rejected, or canceled) will appear here.</p>
+            </div>
+        @endif
+        </div>
+    </div>
+    @endif
+
+    @if($availableProducts->count() === 0)
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-yellow-800">No Products Available for Request</h3>
+                <p class="text-sm text-yellow-700 mt-1">
+                    There are no products available in other branches that you can request. Products must be available in other branches with stock to be requestable.
+                </p>
+            </div>
         </div>
     </div>
     @endif
 </div>
 
 <script>
-// Store product branch data
-const productBranchData = {};
-
-@foreach($availableProducts as $product)
-    productBranchData[{{ $product->id }}] = {
-        quantity_per_box: {{ $product->quantity_per_box ?? 1 }},
-        branches: [
-            @foreach($product->branchProducts as $bp)
-            {
-                branch_id: {{ $bp->branch_id }},
-                branch_name: "{{ $bp->branch->display_label }}",
-                stock: {{ $bp->stock_quantity }},
-                boxes: {{ $bp->quantity_of_boxes ?? 0 }}
-            },
-            @endforeach
-        ]
-    };
-@endforeach
+const productBranches = @json($availableProducts->keyBy('id')->map(function ($product) {
+    return [
+        'quantity_per_box' => $product->quantity_per_box ?? 1,
+        'branches' => $product->branchProducts->map(function ($bp) {
+            return [
+                'branch_id' => $bp->branch_id,
+                'branch_name' => $bp->branch->display_label,
+                'stock' => $bp->stock_quantity,
+                'boxes' => $bp->quantity_of_boxes ?? 0
+            ];
+        })->values()
+    ];
+}));
 
 function updateBranchOptions() {
     const productSelect = document.getElementById('product_id');
@@ -378,32 +400,26 @@ function updateBranchOptions() {
     
     const selectedProductId = productSelect.value;
     
-    // Clear branch options and stock info
+    // Clear branch options
     branchSelect.innerHTML = '<option value="">Select source branch</option>';
     stockInfo.textContent = '';
     boxesInput.max = '';
-    // DON'T clear the box quantity that user may have already entered
-    // boxesInput.value = '';
+    unitsPerBoxInput.value = '';
     totalUnitsInfo.textContent = 'Enter boxes and units per box to see total units';
     
-    if (selectedProductId && productBranchData[selectedProductId]) {
-        const productData = productBranchData[selectedProductId];
+    if (selectedProductId && productBranches[selectedProductId]) {
+        const productData = productBranches[selectedProductId];
+        const branches = productData.branches;
         
         // Auto-fill units per box from product
         unitsPerBoxInput.value = productData.quantity_per_box;
         
-        // Trigger calculation if boxes were already entered
-        if (boxesInput.value) {
-            updateTotalUnits();
-        }
-        
-        // Populate branch options
-        productData.branches.forEach(function(branch) {
+        branches.forEach(branch => {
             const option = document.createElement('option');
             option.value = branch.branch_id;
-            option.textContent = branch.branch_name + ' (' + branch.boxes + ' boxes, ' + branch.stock + ' units)';
-            option.setAttribute('data-boxes', branch.boxes);
-            option.setAttribute('data-stock', branch.stock);
+            option.textContent = `${branch.branch_name} (${branch.boxes} boxes, ${branch.stock} units)`;
+            option.dataset.boxes = branch.boxes;
+            option.dataset.stock = branch.stock;
             branchSelect.appendChild(option);
         });
     }
@@ -417,10 +433,10 @@ document.getElementById('from_branch_id').addEventListener('change', function() 
     
     const selectedOption = branchSelect.options[branchSelect.selectedIndex];
     
-    if (selectedOption && selectedOption.getAttribute('data-boxes')) {
-        const availableBoxes = parseInt(selectedOption.getAttribute('data-boxes'));
-        const availableStock = parseInt(selectedOption.getAttribute('data-stock'));
-        stockInfo.textContent = 'Available: ' + availableBoxes + ' boxes (' + availableStock + ' units)';
+    if (selectedOption && selectedOption.dataset.boxes) {
+        const availableBoxes = parseInt(selectedOption.dataset.boxes);
+        const availableStock = parseInt(selectedOption.dataset.stock);
+        stockInfo.textContent = `Available: ${availableBoxes} boxes (${availableStock} units)`;
         boxesInput.max = availableBoxes;
     } else {
         stockInfo.textContent = '';
@@ -429,8 +445,13 @@ document.getElementById('from_branch_id').addEventListener('change', function() 
 });
 
 // Calculate total units when boxes change
-document.getElementById('quantity_of_boxes').addEventListener('input', updateTotalUnits);
-document.getElementById('quantity_per_box').addEventListener('input', updateTotalUnits);
+document.getElementById('quantity_of_boxes').addEventListener('input', function() {
+    updateTotalUnits();
+});
+
+document.getElementById('quantity_per_box').addEventListener('input', function() {
+    updateTotalUnits();
+});
 
 function updateTotalUnits() {
     const boxes = parseInt(document.getElementById('quantity_of_boxes').value) || 0;
@@ -439,7 +460,7 @@ function updateTotalUnits() {
     const totalUnitsInfo = document.getElementById('total-units-info');
     
     if (boxes > 0 && unitsPerBox > 0) {
-        totalUnitsInfo.innerHTML = '<strong>' + boxes + ' boxes</strong> × <strong>' + unitsPerBox + ' units/box</strong> = <strong class="text-blue-900">' + totalUnits + ' total units</strong>';
+        totalUnitsInfo.innerHTML = `<strong>${boxes} boxes</strong> × <strong>${unitsPerBox} units/box</strong> = <strong class="text-blue-900">${totalUnits} total units</strong>`;
     } else {
         totalUnitsInfo.textContent = 'Enter boxes and units per box to see total units';
     }

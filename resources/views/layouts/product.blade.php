@@ -9,19 +9,63 @@
 
     <!-- Success/Error Messages -->
     @if (session('success'))
-        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
-            <span class="block sm:inline">{{ session('success') }}</span>
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <div class="flex items-start">
+                <i class="fas fa-check-circle text-green-600 mr-3 mt-0.5"></i>
+                <div class="flex-1">
+                    <span class="block sm:inline font-semibold">{{ session('success') }}</span>
+                    @if (session('import_info'))
+                        <p class="text-sm mt-1">{{ session('import_info') }}</p>
+                    @endif
+                    @if (session('details'))
+                        <div class="text-sm mt-2">
+                            <span class="font-medium">Created:</span> {{ session('details')['success'] ?? 0 }} products
+                            @if (session('details')['skipped'] > 0)
+                                | <span class="font-medium">Skipped:</span> {{ session('details')['skipped'] }}
+                            @endif
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    @endif
+    
+    @if (session('warning'))
+        <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <div class="flex items-start">
+                <i class="fas fa-exclamation-triangle text-yellow-600 mr-3 mt-0.5"></i>
+                <span class="block sm:inline">{{ session('warning') }}</span>
+            </div>
+        </div>
+    @endif
+    
+    @if (session('import_errors'))
+        <div class="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <div class="flex items-start">
+                <i class="fas fa-times-circle text-red-600 mr-3 mt-0.5"></i>
+                <div class="flex-1">
+                    <p class="font-semibold mb-2">Import Errors:</p>
+                    <ul class="list-disc list-inside text-sm space-y-1">
+                        @foreach (session('import_errors') as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
         </div>
     @endif
     
     @if (session('error'))
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-            <span class="block sm:inline">{{ session('error') }}</span>
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <div class="flex items-start">
+                <i class="fas fa-times-circle text-red-600 mr-3 mt-0.5"></i>
+                <span class="block sm:inline">{{ session('error') }}</span>
+            </div>
         </div>
     @endif
 
     @if ($errors->any())
-        <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative" role="alert">
+        <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative mb-4" role="alert">
             <ul class="list-disc list-inside">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
@@ -34,18 +78,21 @@
     <div class="bg-white shadow rounded-lg p-6">
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-semibold text-gray-800">Inventory Management</h1>
-                <p class="text-sm text-gray-600 mt-1">Manage your products and track inventory across branches</p>
+                <h1 class="text-2xl font-semibold text-gray-800">Warehouse Inventory</h1>
+                <p class="text-sm text-gray-600 mt-1">Products available for assignment to branches</p>
             </div>
             <div class="flex flex-wrap gap-3">
+                <a href="{{ route('layouts.productman') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center">
+                    <i class="fas fa-store mr-2"></i>Branch Products
+                </a>
                 <a href="{{ route('product.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center">
                     <i class="fas fa-plus mr-2"></i>Add Product
                 </a>
                 <a href="{{ route('inventory.bulk-import') }}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center">
                     <i class="fas fa-file-excel mr-2"></i>Bulk Import
                 </a>
-                <a href="{{ route('inventory.bulk-assignment') }}" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center">
-                    <i class="fas fa-tasks mr-2"></i>Bulk Assign
+                <a href="{{ route('inventory.assign') }}" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center">
+                    <i class="fas fa-hand-pointer mr-2"></i>Assign Products
                 </a>
             </div>
         </div>
@@ -79,7 +126,7 @@
                     </p>
                     <p class="text-xs text-gray-500 mt-1">Value of all inventory at selling price</p>
                 </div>
-                <div class="bg-blue-100 rounded-full p-4">
+                <div class="bg-blue-100 rounded-full p-3">
                     <i class="fas fa-tag text-blue-600 text-2xl"></i>
                 </div>
             </div>
@@ -255,7 +302,7 @@
                             Product Name
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            SKU
+                            Barcode
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Category
@@ -289,19 +336,21 @@
                         <tr class="hover:bg-gray-50 transition-colors" data-category-id="{{ $product->category->id ?? '' }}">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    @if($product->image)
-                                        <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" class="w-10 h-10 rounded-lg object-cover mr-3">
+                                    @if($product->qr_code_url)
+                                        <img src="{{ $product->qr_code_url }}" alt="QR Code for {{ $product->name }}" class="w-10 h-10 mr-3" title="Scan to view product details">
                                     @else
                                         <div class="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center mr-3">
-                                            <i class="fas fa-box text-gray-400"></i>
+                                            <i class="fas fa-qrcode text-gray-400"></i>
                                         </div>
                                     @endif
                                     <span class="text-sm font-medium text-gray-900">{{ $product->name ?? 'N/A' }}</span>
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="text-sm text-gray-600 font-mono">{{ $product->sku ?? 'N/A' }}</span>
-                            </td>
+                                <div class="flex items-center">
+                                    <i class="fas fa-barcode text-gray-400 mr-2"></i>
+                                    <span class="text-sm text-gray-600 font-mono">{{ $product->barcode ?? 'N/A' }}</span>
+                                </div>                            </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 @if($product->category)
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-{{ $product->category->color ?? 'gray' }}-100 text-{{ $product->category->color ?? 'gray' }}-800">

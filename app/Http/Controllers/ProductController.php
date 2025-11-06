@@ -61,7 +61,7 @@ class ProductController extends Controller
                     $q->where('category_id', $categoryId);
                 });
             }
-            $products = $productsQuery->paginate(15);
+            $products = $productsQuery->orderBy('updated_at', 'desc')->paginate(15);
 
             $totalProducts = BranchProduct::where('branch_id', $user->branch_id)->count();
             $inStoreProducts = BranchProduct::where('branch_id', $user->branch_id)
@@ -78,7 +78,7 @@ class ProductController extends Controller
                     $q->where('category_id', $categoryId);
                 });
             }
-            $products = $productsQuery->paginate(15);
+            $products = $productsQuery->orderBy('updated_at', 'desc')->paginate(15);
 
             $totalProducts = Product::count();
             $inStoreProducts = Product::whereHas('branchProducts')->count();
@@ -166,6 +166,16 @@ class ProductController extends Controller
             $validatedData['business_id'] = $businessId;
             $validatedData['added_by'] = Auth::id();
 
+            // Calculate total inventory from boxes and units per box
+            $totalBoxes = $request->input('quantity_of_boxes', 0);
+            $unitsPerBox = $request->input('quantity_per_box', 1);
+            $totalUnits = $totalBoxes * $unitsPerBox;
+            
+            // Add inventory tracking fields
+            $validatedData['total_boxes'] = $totalBoxes;
+            $validatedData['total_units'] = $totalUnits;
+            $validatedData['assigned_units'] = 0; // Nothing assigned yet
+
             // Handle product image upload (stored in 'image' field)
             if ($request->hasFile('image')) {
                 $imagePath = $request->file('image')->store('product-images', 'public');
@@ -174,27 +184,44 @@ class ProductController extends Controller
 
             $product = Product::create($validatedData);
 
-            // If branch info provided, create or update branch_products row
+            // If branch info provided, assign to that branch
             $branchId = $request->input('branch_id');
             $stockQty = $request->input('stock_quantity');
-            $bpData = [];
-            if (!is_null($stockQty)) $bpData['stock_quantity'] = (int) $stockQty;
-            if ($request->filled('price')) $bpData['price'] = $request->input('price');
-            if ($request->filled('cost_price')) $bpData['cost_price'] = $request->input('cost_price');
-            if ($request->filled('reorder_level')) $bpData['reorder_level'] = $request->input('reorder_level');
             
-            // Add box quantity fields
-            if ($request->filled('quantity_of_boxes')) $bpData['quantity_of_boxes'] = $request->input('quantity_of_boxes');
-            if ($request->filled('quantity_per_box')) $bpData['quantity_per_box'] = $request->input('quantity_per_box');
-
-            if ($branchId && count($bpData)) {
-                // create or update existing BranchProduct record
-                $branchProduct = \App\Models\BranchProduct::firstOrNew([
+            if ($branchId && $stockQty > 0) {
+                // Check if we have enough units available
+                if (!$product->hasAvailableUnits($stockQty)) {
+                    $error_message = "Cannot assign {$stockQty} units. Only {$product->available_units} units available in inventory.";
+                    if ($request->wantsJson()|| $request->ajax() || $request->expectsJson()) {
+                        return response()->json(['error' => $error_message], 422);
+                    }
+                    return redirect()->back()->with('error', $error_message)->withInput();
+                }
+                
+                // Create branch product assignment
+                $bpData = [
                     'branch_id' => $branchId,
                     'product_id' => $product->id,
+                    'stock_quantity' => (int) $stockQty,
+                    'quantity_of_boxes' => $request->input('quantity_of_boxes'),
+                    'quantity_per_box' => $unitsPerBox,
+                ];
+                
+                if ($request->filled('price')) $bpData['price'] = $request->input('price');
+                if ($request->filled('cost_price')) $bpData['cost_price'] = $request->input('cost_price');
+                if ($request->filled('reorder_level')) $bpData['reorder_level'] = $request->input('reorder_level');
+                
+                $branchProduct = \App\Models\BranchProduct::create($bpData);
+                
+                // Deduct from available inventory
+                $product->assignUnits($stockQty);
+                
+                Log::info("Product assigned to branch", [
+                    'product_id' => $product->id,
+                    'branch_id' => $branchId,
+                    'assigned_units' => $stockQty,
+                    'remaining_available' => $product->available_units
                 ]);
-                foreach ($bpData as $k => $v) $branchProduct->$k = $v;
-                $branchProduct->save();
             }
             
             // JSON for AJAX, redirect for regular form submit
@@ -295,7 +322,6 @@ class ProductController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'file' => 'required|mimes:xlsx,xls,csv|max:5120', // Max 5MB
-            'branch_id' => 'required|exists:branches,id',
         ]);
 
         if ($validator->fails()) {
@@ -305,42 +331,27 @@ class ProductController extends Controller
         }
 
         $user = Auth::user();
-        $branchId = $request->branch_id;
-
-        // Verify user has access to this branch
-        $branch = Branch::findOrFail($branchId);
-        if ($user->role === 'superadmin') {
-            // allowed for any branch
-        } elseif ($user->role === 'business_admin' || $user->role === 'manager') {
-            // business admins and managers can only operate on their assigned branch
-            if (empty($user->branch_id) || (int)$user->branch_id !== (int)$branchId) {
-                return redirect()->back()->with('error', 'You do not have access to import into this branch.');
-            }
-            // also ensure branch belongs to same business
-            if ($branch->business_id !== $user->business_id) {
-                return redirect()->back()->with('error', 'You do not have access to this branch.');
-            }
-        } else {
-            return redirect()->back()->with('error', 'You do not have permission to perform imports.');
-        }
 
         try {
-            $import = new ProductsImport($branchId, $user->business_id);
+            $import = new ProductsImport($user->business_id);
             Excel::import($import, $request->file('file'));
 
             $message = "Import completed! ";
-            $message .= "Successful: {$import->getSuccessCount()}, ";
+            $message .= "Created: {$import->getSuccessCount()} new products, ";
             $message .= "Skipped: {$import->getSkippedCount()}";
 
             $errors = $import->getErrors();
             if (!empty($errors)) {
                 $message .= ". Some rows had errors.";
-                return redirect()->back()
+                return redirect()->route('layouts.product')
                     ->with('warning', $message)
-                    ->with('import_errors', $errors);
+                    ->with('import_errors', $errors)
+                    ->with('import_info', 'Products created successfully. You can now assign them to branches.');
             }
 
-            return redirect()->back()->with('success', $message);
+            return redirect()->route('layouts.product')
+                ->with('success', $message)
+                ->with('import_info', 'Products created successfully. You can now assign them to branches.');
 
         } catch (\Exception $e) {
             Log::error('Product import failed: ' . $e->getMessage());
@@ -433,13 +444,14 @@ class ProductController extends Controller
                     ->with('import_errors', $import->errors);
             }
 
-            return redirect()->route('inventory.bulk-assignment')
+            // Success! Redirect to product manager to view assigned products
+            return redirect()->route('layouts.productman')
                 ->with('success', $message)
                 ->with('details', [
                     'success' => $import->successCount,
                     'skipped' => $import->skippedCount,
                 ])
-                ->with('import_errors', $import->errors);
+                ->with('import_info', 'Your products have been successfully assigned to the branch. You can see them in the list below.');
                 
         } catch (\Exception $e) {
             Log::error('Bulk assignment import failed', [
@@ -521,14 +533,35 @@ class ProductController extends Controller
 
         try {
             $assignedCount = 0;
-            foreach ($request->products as $productData) {
+            $errors = [];
+            
+            foreach ($request->products as $index => $productData) {
+                $product = Product::findOrFail($productData['product_id']);
                 $stockQuantity = $productData['quantity_of_boxes'] * $productData['quantity_per_box'];
                 
-                // Find or create branch product
-                $branchProduct = BranchProduct::firstOrNew([
+                // Check if this is a new assignment or update
+                $branchProduct = BranchProduct::where([
                     'product_id' => $productData['product_id'],
                     'branch_id' => $branchId,
-                ]);
+                ])->first();
+
+                $oldQuantity = $branchProduct ? $branchProduct->stock_quantity : 0;
+                $quantityDifference = $stockQuantity - $oldQuantity;
+
+                // Check if product has enough available units for new assignments or increases
+                if ($quantityDifference > 0) {
+                    if (!$product->hasAvailableUnits($quantityDifference)) {
+                        $errors[] = "Product '{$product->name}': Cannot assign {$quantityDifference} units. Only {$product->available_units} units available in inventory.";
+                        continue; // Skip this product
+                    }
+                }
+
+                // Create or update branch product
+                if (!$branchProduct) {
+                    $branchProduct = new BranchProduct();
+                    $branchProduct->product_id = $productData['product_id'];
+                    $branchProduct->branch_id = $branchId;
+                }
 
                 // Update quantities
                 $branchProduct->stock_quantity = $stockQuantity;
@@ -552,13 +585,30 @@ class ProductController extends Controller
                 }
 
                 $branchProduct->save();
+                
+                // Update product's assigned units
+                if ($quantityDifference > 0) {
+                    $product->assignUnits($quantityDifference);
+                } elseif ($quantityDifference < 0) {
+                    $product->unassignUnits(abs($quantityDifference));
+                }
+                
                 $assignedCount++;
             }
 
-            return response()->json([
+            // Prepare response
+            $response = [
                 'success' => true,
                 'message' => "{$assignedCount} products assigned to branch successfully!",
-            ]);
+                'assigned_count' => $assignedCount,
+            ];
+            
+            if (!empty($errors)) {
+                $response['warnings'] = $errors;
+                $response['message'] .= " Some products were skipped due to insufficient inventory.";
+            }
+
+            return response()->json($response);
 
         } catch (\Exception $e) {
             Log::error('Bulk assignment failed: ' . $e->getMessage());

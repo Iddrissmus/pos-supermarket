@@ -50,8 +50,13 @@
                     </div>
                     
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('layouts.product', 'product.*') ? 'active bg-purple-50' : 'hover:bg-gray-50' }}">
-                        <i class="fas fa-boxes sidebar-icon {{ request()->routeIs('layouts.product', 'product.*') ? 'text-purple-600' : 'text-gray-500' }}"></i>
-                        <a href="{{ route('layouts.product') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('layouts.product', 'product.*') ? 'text-purple-600 font-semibold' : 'text-gray-700' }}">Products</a>
+                        <i class="fas fa-warehouse sidebar-icon {{ request()->routeIs('layouts.product', 'product.*') ? 'text-purple-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('layouts.product') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('layouts.product', 'product.*') ? 'text-purple-600 font-semibold' : 'text-gray-700' }}">Warehouse Inventory</a>
+                    </div>
+                    
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('layouts.productman') ? 'active bg-purple-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-store sidebar-icon {{ request()->routeIs('layouts.productman') ? 'text-purple-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('layouts.productman') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('layouts.productman') ? 'text-purple-600 font-semibold' : 'text-gray-700' }}">Branch Products</a>
                     </div>
                     
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('inventory.bulk-import') ? 'active bg-purple-50' : 'hover:bg-gray-50' }}">
@@ -100,8 +105,13 @@
                     </div>
                     
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('layouts.product', 'product.*') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
-                        <i class="fas fa-boxes sidebar-icon {{ request()->routeIs('layouts.product', 'product.*') ? 'text-blue-600' : 'text-gray-500' }}"></i>
-                        <a href="{{ route('layouts.product') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('layouts.product', 'product.*') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">Products</a>
+                        <i class="fas fa-warehouse sidebar-icon {{ request()->routeIs('layouts.product', 'product.*') ? 'text-blue-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('layouts.product') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('layouts.product', 'product.*') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">Warehouse Inventory</a>
+                    </div>
+                    
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('layouts.productman') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-store sidebar-icon {{ request()->routeIs('layouts.productman') ? 'text-blue-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('layouts.productman') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('layouts.productman') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">Branch Products</a>
                     </div>
                     
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('inventory.bulk-import') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
@@ -131,11 +141,6 @@
                     
                     <div class="mt-4 mb-2 px-3">
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider sidebar-text">Operations</p>
-                    </div>
-                    
-                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('requests.approval.*') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
-                        <i class="fas fa-clipboard-check sidebar-icon {{ request()->routeIs('requests.approval.*') ? 'text-blue-600' : 'text-gray-500' }}"></i>
-                        <a href="{{ route('requests.approval.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('requests.approval.*') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">Approve Requests</a>
                     </div>
                     
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('customers.*') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
@@ -177,12 +182,7 @@
                         <i class="fas fa-boxes sidebar-icon {{ request()->routeIs('layouts.product', 'product.*') ? 'text-green-600' : 'text-gray-500' }}"></i>
                         <a href="{{ route('layouts.product') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('layouts.product', 'product.*') ? 'text-green-600 font-semibold' : 'text-gray-700' }}">Products</a>
                     </div>
-                    
-                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('inventory.assign') ? 'active bg-green-50' : 'hover:bg-gray-50' }}">
-                        <i class="fas fa-tasks sidebar-icon {{ request()->routeIs('inventory.assign') ? 'text-green-600' : 'text-gray-500' }}"></i>
-                        <a href="{{ route('inventory.assign') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('inventory.assign') ? 'text-green-600 font-semibold' : 'text-gray-700' }}">Assign to Branch</a>
-                    </div>
-                    
+
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('stock-receipts.*') ? 'active bg-green-50' : 'hover:bg-gray-50' }}">
                         <i class="fas fa-truck-loading sidebar-icon {{ request()->routeIs('stock-receipts.*') ? 'text-green-600' : 'text-gray-500' }}"></i>
                         <a href="{{ route('stock-receipts.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('stock-receipts.*') ? 'text-green-600 font-semibold' : 'text-gray-700' }}">Receive Stock</a>
@@ -230,11 +230,6 @@
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('sales.terminal') ? 'active bg-orange-50' : 'hover:bg-gray-50' }}">
                         <i class="fas fa-cart-shopping sidebar-icon {{ request()->routeIs('sales.terminal') ? 'text-orange-600' : 'text-gray-500' }}"></i>
                         <a href="{{ route('sales.terminal') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('sales.terminal') ? 'text-orange-600 font-semibold' : 'text-gray-700' }}">POS Terminal</a>
-                    </div>
-                    
-                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('sales.create') ? 'active bg-orange-50' : 'hover:bg-gray-50' }}">
-                        <i class="fas fa-plus-square sidebar-icon {{ request()->routeIs('sales.create') ? 'text-orange-600' : 'text-gray-500' }}"></i>
-                        <a href="{{ route('sales.create') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('sales.create') ? 'text-orange-600 font-semibold' : 'text-gray-700' }}">New Sale</a>
                     </div>
                     
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('sales.index') ? 'active bg-orange-50' : 'hover:bg-gray-50' }}">

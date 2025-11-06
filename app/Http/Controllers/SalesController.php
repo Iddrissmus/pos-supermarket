@@ -472,6 +472,7 @@ class SalesController extends Controller
                 'id' => $branchProduct->product_id,
                 'name' => optional($branchProduct->product)->name,
                 'sku' => optional($branchProduct->product)->sku,
+                'barcode' => optional($branchProduct->product)->barcode,
                 'branch_id' => $branchProduct->branch_id,
                 'branch_name' => optional($branchProduct->branch)->display_label,
                 'stock_quantity' => $branchProduct->stock_quantity,

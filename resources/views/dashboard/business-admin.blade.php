@@ -10,6 +10,7 @@
         $branch = $user->branch; // Business admin's assigned branch
         $totalManagers = \App\Models\User::where('role', 'manager')->where('branch_id', $user->branch_id)->count();
         $totalCashiers = \App\Models\User::where('role', 'cashier')->where('branch_id', $user->branch_id)->count();
+        // $branchProducts = \App\Models\BranchProduct::where('branch_id', $user->branch_id)->with('product')->get()->count();
     @endphp
 
     <!-- Welcome Header -->
@@ -92,7 +93,8 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-gray-500 text-sm font-medium">Products</p>
-                        <p class="text-3xl font-bold text-orange-600 mt-2">{{ \App\Models\Product::where('business_id', $business->id)->count() }}</p>
+                        <p class="text-3xl font-bold text-orange-600 mt-2">{{ $branch->branchProducts->count() }}</p>
+
                         <p class="text-xs text-gray-500 mt-1">In business</p>
                     </div>
                     <div class="bg-orange-100 rounded-full p-4">
@@ -189,9 +191,9 @@
                                 </p>
                             @endif
                         </div>
-                        <span class="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                        {{-- <span class="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
                             <i class="fas fa-check-circle mr-1"></i>Active
-                        </span>
+                        </span> --}}
                     </div>
                     <div class="grid grid-cols-2 gap-4 text-sm">
                         <div class="bg-white rounded-lg p-3">

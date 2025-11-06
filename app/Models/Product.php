@@ -17,7 +17,10 @@ class Product extends Model
         'added_by',
         'barcode',
         'qr_code_path',
-        'quantity_per_box'
+        'quantity_per_box',
+        'total_boxes',
+        'total_units',
+        'assigned_units',
     ];
 
     protected $casts = [
@@ -81,5 +84,55 @@ class Product extends Model
         return $this->belongsToMany(Branch::class, 'branch_products')
             ->withPivot(['price', 'cost_price', 'stock_quantity', 'reorder_level'])
             ->withTimestamps();
+    }
+
+    public function getQrCodeUrlAttribute()
+    {
+        $path = 'qrcodes/product_' . $this->id . '.svg';
+        
+        if (file_exists(storage_path('app/public/' . $path))) {
+            return asset('storage/' . $path);
+        }
+        
+        // Return a default placeholder or generate on-the-fly
+        return null;
+    }
+
+    /**
+     * Get available units for assignment (computed attribute)
+     */
+    public function getAvailableUnitsAttribute()
+    {
+        return $this->total_units - $this->assigned_units;
+    }
+
+    /**
+     * Check if product has enough units available for assignment
+     */
+    public function hasAvailableUnits($requestedUnits)
+    {
+        return $this->getAvailableUnitsAttribute() >= $requestedUnits;
+    }
+
+    /**
+     * Assign units to a branch (deduct from available)
+     */
+    public function assignUnits($units)
+    {
+        if (!$this->hasAvailableUnits($units)) {
+            throw new \Exception("Not enough units available. Available: {$this->getAvailableUnitsAttribute()}, Requested: {$units}");
+        }
+
+        $this->assigned_units += $units;
+        $this->save();
+    }
+
+    /**
+     * Unassign units from a branch (return to available)
+     */
+    public function unassignUnits($units)
+    {
+        $this->assigned_units = max(0, $this->assigned_units - $units);
+        $this->save();
     }
 }

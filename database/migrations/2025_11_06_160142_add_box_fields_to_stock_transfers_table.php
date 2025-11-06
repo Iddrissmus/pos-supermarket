@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('branch_products', function (Blueprint $table) {
-            $table->integer('quantity_of_boxes')->default(0)->after('stock_quantity');
+        Schema::table('stock_transfers', function (Blueprint $table) {
+            $table->integer('quantity_of_boxes')->default(0)->after('quantity');
             $table->integer('quantity_per_box')->default(1)->after('quantity_of_boxes');
         });
     }
@@ -22,7 +22,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('branch_products', function (Blueprint $table) {
+        Schema::table('stock_transfers', function (Blueprint $table) {
             $table->dropColumn(['quantity_of_boxes', 'quantity_per_box']);
         });
     }

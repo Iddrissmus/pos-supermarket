@@ -99,11 +99,30 @@ class BulkAssignmentImport implements ToCollection, WithHeadingRow
 
                 $stockQuantity = $boxes * $unitsPerBox;
 
-                // Find or create branch product
-                $branchProduct = BranchProduct::firstOrNew([
+                // Check if this is a new assignment or update
+                $branchProduct = BranchProduct::where([
                     'branch_id' => $branch->id,
                     'product_id' => $product->id,
-                ]);
+                ])->first();
+
+                $oldQuantity = $branchProduct ? $branchProduct->stock_quantity : 0;
+                $quantityDifference = $stockQuantity - $oldQuantity;
+
+                // Check if product has enough available units for new assignments or increases
+                if ($quantityDifference > 0) {
+                    if (!$product->hasAvailableUnits($quantityDifference)) {
+                        $this->errors[] = "Row {$rowNumber}: Product '{$product->name}' - Cannot assign {$quantityDifference} more units. Only {$product->available_units} units available in inventory. (Total inventory: {$product->total_units}, Already assigned: {$product->assigned_units})";
+                        $this->skippedCount++;
+                        continue;
+                    }
+                }
+
+                // Create or update branch product
+                if (!$branchProduct) {
+                    $branchProduct = new BranchProduct();
+                    $branchProduct->branch_id = $branch->id;
+                    $branchProduct->product_id = $product->id;
+                }
 
                 // Update quantities
                 $branchProduct->quantity_of_boxes = $boxes;
@@ -134,18 +153,30 @@ class BulkAssignmentImport implements ToCollection, WithHeadingRow
                     'product_name' => $product->name,
                     'branch_id' => $branch->id,
                     'branch_name' => $branch->name,
+                    'old_quantity' => $oldQuantity,
+                    'new_quantity' => $stockQuantity,
+                    'quantity_difference' => $quantityDifference,
+                    'product_available_units' => $product->available_units,
                     'quantity_of_boxes' => $branchProduct->quantity_of_boxes,
                     'quantity_per_box' => $branchProduct->quantity_per_box,
                     'stock_quantity' => $branchProduct->stock_quantity,
                     'reorder_level' => $branchProduct->reorder_level,
                     'price' => $branchProduct->price,
                     'cost_price' => $branchProduct->cost_price,
-                    'exists' => $branchProduct->exists,
                 ]);
 
                 $saved = $branchProduct->save();
 
                 if ($saved) {
+                    // Update product's assigned units
+                    if ($quantityDifference > 0) {
+                        $product->assignUnits($quantityDifference);
+                        Log::info("Row {$rowNumber}: Assigned {$quantityDifference} units to product. New assigned total: {$product->assigned_units}");
+                    } elseif ($quantityDifference < 0) {
+                        $product->unassignUnits(abs($quantityDifference));
+                        Log::info("Row {$rowNumber}: Unassigned " . abs($quantityDifference) . " units from product. New assigned total: {$product->assigned_units}");
+                    }
+                    
                     Log::info("Row {$rowNumber}: Successfully saved with ID: {$branchProduct->id}");
                     $this->successCount++;
                 } else {

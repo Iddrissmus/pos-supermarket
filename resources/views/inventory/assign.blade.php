@@ -120,6 +120,20 @@
         </div>
 
         <!-- Products Table -->
+        <div class="mb-3 bg-green-50 border-l-4 border-green-500 p-3 rounded text-sm">
+            <div class="flex items-start gap-2">
+                <i class="fas fa-warehouse text-green-600 mt-0.5"></i>
+                <div>
+                    <span class="font-medium text-green-800">Inventory Status:</span>
+                    <span class="text-green-700">
+                        <strong>Available</strong> = units you can assign | 
+                        <strong>Total</strong> = units in warehouse | 
+                        <strong>Assigned</strong> = already distributed to branches
+                    </span>
+                </div>
+            </div>
+        </div>
+        
         <div class="overflow-x-auto">
             <table class="w-full border-collapse">
                 <thead class="bg-gray-50">
@@ -129,7 +143,7 @@
                         </th>
                         <th class="border-b px-4 py-3 text-left text-sm font-medium text-gray-700">Product</th>
                         <th class="border-b px-4 py-3 text-left text-sm font-medium text-gray-700">Category</th>
-                        <th class="border-b px-4 py-3 text-left text-sm font-medium text-gray-700">Current Stock</th>
+                        <th class="border-b px-4 py-3 text-left text-sm font-medium text-gray-700">Inventory</th>
                         <th class="border-b px-4 py-3 text-center text-sm font-medium text-gray-700">Boxes *</th>
                         <th class="border-b px-4 py-3 text-center text-sm font-medium text-gray-700">Units/Box *</th>
                         <th class="border-b px-4 py-3 text-center text-sm font-medium text-gray-700">Total Units</th>
@@ -176,27 +190,48 @@
                                 @endif
                             </td>
                             <td class="border-b px-4 py-3">
-                                @php
-                                    $totalStock = $product->branchProducts->sum('stock_quantity');
-                                    $branchCount = $product->branchProducts->count();
-                                @endphp
-                                @if($branchCount > 0)
-                                    <div class="text-sm">
-                                        <span class="font-medium text-gray-900">{{ number_format($totalStock) }}</span>
-                                        <span class="text-gray-500">units</span>
+                                <div class="space-y-1">
+                                    <!-- Available Units (Main) -->
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-gray-500">Available:</span>
+                                        <span class="font-bold text-green-600" data-available-units="{{ $product->available_units }}">
+                                            {{ number_format($product->available_units) }}
+                                        </span>
+                                        <span class="text-xs text-gray-500">units</span>
                                     </div>
-                                    <div class="text-xs text-gray-400">
-                                        in {{ $branchCount }} {{ Str::plural('branch', $branchCount) }}
+                                    
+                                    <!-- Total in Warehouse -->
+                                    <div class="text-xs text-gray-500">
+                                        Total: <span class="font-medium text-gray-700">{{ number_format($product->total_units) }}</span>
                                     </div>
-                                @else
-                                    <span class="text-xs text-gray-400">Not assigned</span>
-                                @endif
+                                    
+                                    <!-- Already Assigned -->
+                                    <div class="text-xs text-gray-500">
+                                        Assigned: <span class="font-medium text-orange-600">{{ number_format($product->assigned_units) }}</span>
+                                    </div>
+                                    
+                                    @if($product->available_units == 0)
+                                        <div class="mt-1">
+                                            <span class="inline-block px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded">
+                                                Out of Stock
+                                            </span>
+                                        </div>
+                                    @elseif($product->available_units < 10)
+                                        <div class="mt-1">
+                                            <span class="inline-block px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded">
+                                                Low Stock
+                                            </span>
+                                        </div>
+                                    @endif
+                                </div>
                             </td>
                             <td class="border-b px-4 py-3">
                                 <input 
                                     type="number" 
                                     class="boxes-input w-20 border border-gray-300 rounded px-2 py-1 text-center text-sm"
                                     min="0"
+                                    max="{{ floor($product->available_units / ($product->quantity_per_box ?: 1)) }}"
+                                    data-max-boxes="{{ floor($product->available_units / ($product->quantity_per_box ?: 1)) }}"
                                     placeholder="0"
                                     disabled
                                 >
@@ -357,11 +392,33 @@
     document.querySelectorAll('.boxes-input, .units-per-box-input, .cost-input').forEach(input => {
         input.addEventListener('input', function() {
             const row = this.closest('tr');
-            const boxes = parseFloat(row.querySelector('.boxes-input').value) || 0;
+            const boxesInput = row.querySelector('.boxes-input');
+            const boxes = parseFloat(boxesInput.value) || 0;
             const unitsPerBox = parseFloat(row.querySelector('.units-per-box-input').value) || 1;
             const costPrice = parseFloat(row.querySelector('.cost-input').value) || 0;
             
+            // Get available units for this product
+            const availableUnitsEl = row.querySelector('[data-available-units]');
+            const availableUnits = parseFloat(availableUnitsEl?.dataset.availableUnits || 0);
+            const maxBoxes = parseFloat(boxesInput.dataset.maxBoxes || 0);
+            
+            // Validate: don't allow more boxes than available
+            if (boxes > maxBoxes) {
+                boxesInput.value = maxBoxes;
+                alert(`Only ${maxBoxes} boxes (${availableUnits} units) available for this product!`);
+                return;
+            }
+            
             const totalUnits = boxes * unitsPerBox;
+            
+            // Double-check total units don't exceed available
+            if (totalUnits > availableUnits) {
+                const correctedBoxes = Math.floor(availableUnits / unitsPerBox);
+                boxesInput.value = correctedBoxes;
+                alert(`Only ${availableUnits} units available. Adjusted to ${correctedBoxes} boxes.`);
+                return;
+            }
+            
             row.querySelector('.total-units-display').textContent = totalUnits;
             
             const lineTotal = costPrice * totalUnits;
@@ -490,8 +547,15 @@
             const data = await response.json();
 
             if (response.ok) {
-                alert(data.message);
-                window.location.href = '{{ route("layouts.product") }}';
+                let message = data.message;
+                
+                if (data.warnings && data.warnings.length > 0) {
+                    message += '\n\nWarnings:\n' + data.warnings.join('\n');
+                }
+                
+                alert(message);
+                // Redirect to Product Manager to view assigned products
+                window.location.href = '{{ route("layouts.productman") }}';
             } else {
                 alert('Error: ' + (data.error || 'Unknown error'));
                 assignBtn.disabled = false;
