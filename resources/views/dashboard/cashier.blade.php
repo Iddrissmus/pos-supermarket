@@ -64,7 +64,7 @@
                         <p class="text-3xl font-bold text-green-600 mt-2">₵{{ number_format($todayRevenue, 2) }}</p>
                     </div>
                     <div class="bg-green-100 rounded-full p-4">
-                        <i class="fas fa-dollar-sign text-green-600 text-2xl"></i>
+                        <i class="fas fa-cedi-sign text-green-600 text-2xl"></i>
                     </div>
                 </div>
             </div>

@@ -12,7 +12,7 @@
                 <p class="text-purple-100">Welcome, {{ Auth::user()->name }}! You have full system control.</p>
             </div>
             <div class="text-6xl opacity-50">
-                <i class="fas fa-shield-alt"></i>
+                <i class="fas fa-shield"></i>
             </div>
         </div>
     </div>

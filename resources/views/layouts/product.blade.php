@@ -99,22 +99,6 @@
     </div>
 
     <!-- Financial Metrics Cards -->
-    @php
-        $totalSellingPrice = 0;
-        $totalCostPrice = 0;
-        foreach($products as $item) {
-            $branchProduct = $item->product ? $item : null;
-            $sellingPrice = $branchProduct->price ?? 0;
-            $costPrice = $branchProduct->cost_price ?? 0;
-            $quantity = $branchProduct->stock_quantity ?? 0;
-            
-            $totalSellingPrice += ($sellingPrice * $quantity);
-            $totalCostPrice += ($costPrice * $quantity);
-        }
-        $totalMargin = $totalSellingPrice - $totalCostPrice;
-        $marginPercentage = $totalCostPrice > 0 ? (($totalMargin / $totalCostPrice) * 100) : 0;
-    @endphp
-
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <!-- Total Selling Price -->
         <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
@@ -122,7 +106,7 @@
                 <div>
                     <p class="text-gray-500 text-sm font-medium">Total Selling Price</p>
                     <p class="text-3xl font-bold text-gray-800 mt-2">
-                        GH₵{{ number_format($totalSellingPrice, 2) }}
+                        GH₵{{ number_format($financialMetrics['total_selling_price'], 2) }}
                     </p>
                     <p class="text-xs text-gray-500 mt-1">Value of all inventory at selling price</p>
                 </div>
@@ -138,7 +122,7 @@
                 <div>
                     <p class="text-gray-500 text-sm font-medium">Total Cost Price</p>
                     <p class="text-3xl font-bold text-gray-800 mt-2">
-                        GH₵{{ number_format($totalCostPrice, 2) }}
+                        GH₵{{ number_format($financialMetrics['total_cost_price'], 2) }}
                     </p>
                     <p class="text-xs text-gray-500 mt-1">Total cost of all inventory</p>
                 </div>
@@ -154,7 +138,7 @@
                 <div>
                     <p class="text-gray-500 text-sm font-medium">Total Margin</p>
                     <p class="text-3xl font-bold text-gray-800 mt-2">
-                        GH₵{{ number_format($totalMargin, 2) }}
+                        GH₵{{ number_format($financialMetrics['total_margin'], 2) }}
                     </p>
                     <p class="text-xs text-gray-500 mt-1">Potential profit from inventory</p>
                 </div>
@@ -170,7 +154,7 @@
                 <div>
                     <p class="text-gray-500 text-sm font-medium">Margin Percentage</p>
                     <p class="text-3xl font-bold text-gray-800 mt-2">
-                        {{ number_format($marginPercentage, 1) }}%
+                        {{ number_format($financialMetrics['margin_percentage'], 1) }}%
                     </p>
                     <p class="text-xs text-gray-500 mt-1">Average profit margin</p>
                 </div>

@@ -1,24 +1,25 @@
 <?php
 
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\Auth\RegisterController;
-use App\Http\Controllers\BusinessController;
+use App\Http\Controllers\SalesController;
 use App\Http\Controllers\BranchController;
-use App\Http\Controllers\Admin\BranchAssignmentController;
-use App\Http\Controllers\CustomerController;
-use App\Http\Controllers\Dashboard\CashierDashboardController;
-use App\Http\Controllers\Dashboard\ManagerDashboardController;
-use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProductController;
-use App\Http\Controllers\ProductDashboardController;
+use App\Http\Controllers\BusinessController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\StockReceiptController;
+use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\ReorderRequestController;
 use App\Http\Controllers\RequestApprovalController;
-use App\Http\Controllers\SalesController;
-use App\Http\Controllers\StockReceiptController;
-use App\Http\Controllers\SupplierController;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\ProductDashboardController;
+use App\Http\Controllers\SuperAdmin\SystemUserController;
+use App\Http\Controllers\Admin\BranchAssignmentController;
+use App\Http\Controllers\Dashboard\CashierDashboardController;
+use App\Http\Controllers\Dashboard\ManagerDashboardController;
 
 Route::get('/', function () {
     // If user is logged in, redirect to their dashboard
@@ -72,7 +73,7 @@ Route::middleware('auth')->group(function () {
         })->name('dashboard.superadmin');
         
         // SuperAdmin can manage all system users
-        Route::resource('system-users', \App\Http\Controllers\SuperAdmin\SystemUserController::class);
+        Route::resource('system-users', SystemUserController::class);
     });
     
     // Only SuperAdmin can create, edit, update and delete businesses
@@ -112,8 +113,8 @@ Route::middleware('auth')->group(function () {
         })->name('my-branch');
     });
 
-    // Business Admin & Manager shared features
-    Route::middleware('role:business_admin,manager')->group(function () {
+    // Super Admin ,  Business Admin & Manager shared features
+    Route::middleware('role:superadmin,business_admin,manager')->group(function () {
         // Notifications
         Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
         Route::get('/notifications/unread', [NotificationController::class, 'unread'])->name('notifications.unread');

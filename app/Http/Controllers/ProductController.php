@@ -1,17 +1,18 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\Models\Branch;
 use App\Models\Product;
 use App\Models\Business;
-use App\Models\BranchProduct;
-use App\Models\Branch;
+use App\Models\Category;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use App\Models\BranchProduct;
+use App\Imports\ProductsImport;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Imports\ProductsImport;
 use App\Exports\ProductTemplateExport;
+use Illuminate\Support\Facades\Validator;
 
 
 class ProductController extends Controller
@@ -30,11 +31,11 @@ class ProductController extends Controller
             $branchIds = collect([$user->branch_id]);
         } else {
             // Superadmin or business admin without specific branch - get all branches
-            $branchIds = \App\Models\Branch::where('business_id', $user->business_id)->pluck('id');
+            $branchIds = Branch::where('business_id', $user->business_id)->pluck('id');
         }
 
         // Get categories that have products available in the accessible branches
-        $categories = \App\Models\Category::forBusiness($user->business_id)
+        $categories = Category::forBusiness($user->business_id)
             ->active()
             ->parents()
             ->whereHas('products', function ($query) use ($branchIds) {
@@ -61,6 +62,12 @@ class ProductController extends Controller
                     $q->where('category_id', $categoryId);
                 });
             }
+            
+            // Get ALL products for financial metrics calculation
+            $allProducts = clone $productsQuery;
+            $allProductsForMetrics = $allProducts->get();
+            
+            // Get paginated products for display
             $products = $productsQuery->orderBy('updated_at', 'desc')->paginate(15);
 
             $totalProducts = BranchProduct::where('branch_id', $user->branch_id)->count();
@@ -78,6 +85,12 @@ class ProductController extends Controller
                     $q->where('category_id', $categoryId);
                 });
             }
+            
+            // Get ALL products for financial metrics calculation
+            $allProducts = clone $productsQuery;
+            $allProductsForMetrics = $allProducts->get();
+            
+            // Get paginated products for display
             $products = $productsQuery->orderBy('updated_at', 'desc')->paginate(15);
 
             $totalProducts = Product::count();
@@ -87,6 +100,9 @@ class ProductController extends Controller
                       ->orWhere('stock_quantity', '<=', 10);
             })->distinct('product_id')->count('product_id');
         }
+
+        // Calculate financial metrics for ALL products (not just paginated)
+        $financialMetrics = $this->calculateFinancialMetrics($allProductsForMetrics);
 
         $stats = [
             'total_products' => $totalProducts,
@@ -103,7 +119,36 @@ class ProductController extends Controller
             'stats' => $stats,
             'categories' => $categories,
             'selectedCategory' => $categoryId,
+            'financialMetrics' => $financialMetrics 
         ]);
+    }
+
+    /**
+     * Calculate financial metrics for products
+     */
+    private function calculateFinancialMetrics($products)
+    {
+        $totalSellingPrice = 0;
+        $totalCostPrice = 0;
+
+        foreach($products as $item) {
+            $branchProduct = $item->product ? $item : null;
+            $sellingPrice = $branchProduct->price ?? 0;
+            $costPrice = $branchProduct->cost_price ?? 0;
+            $quantity = $branchProduct->stock_quantity ?? 0;
+            
+            $totalSellingPrice += ($sellingPrice * $quantity);
+            $totalCostPrice += ($costPrice * $quantity);
+        }
+        $totalMargin = $totalSellingPrice - $totalCostPrice;
+        $marginPercentage = $totalCostPrice > 0 ? (($totalMargin / $totalCostPrice) * 100) : 0;
+
+        return [
+            'total_selling_price' => $totalSellingPrice,
+            'total_cost_price' => $totalCostPrice,
+            'total_margin' => $totalMargin,
+            'margin_percentage' => $marginPercentage
+        ];
     }
 
     /**

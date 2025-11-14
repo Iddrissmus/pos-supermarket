@@ -8,7 +8,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #667eea 20%, #764ba2 100%);
         }
     </style>
 </head>
@@ -90,7 +90,7 @@
                 </div>
 
                 <!-- Remember Me -->
-                <div class="flex items-center justify-between">
+                {{-- <div class="flex items-center justify-between">
                     <label class="flex items-center cursor-pointer">
                         <input type="checkbox" 
                                name="remember" 
@@ -98,7 +98,7 @@
                                class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
                         <span class="ml-2 text-sm text-gray-700">Remember me</span>
                     </label>
-                </div>
+                </div> --}}
 
                 <!-- Submit Button -->
                 <button type="submit" 

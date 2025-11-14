@@ -46,14 +46,14 @@
                     </div>
                 </div>
 
-                <button id="hold-order-button" type="button" class="inline-flex items-center gap-2 bg-gray-200 text-gray-500 px-4 py-2 rounded-lg cursor-not-allowed" title="Hold order is coming soon" disabled>
+                {{-- <button id="hold-order-button" type="button" class="inline-flex items-center gap-2 bg-gray-200 text-gray-500 px-4 py-2 rounded-lg cursor-not-allowed" title="Hold order is coming soon" disabled>
                     <i class="fas fa-pause-circle"></i>
                     <span>Hold Order</span>
-                </button>
-                <button id="new-order-button" type="button" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                </button> --}}
+                {{-- <button id="new-order-button" type="button" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
                     <i class="fas fa-file-circle-plus"></i>
                     <span>New Order</span>
-                </button>
+                </button> --}}
             </div>
         </header>
 
