@@ -299,3 +299,4 @@ Route::middleware('auth')->group(function () {
         // - sales.export.pdf
     });
 });
+

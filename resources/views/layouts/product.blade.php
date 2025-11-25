@@ -110,8 +110,8 @@
                     </p>
                     <p class="text-xs text-gray-500 mt-1">Value of all inventory at selling price</p>
                 </div>
-                <div class="bg-blue-100 rounded-full p-3">
-                    <i class="fas fa-tag text-blue-600 text-2xl"></i>
+                <div class="bg-blue-100 rounded-full p-2">
+                    <i class="fas fa-tag text-blue-600 text-xl"></i>
                 </div>
             </div>
         </div>
@@ -126,8 +126,8 @@
                     </p>
                     <p class="text-xs text-gray-500 mt-1">Total cost of all inventory</p>
                 </div>
-                <div class="bg-orange-100 rounded-full p-4">
-                    <i class="fas fa-dollar-sign text-orange-600 text-2xl"></i>
+                <div class="bg-orange-100 rounded-full p-2">
+                    <i class="fas fa-cedi-sign text-orange-600 text-xl"></i>
                 </div>
             </div>
         </div>
@@ -142,8 +142,8 @@
                     </p>
                     <p class="text-xs text-gray-500 mt-1">Potential profit from inventory</p>
                 </div>
-                <div class="bg-green-100 rounded-full p-4">
-                    <i class="fas fa-chart-line text-green-600 text-2xl"></i>
+                <div class="bg-green-100 rounded-full p-2">
+                    <i class="fas fa-chart-line text-green-600 text-xl"></i>
                 </div>
             </div>
         </div>
@@ -158,8 +158,8 @@
                     </p>
                     <p class="text-xs text-gray-500 mt-1">Average profit margin</p>
                 </div>
-                <div class="bg-purple-100 rounded-full p-4">
-                    <i class="fas fa-percent text-purple-600 text-2xl"></i>
+                <div class="bg-purple-100 rounded-full p-2">
+                    <i class="fas fa-percent text-purple-600 text-xl"></i>
                 </div>
             </div>
         </div>
@@ -320,13 +320,16 @@
                         <tr class="hover:bg-gray-50 transition-colors" data-category-id="{{ $product->category->id ?? '' }}">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    @if($product->qr_code_url)
-                                        <img src="{{ $product->qr_code_url }}" alt="QR Code for {{ $product->name }}" class="w-10 h-10 mr-3" title="Scan to view product details">
-                                    @else
-                                        <div class="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center mr-3">
-                                            <i class="fas fa-qrcode text-gray-400"></i>
-                                        </div>
-                                    @endif
+                                    <img 
+                                        src="{{ $product->qr_code_url }}" 
+                                        alt="QR Code for {{ $product->name }}" 
+                                        class="w-10 h-10 mr-3" 
+                                        loading="lazy"
+                                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                                        title="Scan to view product details">
+                                    <div class="w-10 h-10 rounded-lg bg-gray-200 items-center justify-center mr-3" style="display:none;">
+                                        <i class="fas fa-qrcode text-gray-400"></i>
+                                    </div>
                                     <span class="text-sm font-medium text-gray-900">{{ $product->name ?? 'N/A' }}</span>
                                 </div>
                             </td>

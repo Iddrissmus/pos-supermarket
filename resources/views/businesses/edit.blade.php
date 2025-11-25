@@ -46,16 +46,15 @@
             <!-- Business Admin Selection -->
             <div class="mb-4">
                 <label for="business_admin_id" class="block text-sm font-medium text-gray-700 mb-2">
-                    Business Admin <span class="text-red-500">*</span>
+                    Business Admin (Optional)
                 </label>
                 <select id="business_admin_id" 
                         name="business_admin_id" 
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 @error('business_admin_id') border-red-500 @enderror"
-                        required>
-                    <option value="">Select a Business Admin</option>
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 @error('business_admin_id') border-red-500 @enderror">
+                    <option value="">No Admin Assigned</option>
                     @foreach($availableAdmins as $admin)
                         <option value="{{ $admin->id }}" 
-                                {{ old('business_admin_id', $business->business_admin_id) == $admin->id ? 'selected' : '' }}>
+                                {{ old('business_admin_id', $business->primaryBusinessAdmin?->id) == $admin->id ? 'selected' : '' }}>
                             {{ $admin->name }} ({{ $admin->email }})
                             @if($admin->business_id && $admin->business_id != $business->id)
                                 - Currently assigned to: {{ $admin->managedBusiness->name ?? 'Business #' . $admin->business_id }}
@@ -74,7 +73,7 @@
                     </p>
                 @else
                     <p class="text-blue-600 text-xs mt-1">
-                        <i class="fas fa-info-circle"></i> Note: Assigning a business admin who is already assigned to another business will reassign them to this business.
+                        <i class="fas fa-info-circle"></i> You can assign or reassign a business admin here, or leave it unassigned.
                     </p>
                 @endif
             </div>

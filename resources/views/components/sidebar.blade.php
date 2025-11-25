@@ -45,7 +45,7 @@
                         <a href="{{ route('system-users.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('system-users.*') ? 'text-purple-600 font-semibold' : 'text-gray-700' }}">System Users</a>
                     </div>
                     
-                    <div class="mt-4 mb-2 px-3">
+                    {{-- <div class="mt-4 mb-2 px-3">
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider sidebar-text">Inventory</p>
                     </div>
                     
@@ -77,7 +77,7 @@
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('suppliers.*') ? 'active bg-purple-50' : 'hover:bg-gray-50' }}">
                         <i class="fas fa-industry sidebar-icon {{ request()->routeIs('suppliers.*') ? 'text-purple-600' : 'text-gray-500' }}"></i>
                         <a href="{{ route('suppliers.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('suppliers.*') ? 'text-purple-600 font-semibold' : 'text-gray-700' }}">Suppliers</a>
-                    </div>
+                    </div> --}}
 
                 @elseif($role === 'business_admin')
                     <!-- Business Admin Menu -->

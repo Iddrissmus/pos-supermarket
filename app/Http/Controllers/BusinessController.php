@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 use App\Models\User;
+use App\Models\Branch;
 use App\Models\Business;
+use App\Services\SmsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 
 class BusinessController extends Controller
@@ -17,12 +20,12 @@ class BusinessController extends Controller
 
         if ($user->role === 'superadmin'){
             //they can see all businesses 
-            $businesses = Business::with('businessAdmin')->paginate(15);
+            $businesses = Business::with('primaryBusinessAdmin')->paginate(15);
         }
         else {
             //business admin sees only their business
-            $businesses = Business::with('businessAdmin')
-                ->where('business_admin_id', $user->id)
+            $businesses = Business::with('primaryBusinessAdmin')
+                ->where('id', $user->business_id)
                 ->paginate(15);
         }
         return view('businesses.index', compact('businesses'));
@@ -33,18 +36,13 @@ class BusinessController extends Controller
      */
     public function create()
     {
-        // only superamdin can create business
+        // only superadmin can create business
         $user = auth()->user();
         if ($user->role !== 'superadmin') {
             abort(403, 'Only Super Admin can create a business.');
         }
-        // Get all business admin users
-        $availableAdmins = User::where('role', 'business_admin')
-            ->with('managedBusiness')
-            ->orderBy('name')
-            ->get();
             
-        return view('businesses.create', compact('availableAdmins'));
+        return view('businesses.create');
     }
 
     /**
@@ -54,7 +52,10 @@ class BusinessController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'business_admin_id' => 'required|exists:users,id',
+            'branch_name' => 'required|string|max:255',
+            'address' => 'required|string|max:500',
+            'region' => 'required|string|max:100',
+            'contact' => 'required|string|max:20',
             'logo' => 'nullable|image|max:2048', // Optional logo, max size 2MB
         ]);
 
@@ -64,14 +65,47 @@ class BusinessController extends Controller
             $validated['logo'] = $logoPath;
         }
 
-        $business = Business::create($validated);
+        // Create the business
+        $business = Business::create([
+            'name' => $validated['name'],
+            'logo' => $validated['logo'] ?? null,
+        ]);
         
-        // Assign the business to the business admin
-        \App\Models\User::where('id', $validated['business_admin_id'])
-            ->update(['business_id' => $business->id]);
+        // Automatically create the first branch with the business location
+        Branch::create([
+            'business_id' => $business->id,
+            'name' => $validated['branch_name'],
+            'address' => $validated['address'],
+            'region' => $validated['region'],
+            'contact' => $validated['contact'],
+            'manager_id' => null, // Will be assigned by Business Admin later
+        ]);
+        
+        // Send SMS notification to the business contact
+        try {
+            Log::info("Attempting to send SMS for business creation", [
+                'business_name' => $business->name,
+                'contact' => $validated['contact']
+            ]);
+            
+            $smsService = new SmsService();
+            $message = "Welcome! Your business '{$business->name}' has been successfully registered in our POS system. Main branch: {$validated['branch_name']}, Location: {$validated['address']}, {$validated['region']}. A Business Admin will be assigned soon.";
+            
+            $smsSent = $smsService->sendSms($validated['contact'], $message);
+            
+            if ($smsSent) {
+                Log::info("Business creation SMS sent successfully to {$validated['contact']}");
+                return redirect()->route('businesses.index')
+                    ->with('success', "Business '{$business->name}' created successfully with main branch '{$validated['branch_name']}'! SMS notification sent to {$validated['contact']}.");
+            } else {
+                Log::warning("Business creation SMS sending returned false for {$validated['contact']}");
+            }
+        } catch (\Exception $e) {
+            Log::error('Business creation SMS failed: ' . $e->getMessage());
+        }
         
         return redirect()->route('businesses.index')
-            ->with('success', 'Business created successfully!');
+            ->with('success', "Business '{$business->name}' created successfully with main branch '{$validated['branch_name']}'! You can now create a Business Admin user and assign them to this business.");
     }
 
     /**
@@ -80,9 +114,9 @@ class BusinessController extends Controller
     public function show(string $id)
     {
         $user = auth()->user();
-        $business = Business::with('businessAdmin', 'branches')->findOrFail($id);
+        $business = Business::with('primaryBusinessAdmin', 'branches')->findOrFail($id);
         // Ensure that non-superadmin users can only view their own business
-        if ($user->role === 'business_admin' && $business->business_admin_id !== $user->id) {
+        if ($user->role === 'business_admin' && $business->id !== $user->business_id) {
         abort(403, 'Unauthorized access');
         }
         return view('businesses.show', compact('business'));
@@ -94,10 +128,10 @@ class BusinessController extends Controller
     public function edit(string $id)
     {
         $user = auth()->user();
-        $business = Business::with('businessAdmin', 'branches')->findOrFail($id);
+        $business = Business::with('primaryBusinessAdmin', 'branches')->findOrFail($id);
         
         // Business admin can only edit their own business
-        if ($user->role === 'business_admin' && $business->business_admin_id !== $user->id) {
+        if ($user->role === 'business_admin' && $business->id !== $user->business_id) {
             abort(403, 'Unauthorized access');
         }
         
@@ -126,31 +160,36 @@ class BusinessController extends Controller
         $business = Business::findOrFail($id);
         
         // Business admin can only update their own business
-        if ($user->role === 'business_admin' && $business->business_admin_id !== $user->id) {
+        if ($user->role === 'business_admin' && $business->id !== $user->business_id) {
             abort(403, 'Unauthorized access');
         }
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'business_admin_id' => 'required|exists:users,id',
+            'business_admin_id' => 'nullable|exists:users,id',
             'logo' => 'nullable|image|max:2048',
         ]);
         
-        // Business admin cannot change their own assignment
-        if ($user->role === 'business_admin' && $validated['business_admin_id'] !== $user->id) {
-            abort(403, 'You cannot change business admin assignment');
-        }
-
         // Handle logo upload if present
         if ($request->hasFile('logo')) {
             $logoPath = $request->file('logo')->store('logos', 'public');
             $validated['logo'] = $logoPath;
         }
 
-        $business->update($validated);
+        // Only update name and logo
+        $business->update([
+            'name' => $validated['name'],
+            'logo' => $validated['logo'] ?? $business->logo,
+        ]);
         
         // Update the business admin's business assignment (only if changed by superadmin)
-        if ($user->role === 'superadmin') {
+        if ($user->role === 'superadmin' && isset($validated['business_admin_id'])) {
+            // Remove old admin assignment
+            User::where('business_id', $business->id)
+                ->where('role', 'business_admin')
+                ->update(['business_id' => null]);
+                
+            // Assign new admin
             User::where('id', $validated['business_admin_id'])
                 ->update(['business_id' => $business->id]);
         }

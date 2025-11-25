@@ -205,7 +205,10 @@ class LoginController extends Controller
         $role = Auth::user()->role ?? null;
         
         Auth::logout();
+        
+        // Completely destroy the session
         $request->session()->invalidate();
+        $request->session()->flush();
         $request->session()->regenerateToken();
         
         // Redirect to role-specific login page

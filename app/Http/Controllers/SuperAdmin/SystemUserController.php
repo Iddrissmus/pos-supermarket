@@ -30,9 +30,8 @@ class SystemUserController extends Controller
     public function create()
     {
         $businesses = Business::orderBy('name')->get();
-        $branches = Branch::with('business')->orderBy('name')->get();
         
-        return view('superadmin.users.create', compact('businesses', 'branches'));
+        return view('superadmin.users.create', compact('businesses'));
     }
 
     /**
@@ -43,51 +42,63 @@ class SystemUserController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
+            'phone' => 'required|string|max:20',
             'password' => ['required', 'confirmed', Password::defaults()],
             'role' => 'required|in:superadmin,business_admin,manager,cashier',
             'business_id' => 'nullable|exists:businesses,id',
-            'branch_id' => 'nullable|exists:branches,id',
         ]);
 
         // Validate role-specific requirements
-        if ($validated['role'] === 'business_admin' && !$validated['business_id']) {
-            return back()->withErrors(['business_id' => 'Business Admin must be assigned to a business.'])->withInput();
-        }
-        
-        if ($validated['role'] === 'business_admin' && !$validated['branch_id']) {
-            return back()->withErrors(['branch_id' => 'Business Admin must be assigned to a branch.'])->withInput();
+        // Business Admin, Manager, and Cashier must be assigned to a business
+        if (in_array($validated['role'], ['business_admin', 'manager', 'cashier']) && !$validated['business_id']) {
+            return back()->withErrors(['business_id' => ucfirst(str_replace('_', ' ', $validated['role'])) . ' must be assigned to a business.'])->withInput();
         }
 
-        if ($validated['role'] === 'manager' && !$validated['branch_id']) {
-            return back()->withErrors(['branch_id' => 'Manager must be assigned to a branch.'])->withInput();
-        }
-        
-        // Check for duplicate role on the same branch (one-per-role rule)
-        if ($validated['branch_id'] && in_array($validated['role'], ['manager', 'cashier', 'business_admin'])) {
-            $existingUser = User::where('branch_id', $validated['branch_id'])
-                ->where('role', $validated['role'])
-                ->first();
-                
-            if ($existingUser) {
-                $branch = Branch::find($validated['branch_id']);
-                $roleName = ucfirst(str_replace('_', ' ', $validated['role']));
-                return back()->withErrors([
-                    'branch_id' => "Branch {$branch->display_label} already has a {$roleName} assigned: {$existingUser->name}. Each branch can only have one {$roleName}."
-                ])->withInput();
-            }
-        }
+        // Store plain password before hashing for SMS
+        $plainPassword = $validated['password'];
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
+            'phone' => $validated['phone'],
             'password' => Hash::make($validated['password']),
             'role' => $validated['role'],
             'business_id' => $validated['business_id'],
-            'branch_id' => $validated['branch_id'],
+            'branch_id' => null, // Branch assignment handled by Business Admin later
         ]);
 
+        // Send SMS with credentials
+        try {
+            \Illuminate\Support\Facades\Log::info("Attempting to send SMS to user", [
+                'name' => $user->name,
+                'phone' => $user->phone,
+                'email' => $user->email,
+                'role' => $user->role
+            ]);
+            
+            $smsService = new \App\Services\SmsService();
+            $smsSent = $smsService->sendWelcomeSms(
+                $user->name,
+                $user->email,
+                $plainPassword,
+                $user->role,
+                $user->phone
+            );
+
+            if ($smsSent) {
+                \Illuminate\Support\Facades\Log::info("SMS sent successfully to {$user->phone}");
+                return redirect()->route('system-users.index')
+                    ->with('success', "User {$user->name} ({$user->role}) has been created successfully! Login credentials sent via SMS to {$user->phone}.");
+            } else {
+                \Illuminate\Support\Facades\Log::warning("SMS sending returned false for {$user->phone}");
+            }
+        } catch (\Exception $e) {
+            // Log error but don't fail the user creation
+            \Illuminate\Support\Facades\Log::error('SMS sending failed: ' . $e->getMessage());
+        }
+
         return redirect()->route('system-users.index')
-            ->with('success', "User {$user->name} ({$user->role}) has been created successfully!");
+            ->with('success', "User {$user->name} ({$user->role}) has been created successfully! Note: SMS could not be sent. Please share credentials manually.");
     }
 
     /**
@@ -96,12 +107,10 @@ class SystemUserController extends Controller
     public function edit(User $systemUser)
     {
         $businesses = Business::orderBy('name')->get();
-        $branches = Branch::with('business')->orderBy('name')->get();
         
         return view('superadmin.users.edit', [
             'user' => $systemUser,
-            'businesses' => $businesses,
-            'branches' => $branches
+            'businesses' => $businesses
         ]);
     }
 
@@ -113,47 +122,23 @@ class SystemUserController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $systemUser->id,
+            'phone' => 'required|string|max:20',
             'password' => ['nullable', 'confirmed', Password::defaults()],
             'role' => 'required|in:superadmin,business_admin,manager,cashier',
             'business_id' => 'nullable|exists:businesses,id',
-            'branch_id' => 'nullable|exists:branches,id',
         ]);
 
         // Validate role-specific requirements
-        if ($validated['role'] === 'business_admin' && !$validated['business_id']) {
-            return back()->withErrors(['business_id' => 'Business Admin must be assigned to a business.'])->withInput();
-        }
-        
-        if ($validated['role'] === 'business_admin' && !$validated['branch_id']) {
-            return back()->withErrors(['branch_id' => 'Business Admin must be assigned to a branch.'])->withInput();
-        }
-
-        if ($validated['role'] === 'manager' && !$validated['branch_id']) {
-            return back()->withErrors(['branch_id' => 'Manager must be assigned to a branch.'])->withInput();
-        }
-        
-        // Check for duplicate role on the same branch (one-per-role rule)
-        if ($validated['branch_id'] && in_array($validated['role'], ['manager', 'cashier', 'business_admin'])) {
-            $existingUser = User::where('branch_id', $validated['branch_id'])
-                ->where('role', $validated['role'])
-                ->where('id', '!=', $systemUser->id)
-                ->first();
-                
-            if ($existingUser) {
-                $branch = Branch::find($validated['branch_id']);
-                $roleName = ucfirst(str_replace('_', ' ', $validated['role']));
-                return back()->withErrors([
-                    'branch_id' => "Branch {$branch->display_label} already has a {$roleName} assigned: {$existingUser->name}. Each branch can only have one {$roleName}."
-                ])->withInput();
-            }
+        if (in_array($validated['role'], ['business_admin', 'manager', 'cashier']) && !$validated['business_id']) {
+            return back()->withErrors(['business_id' => ucfirst(str_replace('_', ' ', $validated['role'])) . ' must be assigned to a business.'])->withInput();
         }
 
         $updateData = [
             'name' => $validated['name'],
             'email' => $validated['email'],
+            'phone' => $validated['phone'],
             'role' => $validated['role'],
             'business_id' => $validated['business_id'],
-            'branch_id' => $validated['branch_id'],
         ];
 
         // Only update password if provided

@@ -56,12 +56,12 @@
                 <div>
                     <dt class="text-sm font-medium text-gray-500">Business Admin</dt>
                     <dd class="mt-1 text-sm text-gray-900">
-                        @if($business->businessAdmin)
+                        @if($business->primaryBusinessAdmin)
                             <div class="flex items-center">
                                 <i class="fas fa-user-tie text-blue-600 mr-2"></i>
-                                <span>{{ $business->businessAdmin->name }}</span>
+                                <span>{{ $business->primaryBusinessAdmin->name }}</span>
                             </div>
-                            <div class="text-xs text-gray-500 ml-6">{{ $business->businessAdmin->email }}</div>
+                            <div class="text-xs text-gray-500 ml-6">{{ $business->primaryBusinessAdmin->email }}</div>
                         @else
                             <span class="text-gray-400">No admin assigned</span>
                         @endif

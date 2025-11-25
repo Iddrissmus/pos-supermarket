@@ -68,31 +68,100 @@
                     @enderror
                 </div>
 
-                <!-- Password -->
-                <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
-                        Password <span class="text-red-500">*</span>
+                <!-- Phone Number -->
+                <div class="md:col-span-2">
+                    <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">
+                        Phone Number <span class="text-red-500">*</span>
                     </label>
-                    <input type="password" 
-                           id="password" 
-                           name="password"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 @error('password') border-red-500 @enderror"
+                    <input type="text" 
+                           id="phone" 
+                           name="phone" 
+                           value="{{ old('phone') }}"
+                           placeholder="e.g., 0241234567 or 233241234567"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 @error('phone') border-red-500 @enderror"
                            required>
+                    @error('phone')
+                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                    @enderror
+                    <p class="text-xs text-gray-500 mt-1">
+                        <i class="fas fa-info-circle mr-1"></i>Login credentials will be sent to this number via SMS
+                    </p>
+                </div>
+
+                <!-- Password -->
+                <div class="md:col-span-2">
+                    <div class="flex items-center justify-between mb-2">
+                        <label for="password" class="block text-sm font-medium text-gray-700">
+                            Password <span class="text-red-500">*</span>
+                        </label>
+                        <button type="button" 
+                                onclick="generateStrongPassword()"
+                                class="text-sm text-purple-600 hover:text-purple-800 font-medium inline-flex items-center">
+                            <i class="fas fa-key mr-1"></i>Generate Strong Password
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <input type="password" 
+                               id="password" 
+                               name="password"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-purple-500 @error('password') border-red-500 @enderror"
+                               required
+                               oninput="checkPasswordStrength(this.value)">
+                        <button type="button"
+                                onclick="togglePasswordVisibility('password', 'password-eye')"
+                                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                            <i id="password-eye" class="fas fa-eye"></i>
+                        </button>
+                    </div>
                     @error('password')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                     @enderror
+                    <!-- Password Strength Indicator -->
+                    <div id="password-strength" class="mt-2 hidden">
+                        <div class="flex items-center space-x-2">
+                            <div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div id="strength-bar" class="h-full transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                            <span id="strength-text" class="text-xs font-medium"></span>
+                        </div>
+                    </div>
+                    <!-- Generated Password Display -->
+                    <div id="generated-password-display" class="mt-2 hidden bg-green-50 border border-green-200 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <p class="text-xs text-green-700 font-medium mb-1">Generated Password:</p>
+                                <code id="generated-password-text" class="text-sm text-green-900 font-mono break-all"></code>
+                            </div>
+                            <button type="button"
+                                    onclick="copyPasswordToClipboard()"
+                                    class="ml-3 text-green-600 hover:text-green-800"
+                                    title="Copy to clipboard">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <p class="text-xs text-green-600 mt-2">
+                            <i class="fas fa-info-circle mr-1"></i>Save this password - the user will need it to log in!
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Confirm Password -->
-                <div>
+                <div class="md:col-span-2">
                     <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-2">
                         Confirm Password <span class="text-red-500">*</span>
                     </label>
-                    <input type="password" 
-                           id="password_confirmation" 
-                           name="password_confirmation"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                           required>
+                    <div class="relative">
+                        <input type="password" 
+                               id="password_confirmation" 
+                               name="password_confirmation"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                               required>
+                        <button type="button"
+                                onclick="togglePasswordVisibility('password_confirmation', 'confirm-eye')"
+                                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                            <i id="confirm-eye" class="fas fa-eye"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Role -->
@@ -124,8 +193,7 @@
                     </label>
                     <select id="business_id" 
                             name="business_id" 
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 @error('business_id') border-red-500 @enderror"
-                            onchange="filterBranches(this.value)">
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 @error('business_id') border-red-500 @enderror">
                         <option value="">Select a Business</option>
                         @foreach($businesses as $business)
                             <option value="{{ $business->id }}" {{ old('business_id') == $business->id ? 'selected' : '' }}>
@@ -136,28 +204,9 @@
                     @error('business_id')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                     @enderror
-                </div>
-
-                <!-- Branch Selection -->
-                <div class="md:col-span-2" id="branch-field" style="display: none;">
-                    <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-2">
-                        Branch <span class="text-red-500" id="branch-required">*</span>
-                    </label>
-                    <select id="branch_id" 
-                            name="branch_id" 
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 @error('branch_id') border-red-500 @enderror">
-                        <option value="">Select a Branch</option>
-                        @foreach($branches as $branch)
-                            <option value="{{ $branch->id }}" 
-                                    data-business="{{ $branch->business_id }}"
-                                    {{ old('branch_id') == $branch->id ? 'selected' : '' }}>
-                                {{ $branch->name }} ({{ $branch->business->name }})
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('branch_id')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
+                    <p class="text-xs text-gray-500 mt-1">
+                        <i class="fas fa-info-circle mr-1"></i>Branch assignment will be handled by the Business Admin
+                    </p>
                 </div>
             </div>
 
@@ -179,71 +228,30 @@
 <script>
 const roleDescriptions = {
     superadmin: 'Full system access. Can manage all businesses, users, and system-wide settings.',
-    business_admin: 'Manages a specific branch in their business. Can handle day-to-day operations and staff for their assigned branch.',
-    manager: 'Manages a specific branch. Can handle day-to-day operations, staff, and inventory for their branch.',
-    cashier: 'Makes sales at a specific branch. Limited access to POS terminal and sales functions only.'
+    business_admin: 'Manages their assigned business. Can create branches, assign staff, and handle business operations.',
+    manager: 'Will be assigned to a branch by Business Admin. Manages branch operations, staff, and inventory.',
+    cashier: 'Will be assigned to a branch by Business Admin. Handles sales at their assigned branch.'
 };
 
 function handleRoleChange(role) {
     const descElement = document.getElementById('role-description');
     const businessField = document.getElementById('business-field');
-    const branchField = document.getElementById('branch-field');
     const businessRequired = document.getElementById('business-required');
-    const branchRequired = document.getElementById('branch-required');
     
     // Update description
     descElement.textContent = roleDescriptions[role] || 'Select a role to see its description';
     
-    // Show/hide fields based on role
+    // Show/hide business field based on role
     if (role === 'superadmin') {
         businessField.style.display = 'none';
-        branchField.style.display = 'none';
         document.getElementById('business_id').removeAttribute('required');
-        document.getElementById('branch_id').removeAttribute('required');
-    } else if (role === 'business_admin') {
+    } else if (role === 'business_admin' || role === 'manager' || role === 'cashier') {
         businessField.style.display = 'block';
-        branchField.style.display = 'block';
         document.getElementById('business_id').setAttribute('required', 'required');
-        document.getElementById('branch_id').setAttribute('required', 'required');
         businessRequired.style.display = 'inline';
-        branchRequired.style.display = 'inline';
-    } else if (role === 'manager' || role === 'cashier') {
-        businessField.style.display = 'block';
-        branchField.style.display = 'block';
-        document.getElementById('business_id').removeAttribute('required');
-        document.getElementById('branch_id').setAttribute('required', 'required');
-        businessRequired.style.display = 'none';
-        branchRequired.style.display = 'inline';
     } else {
         businessField.style.display = 'none';
-        branchField.style.display = 'none';
         document.getElementById('business_id').removeAttribute('required');
-        document.getElementById('branch_id').removeAttribute('required');
-    }
-}
-
-function filterBranches(businessId) {
-    const branchSelect = document.getElementById('branch_id');
-    const options = branchSelect.querySelectorAll('option');
-    
-    options.forEach(option => {
-        if (option.value === '') {
-            option.style.display = 'block';
-            return;
-        }
-        
-        const optionBusiness = option.getAttribute('data-business');
-        if (businessId === '' || optionBusiness === businessId) {
-            option.style.display = 'block';
-        } else {
-            option.style.display = 'none';
-        }
-    });
-    
-    // Reset branch selection if it doesn't match business
-    const selectedOption = branchSelect.options[branchSelect.selectedIndex];
-    if (selectedOption && selectedOption.getAttribute('data-business') !== businessId && businessId !== '') {
-        branchSelect.value = '';
     }
 }
 
@@ -254,5 +262,142 @@ document.addEventListener('DOMContentLoaded', function() {
         handleRoleChange(roleSelect.value);
     }
 });
+
+// Password Generation Functions
+function generateStrongPassword() {
+    const length = 16;
+    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const numbers = '0123456789';
+    const specialChars = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+    
+    // Ensure at least one character from each category
+    let password = '';
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += specialChars[Math.floor(Math.random() * specialChars.length)];
+    
+    // Fill the rest randomly
+    const allChars = uppercase + lowercase + numbers + specialChars;
+    for (let i = password.length; i < length; i++) {
+        password += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+    
+    // Shuffle the password
+    password = password.split('').sort(() => Math.random() - 0.5).join('');
+    
+    // Set the password fields
+    const passwordField = document.getElementById('password');
+    const confirmField = document.getElementById('password_confirmation');
+    
+    passwordField.value = password;
+    confirmField.value = password;
+    
+    // Show the generated password display
+    document.getElementById('generated-password-text').textContent = password;
+    document.getElementById('generated-password-display').classList.remove('hidden');
+    
+    // Check strength
+    checkPasswordStrength(password);
+}
+
+function togglePasswordVisibility(fieldId, eyeIconId) {
+    const field = document.getElementById(fieldId);
+    const eyeIcon = document.getElementById(eyeIconId);
+    
+    if (field.type === 'password') {
+        field.type = 'text';
+        eyeIcon.classList.remove('fa-eye');
+        eyeIcon.classList.add('fa-eye-slash');
+    } else {
+        field.type = 'password';
+        eyeIcon.classList.remove('fa-eye-slash');
+        eyeIcon.classList.add('fa-eye');
+    }
+}
+
+function checkPasswordStrength(password) {
+    const strengthContainer = document.getElementById('password-strength');
+    const strengthBar = document.getElementById('strength-bar');
+    const strengthText = document.getElementById('strength-text');
+    
+    if (!password) {
+        strengthContainer.classList.add('hidden');
+        return;
+    }
+    
+    strengthContainer.classList.remove('hidden');
+    
+    let strength = 0;
+    const checks = {
+        length: password.length >= 8,
+        uppercase: /[A-Z]/.test(password),
+        lowercase: /[a-z]/.test(password),
+        numbers: /[0-9]/.test(password),
+        special: /[^A-Za-z0-9]/.test(password)
+    };
+    
+    // Calculate strength
+    strength += checks.length ? 20 : 0;
+    strength += checks.uppercase ? 20 : 0;
+    strength += checks.lowercase ? 20 : 0;
+    strength += checks.numbers ? 20 : 0;
+    strength += checks.special ? 20 : 0;
+    
+    // Update bar and text
+    strengthBar.style.width = strength + '%';
+    
+    if (strength <= 40) {
+        strengthBar.className = 'h-full transition-all duration-300 bg-red-500';
+        strengthText.textContent = 'Weak';
+        strengthText.className = 'text-xs font-medium text-red-600';
+    } else if (strength <= 60) {
+        strengthBar.className = 'h-full transition-all duration-300 bg-yellow-500';
+        strengthText.textContent = 'Fair';
+        strengthText.className = 'text-xs font-medium text-yellow-600';
+    } else if (strength <= 80) {
+        strengthBar.className = 'h-full transition-all duration-300 bg-blue-500';
+        strengthText.textContent = 'Good';
+        strengthText.className = 'text-xs font-medium text-blue-600';
+    } else {
+        strengthBar.className = 'h-full transition-all duration-300 bg-green-500';
+        strengthText.textContent = 'Strong';
+        strengthText.className = 'text-xs font-medium text-green-600';
+    }
+}
+
+function copyPasswordToClipboard() {
+    const passwordText = document.getElementById('generated-password-text').textContent;
+    
+    // Modern clipboard API
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(passwordText).then(() => {
+            // Show feedback
+            const copyBtn = event.target.closest('button');
+            const icon = copyBtn.querySelector('i');
+            icon.classList.remove('fa-copy');
+            icon.classList.add('fa-check');
+            copyBtn.classList.add('text-green-700');
+            
+            setTimeout(() => {
+                icon.classList.remove('fa-check');
+                icon.classList.add('fa-copy');
+                copyBtn.classList.remove('text-green-700');
+            }, 2000);
+        });
+    } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = passwordText;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert('Password copied to clipboard!');
+    }
+}
 </script>
 @endsection

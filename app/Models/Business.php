@@ -6,18 +6,25 @@ use Illuminate\Database\Eloquent\Model;
 
 class Business extends Model
 {
-    protected $fillable = ['name', 'business_admin_id', 'logo'];
+    protected $fillable = ['name', 'logo'];
 
     
     public function businessAdmin()
     {
-        return $this->belongsTo(User::class, 'business_admin_id');
+        // Get the business admin(s) assigned to this business
+        return $this->hasMany(User::class, 'business_id')->where('role', 'business_admin');
+    }
+    
+    // Get the first/primary business admin
+    public function primaryBusinessAdmin()
+    {
+        return $this->hasOne(User::class, 'business_id')->where('role', 'business_admin');
     }
     
     // Alias for backwards compatibility
     public function owner()
     {
-        return $this->businessAdmin();
+        return $this->primaryBusinessAdmin();
     }
 
     public function branches()

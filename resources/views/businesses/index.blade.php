@@ -62,7 +62,7 @@
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {{ $business->businessAdmin ? $business->businessAdmin->name : 'N/A' }}
+                            {{ $business->primaryBusinessAdmin ? $business->primaryBusinessAdmin->name : 'No Admin Assigned' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                             {{ $business->branches->count() }} branches

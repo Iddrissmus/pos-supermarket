@@ -47,6 +47,23 @@
                     @enderror
                 </div>
 
+                <!-- Phone Number -->
+                <div class="md:col-span-2">
+                    <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">
+                        Phone Number <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" 
+                           id="phone" 
+                           name="phone" 
+                           value="{{ old('phone', $user->phone) }}"
+                           placeholder="e.g., 0241234567 or 233241234567"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 @error('phone') border-red-500 @enderror"
+                           required>
+                    @error('phone')
+                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 <!-- Password (Optional) -->
                 <div>
                     <label for="password" class="block text-sm font-medium text-gray-700 mb-2">

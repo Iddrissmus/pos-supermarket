@@ -33,6 +33,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'phone',
         'password',
         'role',
         'branch_id',
@@ -51,16 +52,15 @@ class User extends Authenticatable
                 return;
             }
 
-            // Business Admin must have business_id and branch_id
+            // Business Admin must have business_id (branch_id is optional)
             if ($user->role === self::ROLE_BUSINESS_ADMIN) {
                 if (!$user->business_id) {
                     throw new \InvalidArgumentException('Business Administrators must be assigned to a business.');
                 }
-                if (!$user->branch_id) {
-                    throw new \InvalidArgumentException('Business Administrators must be assigned to a branch.');
-                }
-                // Business admin is assigned to one specific branch
-                $user->branch_role_key = "{$user->branch_id}:{$user->role}";
+                // Business admin can optionally be assigned to a specific branch
+                $user->branch_role_key = $user->branch_id 
+                    ? "{$user->branch_id}:{$user->role}"
+                    : null;
                 return;
             }
 

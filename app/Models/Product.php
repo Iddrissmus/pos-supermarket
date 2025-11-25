@@ -88,14 +88,10 @@ class Product extends Model
 
     public function getQrCodeUrlAttribute()
     {
+        // Generate URL directly without checking file existence
+        // Browser will handle missing images gracefully with onerror handler
         $path = 'qrcodes/product_' . $this->id . '.svg';
-        
-        if (file_exists(storage_path('app/public/' . $path))) {
-            return asset('storage/' . $path);
-        }
-        
-        // Return a default placeholder or generate on-the-fly
-        return null;
+        return asset('storage/' . $path);
     }
 
     /**
