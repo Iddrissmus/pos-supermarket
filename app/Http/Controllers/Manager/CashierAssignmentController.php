@@ -71,6 +71,7 @@ class CashierAssignmentController extends Controller
             'email' => $validated['email'],
             'password' => bcrypt($validated['password']),
             'role' => 'cashier',
+            'business_id' => $manager->business_id,
             'branch_id' => $manager->branch_id,
         ]);
 

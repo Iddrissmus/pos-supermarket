@@ -41,4 +41,10 @@ class Business extends Model
     {
         return $this->hasMany(Product::class);
     }
+    
+    // Get the first branch (default branch)
+    public function firstBranch()
+    {
+        return $this->hasOne(Branch::class)->oldest('id');
+    }
 }

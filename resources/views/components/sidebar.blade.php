@@ -35,9 +35,14 @@
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider sidebar-text">System Management</p>
                     </div>
                     
-                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('businesses.*') ? 'active bg-purple-50' : 'hover:bg-gray-50' }}">
-                        <i class="fas fa-building sidebar-icon {{ request()->routeIs('businesses.*') ? 'text-purple-600' : 'text-gray-500' }}"></i>
-                        <a href="{{ route('businesses.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('businesses.*') ? 'text-purple-600 font-semibold' : 'text-gray-700' }}">Manage Business</a>
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('businesses.index') || request()->routeIs('businesses.create') || request()->routeIs('businesses.edit') || request()->routeIs('businesses.show') ? 'active bg-purple-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-building sidebar-icon {{ request()->routeIs('businesses.index') || request()->routeIs('businesses.create') || request()->routeIs('businesses.edit') || request()->routeIs('businesses.show') ? 'text-purple-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('businesses.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('businesses.index') || request()->routeIs('businesses.create') || request()->routeIs('businesses.edit') || request()->routeIs('businesses.show') ? 'text-purple-600 font-semibold' : 'text-gray-700' }}">Manage Business</a>
+                    </div>
+                    
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('businesses.map') ? 'active bg-purple-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-map-marked-alt sidebar-icon {{ request()->routeIs('businesses.map') ? 'text-purple-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('businesses.map') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('businesses.map') ? 'text-purple-600 font-semibold' : 'text-gray-700' }}">Business Map</a>
                     </div>
                     
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('system-users.*') ? 'active bg-purple-50' : 'hover:bg-gray-50' }}">
@@ -85,9 +90,14 @@
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider sidebar-text">Business Management</p>
                     </div>
                     
-                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('businesses.*') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
-                        <i class="fas fa-building sidebar-icon {{ request()->routeIs('businesses.*') ? 'text-blue-600' : 'text-gray-500' }}"></i>
-                        <a href="{{ route('businesses.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('businesses.*') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">My Business</a>
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('businesses.index') || request()->routeIs('businesses.edit') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-building sidebar-icon {{ request()->routeIs('businesses.index') || request()->routeIs('businesses.edit') ? 'text-blue-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('businesses.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('businesses.index') || request()->routeIs('businesses.edit') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">My Business</a>
+                    </div>
+                    
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('businesses.myMap') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-map-marked-alt sidebar-icon {{ request()->routeIs('businesses.myMap') ? 'text-blue-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('businesses.myMap') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('businesses.myMap') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">Branch Locations</a>
                     </div>
                     
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('my-branch') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">

@@ -2,6 +2,21 @@
 
 @section('title', 'Create New Business')
 
+@push('styles')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #map {
+        height: 400px;
+        width: 100%;
+        border-radius: 0.5rem;
+        border: 2px solid #e5e7eb;
+    }
+    .leaflet-popup-content {
+        font-size: 14px;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="p-6 max-w-2xl mx-auto">
     <div class="bg-white shadow rounded-lg p-6">
@@ -53,7 +68,37 @@
                     @enderror
                 </div>
 
-                <!-- Address -->
+                <!-- Map Selection -->
+                <div class="mb-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Select Location on Map <span class="text-red-500">*</span>
+                    </label>
+                    <div id="map"></div>
+                    <p class="text-xs text-gray-600 mt-2">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Click on the map to select your business location. You can also search for a location or drag the marker.
+                    </p>
+                </div>
+
+                <!-- Search Location -->
+                <div class="mb-3">
+                    <label for="search-location" class="block text-sm font-medium text-gray-700 mb-2">
+                        Search Location (Optional)
+                    </label>
+                    <div class="flex gap-2">
+                        <input type="text" 
+                               id="search-location" 
+                               placeholder="Search for a location..."
+                               class="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button type="button" 
+                                id="search-btn"
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Address (Auto-filled) -->
                 <div class="mb-3">
                     <label for="address" class="block text-sm font-medium text-gray-700 mb-2">
                         Address <span class="text-red-500">*</span>
@@ -61,13 +106,17 @@
                     <textarea id="address" 
                               name="address" 
                               rows="2"
-                              placeholder="Enter business address"
+                              placeholder="Address will be filled automatically from map"
                               class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 @error('address') border-red-500 @enderror"
                               required>{{ old('address') }}</textarea>
                     @error('address')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                     @enderror
                 </div>
+
+                <!-- Hidden fields for coordinates -->
+                <input type="hidden" id="latitude" name="latitude" value="{{ old('latitude') }}">
+                <input type="hidden" id="longitude" name="longitude" value="{{ old('longitude') }}">
 
                 <!-- Region and Contact -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -145,4 +194,177 @@
         </form>
     </div>
 </div>
+
+@push('scripts')
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    let map, marker;
+    
+    // Initialize map centered on Ghana
+    function initMap() {
+        map = L.map('map').setView([6.6885, -1.6244], 7); // Ghana center
+        
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+        
+        // Add click event to map
+        map.on('click', function(e) {
+            setMarker(e.latlng.lat, e.latlng.lng);
+        });
+        
+        // Try to get user's location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                map.setView([lat, lng], 13);
+                setMarker(lat, lng);
+            });
+        }
+    }
+    
+    // Set marker and reverse geocode
+    function setMarker(lat, lng) {
+        // Remove existing marker
+        if (marker) {
+            map.removeLayer(marker);
+        }
+        
+        // Add new marker
+        marker = L.marker([lat, lng], {
+            draggable: true
+        }).addTo(map);
+        
+        // Update coordinates
+        document.getElementById('latitude').value = lat;
+        document.getElementById('longitude').value = lng;
+        
+        // Reverse geocode to get address
+        reverseGeocode(lat, lng);
+        
+        // Add drag event
+        marker.on('dragend', function(e) {
+            const pos = marker.getLatLng();
+            document.getElementById('latitude').value = pos.lat;
+            document.getElementById('longitude').value = pos.lng;
+            reverseGeocode(pos.lat, pos.lng);
+        });
+        
+        marker.bindPopup('Selected Location').openPopup();
+    }
+    
+    // Reverse geocode to get address from coordinates
+    function reverseGeocode(lat, lng) {
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.display_name) {
+                    document.getElementById('address').value = data.display_name;
+                    
+                    // Try to extract and match region from address components
+                    if (data.address) {
+                        const regionSelect = document.getElementById('region');
+                        
+                        // Check various address fields for Ghana regions
+                        const addressFields = [
+                            data.address.state,
+                            data.address.region,
+                            data.address.county,
+                            data.address.state_district
+                        ];
+                        
+                        // Also check the full display name
+                        const searchText = (data.display_name + ' ' + addressFields.join(' ')).toLowerCase();
+                        
+                        // Try to match with Ghana regions
+                        let matched = false;
+                        for (let option of regionSelect.options) {
+                            if (option.value) {
+                                const regionName = option.value.toLowerCase();
+                                const regionWords = regionName.split(' ');
+                                
+                                // Check if region name or any significant word from it appears in the address
+                                if (searchText.includes(regionName) || 
+                                    regionWords.some(word => word.length > 3 && searchText.includes(word))) {
+                                    regionSelect.value = option.value;
+                                    matched = true;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        // If no match found, try partial matching
+                        if (!matched) {
+                            for (let field of addressFields) {
+                                if (field) {
+                                    for (let option of regionSelect.options) {
+                                        if (option.value && 
+                                            (field.toLowerCase().includes(option.value.toLowerCase()) ||
+                                             option.value.toLowerCase().includes(field.toLowerCase()))) {
+                                            regionSelect.value = option.value;
+                                            matched = true;
+                                            break;
+                                        }
+                                    }
+                                    if (matched) break;
+                                }
+                            }
+                        }
+                        
+                        // Visual feedback
+                        if (matched) {
+                            regionSelect.classList.add('border-green-500');
+                            setTimeout(() => regionSelect.classList.remove('border-green-500'), 2000);
+                        }
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Reverse geocoding error:', error);
+                document.getElementById('address').value = `Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}`;
+            });
+    }
+    
+    // Search location
+    document.getElementById('search-btn').addEventListener('click', function() {
+        const query = document.getElementById('search-location').value;
+        if (!query) return;
+        
+        // Add Ghana to search query for better results
+        const searchQuery = query.includes('Ghana') ? query : query + ', Ghana';
+        
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.length > 0) {
+                    const result = data[0];
+                    const lat = parseFloat(result.lat);
+                    const lng = parseFloat(result.lon);
+                    map.setView([lat, lng], 15);
+                    setMarker(lat, lng);
+                } else {
+                    alert('Location not found. Please try a different search term.');
+                }
+            })
+            .catch(error => {
+                console.error('Search error:', error);
+                alert('Error searching location. Please try again.');
+            });
+    });
+    
+    // Allow search on Enter key
+    document.getElementById('search-location').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('search-btn').click();
+        }
+    });
+    
+    // Initialize map when page loads
+    document.addEventListener('DOMContentLoaded', initMap);
+</script>
+@endpush
 @endsection

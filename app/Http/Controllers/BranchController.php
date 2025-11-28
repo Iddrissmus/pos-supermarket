@@ -16,6 +16,8 @@ class BranchController extends Controller
             'address' => 'nullable|string|max:500',
             'contact' => 'nullable|string|max:50',
             'region' => 'nullable|string|max:100',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
         ]);
 
         $business = Business::findOrFail($validated['business_id']);
@@ -44,6 +46,8 @@ class BranchController extends Controller
             'address' => 'nullable|string|max:500',
             'contact' => 'nullable|string|max:50',
             'region' => 'nullable|string|max:100',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
         ]);
 
         $branch->update($validated);

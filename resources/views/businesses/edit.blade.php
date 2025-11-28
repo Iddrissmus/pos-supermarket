@@ -2,6 +2,19 @@
 
 @section('title', 'Edit Business - ' . $business->name)
 
+@push('styles')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    .modal-map {
+        height: 300px;
+        width: 100%;
+        border-radius: 0.5rem;
+        border: 2px solid #e5e7eb;
+        margin-bottom: 1rem;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="p-6 max-w-2xl mx-auto">
     <!-- Success/Error Messages -->
@@ -182,7 +195,7 @@
                                     </div>
                                     <div class="flex space-x-2 ml-4">
                                         <button type="button" 
-                                                onclick="editBranch({{ $branch->id }}, '{{ $branch->name }}', '{{ $branch->address }}', '{{ $branch->contact }}', '{{ $branch->region }}')"
+                                                onclick="editBranch({{ $branch->id }}, '{{ $branch->name }}', '{{ $branch->address }}', '{{ $branch->contact }}', '{{ $branch->region }}', {{ $branch->latitude ?? 'null' }}, {{ $branch->longitude ?? 'null' }})"
                                                 class="text-blue-600 hover:text-blue-800 px-3 py-1 rounded text-sm">
                                             <i class="fas fa-edit"></i> Edit
                                         </button>
@@ -223,13 +236,15 @@
 
 <!-- Add Branch Modal -->
 <div id="addBranchModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
         <div class="mb-4">
             <h3 class="text-lg font-semibold text-gray-900">Add New Branch</h3>
         </div>
         <form id="addBranchForm" action="{{ route('branches.store') }}" method="POST">
             @csrf
             <input type="hidden" name="business_id" value="{{ $business->id }}">
+            <input type="hidden" id="add_latitude" name="latitude">
+            <input type="hidden" id="add_longitude" name="longitude">
             
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Branch Name *</label>
@@ -237,9 +252,18 @@
                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500">
             </div>
             
+            <!-- Map Selection -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Select Location on Map *
+                </label>
+                <div id="addBranchMap" class="modal-map"></div>
+                <p class="text-xs text-gray-600">Click on the map to select the branch location</p>
+            </div>
+            
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Address</label>
-                <textarea name="address" rows="2"
+                <textarea id="add_address" name="address" rows="2"
                           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"></textarea>
             </div>
             
@@ -251,7 +275,7 @@
 
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Region</label>
-                <select name="region" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500">
+                <select id="add_region" name="region" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500">
                     <option value="">Select Region</option>
                     <option value="Greater Accra">Greater Accra</option>
                     <option value="Ashanti">Ashanti</option>
@@ -288,18 +312,29 @@
 
 <!-- Edit Branch Modal -->
 <div id="editBranchModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
         <div class="mb-4">
             <h3 class="text-lg font-semibold text-gray-900">Edit Branch</h3>
         </div>
         <form id="editBranchForm" method="POST">
             @csrf
             @method('PUT')
+            <input type="hidden" id="edit_latitude" name="latitude">
+            <input type="hidden" id="edit_longitude" name="longitude">
             
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Branch Name *</label>
                 <input type="text" id="edit_name" name="name" required
                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            
+            <!-- Map Selection -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Update Location on Map
+                </label>
+                <div id="editBranchMap" class="modal-map"></div>
+                <p class="text-xs text-gray-600">Click on the map to update the branch location</p>
             </div>
             
             <div class="mb-4">
@@ -400,4 +435,198 @@ function deleteBranch(id, name) {
     }
 }
 </script>
+
+@push('scripts')
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+let addBranchMap = null;
+let addBranchMarker = null;
+let editBranchMap = null;
+let editBranchMarker = null;
+
+function initAddBranchMap() {
+    if (addBranchMap) {
+        addBranchMap.remove();
+    }
+    
+    addBranchMap = L.map('addBranchMap').setView([7.9465, -1.0232], 7); // Ghana center
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(addBranchMap);
+    
+    addBranchMap.on('click', function(e) {
+        setAddBranchMarker(e.latlng.lat, e.latlng.lng);
+    });
+    
+    setTimeout(() => {
+        addBranchMap.invalidateSize();
+    }, 100);
+}
+
+function initEditBranchMap(lat, lng) {
+    if (editBranchMap) {
+        editBranchMap.remove();
+    }
+    
+    const center = (lat && lng) ? [lat, lng] : [7.9465, -1.0232];
+    const zoom = (lat && lng) ? 13 : 7;
+    
+    editBranchMap = L.map('editBranchMap').setView(center, zoom);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(editBranchMap);
+    
+    if (lat && lng) {
+        setEditBranchMarker(lat, lng);
+    }
+    
+    editBranchMap.on('click', function(e) {
+        setEditBranchMarker(e.latlng.lat, e.latlng.lng);
+    });
+    
+    setTimeout(() => {
+        editBranchMap.invalidateSize();
+    }, 100);
+}
+
+function setAddBranchMarker(lat, lng) {
+    if (addBranchMarker) {
+        addBranchMap.removeLayer(addBranchMarker);
+    }
+    
+    addBranchMarker = L.marker([lat, lng], { draggable: true }).addTo(addBranchMap);
+    
+    addBranchMarker.on('dragend', function(e) {
+        const position = e.target.getLatLng();
+        setAddBranchMarker(position.lat, position.lng);
+    });
+    
+    document.getElementById('add_latitude').value = lat;
+    document.getElementById('add_longitude').value = lng;
+    
+    reverseGeocode(lat, lng, 'add');
+    
+    addBranchMap.setView([lat, lng], 13);
+}
+
+function setEditBranchMarker(lat, lng) {
+    if (editBranchMarker) {
+        editBranchMap.removeLayer(editBranchMarker);
+    }
+    
+    editBranchMarker = L.marker([lat, lng], { draggable: true }).addTo(editBranchMap);
+    
+    editBranchMarker.on('dragend', function(e) {
+        const position = e.target.getLatLng();
+        setEditBranchMarker(position.lat, position.lng);
+    });
+    
+    document.getElementById('edit_latitude').value = lat;
+    document.getElementById('edit_longitude').value = lng;
+    
+    reverseGeocode(lat, lng, 'edit');
+    
+    editBranchMap.setView([lat, lng], 13);
+}
+
+function reverseGeocode(lat, lng, prefix) {
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.display_name) {
+                const addressField = document.getElementById(`${prefix}_address`);
+                if (addressField) {
+                    addressField.value = data.display_name;
+                }
+                
+                // Try to detect region from address components
+                const address = data.address || {};
+                let region = address.state || address.region || '';
+                
+                if (region) {
+                    const regionSelect = document.getElementById(`${prefix}_region`);
+                    if (regionSelect) {
+                        // Try to match with existing options
+                        for (let option of regionSelect.options) {
+                            if (option.text.toLowerCase().includes(region.toLowerCase()) || 
+                                region.toLowerCase().includes(option.text.toLowerCase())) {
+                                regionSelect.value = option.value;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        })
+        .catch(error => console.error('Reverse geocoding error:', error));
+}
+
+function showAddBranchModal() {
+    document.getElementById('addBranchModal').classList.remove('hidden');
+    setTimeout(() => initAddBranchMap(), 100);
+}
+
+function hideAddBranchModal() {
+    document.getElementById('addBranchModal').classList.add('hidden');
+    document.getElementById('addBranchForm').reset();
+    if (addBranchMap) {
+        addBranchMap.remove();
+        addBranchMap = null;
+        addBranchMarker = null;
+    }
+}
+
+function editBranch(id, name, address, contact, region, latitude, longitude) {
+    const form = document.getElementById('editBranchForm');
+    form.action = `/branches/${id}`;
+    
+    document.getElementById('edit_name').value = name;
+    document.getElementById('edit_address').value = address || '';
+    document.getElementById('edit_contact').value = contact || '';
+    document.getElementById('edit_region').value = region || '';
+    
+    document.getElementById('editBranchModal').classList.remove('hidden');
+    
+    setTimeout(() => {
+        const lat = latitude !== null ? parseFloat(latitude) : null;
+        const lng = longitude !== null ? parseFloat(longitude) : null;
+        initEditBranchMap(lat, lng);
+    }, 100);
+}
+
+function hideEditBranchModal() {
+    document.getElementById('editBranchModal').classList.add('hidden');
+    if (editBranchMap) {
+        editBranchMap.remove();
+        editBranchMap = null;
+        editBranchMarker = null;
+    }
+}
+
+function deleteBranch(id, name) {
+    if (confirm(`Are you sure you want to delete the branch "${name}"?\n\nThis will also remove all associated staff assignments and inventory data. This action cannot be undone.`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/branches/${id}`;
+        
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = '_token';
+        csrfToken.value = '{{ csrf_token() }}';
+        
+        const methodField = document.createElement('input');
+        methodField.type = 'hidden';
+        methodField.name = '_method';
+        methodField.value = 'DELETE';
+        
+        form.appendChild(csrfToken);
+        form.appendChild(methodField);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+@endpush
 @endsection

@@ -56,6 +56,8 @@ class BusinessController extends Controller
             'address' => 'required|string|max:500',
             'region' => 'required|string|max:100',
             'contact' => 'required|string|max:20',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'logo' => 'nullable|image|max:2048', // Optional logo, max size 2MB
         ]);
 
@@ -78,6 +80,8 @@ class BusinessController extends Controller
             'address' => $validated['address'],
             'region' => $validated['region'],
             'contact' => $validated['contact'],
+            'latitude' => $validated['latitude'] ?? null,
+            'longitude' => $validated['longitude'] ?? null,
             'manager_id' => null, // Will be assigned by Business Admin later
         ]);
         
@@ -213,5 +217,103 @@ class BusinessController extends Controller
         
         return redirect()->route('businesses.index')
             ->with('success', 'Business deleted successfully');
+    }
+    
+    /**
+     * Show map view of all businesses and branches (SuperAdmin only)
+     */
+    public function map()
+    {
+        // Only superadmin can access
+        if (auth()->user()->role !== 'superadmin') {
+            abort(403, 'Unauthorized access');
+        }
+        
+        // Get all businesses with their branches (with and without coordinates)
+        $businesses = Business::with(['branches'])->get();
+        
+        // Format data for map markers (only branches with coordinates)
+        $mapData = [];
+        $branchesWithoutCoordinates = [];
+        
+        foreach ($businesses as $business) {
+            foreach ($business->branches as $branch) {
+                if ($branch->latitude && $branch->longitude) {
+                    $mapData[] = [
+                        'id' => $branch->id,
+                        'business_name' => $business->name,
+                        'business_logo' => $business->logo ? asset('storage/' . $business->logo) : null,
+                        'branch_name' => $branch->name,
+                        'address' => $branch->address,
+                        'region' => $branch->region,
+                        'contact' => $branch->contact,
+                        'latitude' => (float) $branch->latitude,
+                        'longitude' => (float) $branch->longitude,
+                        'manager' => $branch->manager ? $branch->manager->name : 'Not assigned',
+                    ];
+                } else {
+                    $branchesWithoutCoordinates[] = [
+                        'id' => $branch->id,
+                        'business_name' => $business->name,
+                        'branch_name' => $branch->name,
+                        'address' => $branch->address,
+                        'region' => $branch->region,
+                    ];
+                }
+            }
+        }
+        
+        return view('businesses.map', compact('mapData', 'branchesWithoutCoordinates'));
+    }
+    
+    /**
+     * Show map view for business admin (only their business branches)
+     */
+    public function myMap()
+    {
+        $user = auth()->user();
+        
+        // Only business admin can access
+        if ($user->role !== 'business_admin') {
+            abort(403, 'Unauthorized access');
+        }
+        
+        // Get the business admin's business with branches
+        $business = Business::with(['branches'])->find($user->business_id);
+        
+        if (!$business) {
+            abort(404, 'Business not found');
+        }
+        
+        // Format data for map markers (only branches with coordinates)
+        $mapData = [];
+        $branchesWithoutCoordinates = [];
+        
+        foreach ($business->branches as $branch) {
+            if ($branch->latitude && $branch->longitude) {
+                $mapData[] = [
+                    'id' => $branch->id,
+                    'business_name' => $business->name,
+                    'business_logo' => $business->logo ? asset('storage/' . $business->logo) : null,
+                    'branch_name' => $branch->name,
+                    'address' => $branch->address,
+                    'region' => $branch->region,
+                    'contact' => $branch->contact,
+                    'latitude' => (float) $branch->latitude,
+                    'longitude' => (float) $branch->longitude,
+                    'manager' => $branch->manager ? $branch->manager->name : 'Not assigned',
+                ];
+            } else {
+                $branchesWithoutCoordinates[] = [
+                    'id' => $branch->id,
+                    'business_name' => $business->name,
+                    'branch_name' => $branch->name,
+                    'address' => $branch->address,
+                    'region' => $branch->region,
+                ];
+            }
+        }
+        
+        return view('businesses.my-map', compact('mapData', 'branchesWithoutCoordinates', 'business'));
     }
 }

@@ -5,7 +5,7 @@
 @section('content')
 <div class="p-6">
     <!-- Welcome Header -->
-    <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg shadow-lg p-8 mb-8 text-white">
+    <div class="bg-purple-600  rounded-lg shadow-lg p-8 mb-8 text-white">
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="text-3xl font-bold mb-2">System Administrator Dashboard</h1>
@@ -74,7 +74,7 @@
             <i class="fas fa-users text-indigo-600 mr-2"></i>Users by Role
         </h2>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border-l-4 border-purple-600">
+            <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 ">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-gray-600 text-sm font-medium">SuperAdmins</p>
@@ -84,12 +84,10 @@
                         <i class="fas fa-shield-alt text-purple-700 text-xl"></i>
                     </div>
                 </div>
-                <a href="{{ route('system-users.index') }}" class="text-xs text-purple-700 hover:text-purple-900 mt-2 inline-block">
-                    View all <i class="fas fa-arrow-right ml-1"></i>
-                </a>
+                
             </div>
 
-            <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border-l-4 border-blue-600">
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 ">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-gray-600 text-sm font-medium">Business Admins</p>
@@ -99,12 +97,10 @@
                         <i class="fas fa-user-tie text-blue-700 text-xl"></i>
                     </div>
                 </div>
-                <a href="{{ route('system-users.index') }}" class="text-xs text-blue-700 hover:text-blue-900 mt-2 inline-block">
-                    View all <i class="fas fa-arrow-right ml-1"></i>
-                </a>
+                
             </div>
 
-            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border-l-4 border-green-600">
+            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 ">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-gray-600 text-sm font-medium">Managers</p>
@@ -114,12 +110,10 @@
                         <i class="fas fa-user-cog text-green-700 text-xl"></i>
                     </div>
                 </div>
-                <a href="{{ route('system-users.index') }}" class="text-xs text-green-700 hover:text-green-900 mt-2 inline-block">
-                    View all <i class="fas fa-arrow-right ml-1"></i>
-                </a>
+                
             </div>
 
-            <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border-l-4 border-orange-600">
+            <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 ">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-gray-600 text-sm font-medium">Cashiers</p>
@@ -129,15 +123,17 @@
                         <i class="fas fa-cash-register text-orange-700 text-xl"></i>
                     </div>
                 </div>
-                <a href="{{ route('system-users.index') }}" class="text-xs text-orange-700 hover:text-orange-900 mt-2 inline-block">
-                    View all <i class="fas fa-arrow-right ml-1"></i>
-                </a>
+               
             </div>
         </div>
         <div class="mt-4 pt-4 border-t border-gray-200">
             <div class="flex items-center justify-between">
-                <p class="text-sm text-gray-600">Total System Users</p>
-                <p class="text-xl font-bold text-gray-800">{{ \App\Models\User::count() }}</p>
+                <div class="text-lg text-gray-600">
+                    <p>Total System Users: <strong>{{\App\Models\User::count()}}</strong></p>
+                </div>
+                <a href="{{ route('system-users.index') }}" class="text-xs text-white mt-2 inline-block border border-gray-300 px-3 py-1 rounded-lg bg-purple-700 hover:bg-purple-800 transition-colors">
+                    View all <i class="fas fa-arrow-right ml-1"></i>
+                </a>
             </div>
         </div>
     </div>
@@ -147,7 +143,7 @@
         <h2 class="text-xl font-semibold text-gray-800 mb-4">
             <i class="fas fa-bolt text-yellow-500 mr-2"></i>Quick Actions
         </h2>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <a href="{{ route('businesses.create') }}" class="flex items-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors border-2 border-purple-200">
                 <div class="bg-purple-600 rounded-full p-3 mr-4">
                     <i class="fas fa-plus text-white"></i>
@@ -175,6 +171,16 @@
                 <div>
                     <p class="font-semibold text-gray-800">System Users</p>
                     <p class="text-sm text-gray-600">Manage all system users</p>
+                </div>
+            </a>
+
+            <a href="{{ route('businesses.map') }}" class="flex items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors border-2 border-green-200">
+                <div class="bg-green-600 rounded-full p-3 mr-4">
+                    <i class="fas fa-map-marked-alt text-white"></i>
+                </div>
+                <div>
+                    <p class="font-semibold text-gray-800">Business Map</p>
+                    <p class="text-sm text-gray-600">View all locations on map</p>
                 </div>
             </a>
 

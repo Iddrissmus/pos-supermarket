@@ -56,6 +56,16 @@ class SystemUserController extends Controller
 
         // Store plain password before hashing for SMS
         $plainPassword = $validated['password'];
+        
+        // Automatically assign to first branch if user has a business
+        $branchId = null;
+        if ($validated['business_id']) {
+            $business = \App\Models\Business::find($validated['business_id']);
+            $firstBranch = $business->branches()->oldest('id')->first();
+            if ($firstBranch) {
+                $branchId = $firstBranch->id;
+            }
+        }
 
         $user = User::create([
             'name' => $validated['name'],
@@ -64,7 +74,7 @@ class SystemUserController extends Controller
             'password' => Hash::make($validated['password']),
             'role' => $validated['role'],
             'business_id' => $validated['business_id'],
-            'branch_id' => null, // Branch assignment handled by Business Admin later
+            'branch_id' => $branchId, // Automatically assigned to first branch
         ]);
 
         // Send SMS with credentials
@@ -107,10 +117,12 @@ class SystemUserController extends Controller
     public function edit(User $systemUser)
     {
         $businesses = Business::orderBy('name')->get();
+        $branches = Branch::with('business')->orderBy('name')->get();
         
         return view('superadmin.users.edit', [
             'user' => $systemUser,
-            'businesses' => $businesses
+            'businesses' => $businesses,
+            'branches' => $branches
         ]);
     }
 
@@ -126,6 +138,7 @@ class SystemUserController extends Controller
             'password' => ['nullable', 'confirmed', Password::defaults()],
             'role' => 'required|in:superadmin,business_admin,manager,cashier',
             'business_id' => 'nullable|exists:businesses,id',
+            'branch_id' => 'nullable|exists:branches,id',
         ]);
 
         // Validate role-specific requirements
@@ -139,6 +152,7 @@ class SystemUserController extends Controller
             'phone' => $validated['phone'],
             'role' => $validated['role'],
             'business_id' => $validated['business_id'],
+            'branch_id' => $validated['branch_id'] ?? null,
         ];
 
         // Only update password if provided

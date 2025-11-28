@@ -74,6 +74,14 @@ Route::middleware('auth')->group(function () {
         
         // SuperAdmin can manage all system users
         Route::resource('system-users', SystemUserController::class);
+        
+        // Map view of all businesses and branches
+        Route::get('/map', [BusinessController::class, 'map'])->name('businesses.map');
+    });
+    
+    // Business Admin Map - only their business branches
+    Route::middleware('role:business_admin')->group(function () {
+        Route::get('/my-branches-map', [BusinessController::class, 'myMap'])->name('businesses.myMap');
     });
     
     // Only SuperAdmin can create, edit, update and delete businesses

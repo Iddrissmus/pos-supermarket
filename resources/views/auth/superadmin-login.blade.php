@@ -6,17 +6,17 @@
     <title>SuperAdmin Login - POS Supermarket</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
+    {{-- <style>
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 20%, #764ba2 100%);
         }
-    </style>
+    </style> --}}
 </head>
 <body class="gradient-bg min-h-screen flex items-center justify-center p-4">
     <div class="w-full max-w-md">
         <!-- Back to Home -->
         <div class="mb-4">
-            <a href="/" class="text-white hover:text-purple-200 transition-colors inline-flex items-center space-x-2">
+            <a href="/" class="text-black hover:text-purple-200 transition-colors inline-flex items-center space-x-2">
                 <i class="fas fa-arrow-left"></i>
                 <span>Back to Home</span>
             </a>
@@ -29,8 +29,8 @@
                 <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-500 to-purple-700 rounded-full mb-4">
                     <i class="fas fa-crown text-white text-2xl"></i>
                 </div>
-                <h2 class="text-3xl font-bold text-gray-800 mb-2">SuperAdmin Login</h2>
-                <p class="text-gray-600">System Administrator Access</p>
+                <h2 class="pb-3 text-3xl border-b border-gray-200 font-bold text-gray-800 mb-2">SuperAdmin Login</h2>
+                {{-- <p class="text-gray-600">System Administrator Access</p> --}}
             </div>
 
             @if(session('error'))
@@ -102,14 +102,14 @@
 
                 <!-- Submit Button -->
                 <button type="submit" 
-                        class="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-purple-800 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2">
+                        class="w-full bg-purple-700 text-white py-3 rounded-lg font-semibold hover:bg-purple-800 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2">
                     <span>Sign In</span>
                     <i class="fas fa-arrow-right"></i>
                 </button>
             </form>
 
             <!-- Other Logins -->
-            <div class="mt-6 pt-6 border-t border-gray-200">
+            <div class="mt-6 pt-6 ">
                 <p class="text-xs text-gray-500 text-center mb-3">Different Role?</p>
                 <div class="grid grid-cols-3 gap-2 text-xs">
                     <a href="{{ route('login.business-admin') }}" class="text-center py-2 px-3 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors">
