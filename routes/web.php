@@ -84,24 +84,25 @@ Route::middleware('auth')->group(function () {
         Route::get('/my-branches-map', [BusinessController::class, 'myMap'])->name('businesses.myMap');
     });
     
-    // Only SuperAdmin can create, edit, update and delete businesses
+    // Only SuperAdmin can create, delete businesses and update business details
     Route::middleware('role:superadmin')->group(function () {
         Route::get('businesses/create', [BusinessController::class, 'create'])->name('businesses.create');
         Route::post('businesses', [BusinessController::class, 'store'])->name('businesses.store');
-        Route::get('businesses/{business}/edit', [BusinessController::class, 'edit'])->name('businesses.edit');
         Route::put('businesses/{business}', [BusinessController::class, 'update'])->name('businesses.update');
         Route::patch('businesses/{business}', [BusinessController::class, 'update']);
         Route::delete('businesses/{business}', [BusinessController::class, 'destroy'])->name('businesses.destroy');
     });
     
-    // Business Admin can only view businesses (index and show)
+    // Both SuperAdmin and Business Admin can view and edit (for branch management)
     Route::middleware('role:superadmin,business_admin')->group(function () {
         Route::get('businesses', [BusinessController::class, 'index'])->name('businesses.index');
         Route::get('businesses/{business}', [BusinessController::class, 'show'])->name('businesses.show');
+        Route::get('businesses/{business}/edit', [BusinessController::class, 'edit'])->name('businesses.edit');
     });
 
     // Branch Management (SuperAdmin and Business Admin can manage branches)
     Route::middleware('role:superadmin,business_admin')->group(function () {
+        Route::get('branches/create', [BranchController::class, 'create'])->name('branches.create');
         Route::post('branches', [BranchController::class, 'store'])->name('branches.store');
         Route::put('branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
         Route::delete('branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');

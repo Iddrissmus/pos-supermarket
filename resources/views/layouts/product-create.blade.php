@@ -20,7 +20,7 @@
             @csrf
             <div class="grid grid-cols-1 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Product Name</label>
+                    <label class="block text-sm font-medium text-gray-700">Product Name *</label>
                     <input id="product_name" name="name" type="text" required class="mt-1 block w-full border rounded-md p-2" />
                 </div>
 
@@ -67,8 +67,8 @@
                         <input id="product_price" name="price" type="number" step="0.01" required class="mt-1 block w-full border rounded-md p-2" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Cost Price (optional)</label>
-                        <input id="product_cost_price" name="cost_price" type="number" step="0.01" class="mt-1 block w-full border rounded-md p-2" />
+                        <label class="block text-sm font-medium text-gray-700">Cost Price *</label>
+                        <input id="product_cost_price" name="cost_price" type="number" step="0.01" required class="mt-1 block w-full border rounded-md p-2" />
                     </div>
                 </div>
 

@@ -24,6 +24,7 @@ class ProductController extends Controller
     {
         $user = Auth::user();
         $categoryId = request()->input('category_id');
+        $filterUncategorized = $categoryId === 'null';
 
         // Determine which branches the user has access to
         $branchIds = collect();
@@ -54,10 +55,27 @@ class ProductController extends Controller
             ->orderBy('name')
             ->get();
 
+        // Count uncategorized products
+        $uncategorizedCount = 0;
+        if (($user->role === 'manager' || $user->role === 'business_admin') && $user->branch_id) {
+            $uncategorizedCount = BranchProduct::where('branch_id', $user->branch_id)
+                ->whereHas('product', function($q) {
+                    $q->whereNull('category_id');
+                })->count();
+        } else {
+            $uncategorizedCount = BranchProduct::whereHas('product', function($q) {
+                $q->whereNull('category_id');
+            })->count();
+        }
+
         if (($user->role === 'manager' || $user->role === 'business_admin') && $user->branch_id) {
             $productsQuery = BranchProduct::where('branch_id', $user->branch_id)
                 ->with(['product.category']);
-            if ($categoryId) {
+            if ($filterUncategorized) {
+                $productsQuery->whereHas('product', function($q) {
+                    $q->whereNull('category_id');
+                });
+            } elseif ($categoryId) {
                 $productsQuery->whereHas('product', function($q) use ($categoryId) {
                     $q->where('category_id', $categoryId);
                 });
@@ -80,7 +98,11 @@ class ProductController extends Controller
                 })->count();
         } else {
             $productsQuery = BranchProduct::with(['product.category', 'branch']);
-            if ($categoryId) {
+            if ($filterUncategorized) {
+                $productsQuery->whereHas('product', function($q) {
+                    $q->whereNull('category_id');
+                });
+            } elseif ($categoryId) {
                 $productsQuery->whereHas('product', function($q) use ($categoryId) {
                     $q->where('category_id', $categoryId);
                 });
@@ -119,7 +141,8 @@ class ProductController extends Controller
             'stats' => $stats,
             'categories' => $categories,
             'selectedCategory' => $categoryId,
-            'financialMetrics' => $financialMetrics 
+            'financialMetrics' => $financialMetrics,
+            'uncategorizedCount' => $uncategorizedCount
         ]);
     }
 
@@ -166,7 +189,7 @@ class ProductController extends Controller
             'branch_id' => 'nullable|exists:branches,id',
             'stock_quantity' => 'required|integer|min:0',
             'price' => 'nullable|numeric|min:0',
-            'cost_price' => 'nullable|numeric|min:0',
+            'cost_price' => 'required|numeric|min:0',
             'reorder_level' => 'nullable|integer|min:0',
             
             // Box quantity fields (now required)

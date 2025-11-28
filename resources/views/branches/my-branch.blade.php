@@ -57,28 +57,43 @@
 
         <!-- Stats Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <!-- Total Staff -->
+            <!-- Total Branches -->
             <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-gray-500 text-sm font-medium">Total Staff</p>
+                        <p class="text-gray-500 text-sm font-medium">Total Branches</p>
                         <p class="text-3xl font-bold text-gray-800 mt-2">
-                            {{ \App\Models\User::where('branch_id', $branch->id)->whereIn('role', ['manager', 'cashier'])->count() }}
+                            {{ $branch->business->branches()->count() }}
                         </p>
                     </div>
                     <div class="bg-blue-100 rounded-full p-4">
-                        <i class="fas fa-users text-blue-600 text-2xl"></i>
+                        <i class="fas fa-building text-blue-600 text-2xl"></i>
                     </div>
                 </div>
             </div>
 
-            <!-- Managers -->
+            <!-- Total Staff (All Branches) -->
+            <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Total Staff</p>
+                        <p class="text-3xl font-bold text-gray-800 mt-2">
+                            {{ \App\Models\User::where('business_id', $branch->business_id)->whereIn('role', ['manager', 'cashier'])->count() }}
+                        </p>
+                    </div>
+                    <div class="bg-purple-100 rounded-full p-4">
+                        <i class="fas fa-users text-purple-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Managers (All Branches) -->
             <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-gray-500 text-sm font-medium">Managers</p>
                         <p class="text-3xl font-bold text-gray-800 mt-2">
-                            {{ \App\Models\User::where('branch_id', $branch->id)->where('role', 'manager')->count() }}
+                            {{ \App\Models\User::where('business_id', $branch->business_id)->where('role', 'manager')->count() }}
                         </p>
                     </div>
                     <div class="bg-green-100 rounded-full p-4">
@@ -87,32 +102,17 @@
                 </div>
             </div>
 
-            <!-- Cashiers -->
+            <!-- Cashiers (All Branches) -->
             <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-orange-500">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-gray-500 text-sm font-medium">Cashiers</p>
                         <p class="text-3xl font-bold text-gray-800 mt-2">
-                            {{ \App\Models\User::where('branch_id', $branch->id)->where('role', 'cashier')->count() }}
+                            {{ \App\Models\User::where('business_id', $branch->business_id)->where('role', 'cashier')->count() }}
                         </p>
                     </div>
                     <div class="bg-orange-100 rounded-full p-4">
                         <i class="fas fa-cash-register text-orange-600 text-2xl"></i>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Products -->
-            <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm font-medium">Products</p>
-                        <p class="text-3xl font-bold text-gray-800 mt-2">
-                            {{ $branch->branchProducts()->count() }}
-                        </p>
-                    </div>
-                    <div class="bg-purple-100 rounded-full p-4">
-                        <i class="fas fa-boxes text-purple-600 text-2xl"></i>
                     </div>
                 </div>
             </div>
@@ -123,7 +123,7 @@
             <!-- Contact Information -->
             <div class="bg-white rounded-lg shadow-md p-6">
                 <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-                    <i class="fas fa-address-card text-blue-600 mr-2"></i>Contact Information
+                    <i class="fas fa-address-card text-blue-600 mr-2"></i>Branch Information
                 </h2>
                 <div class="space-y-4">
                     <div class="flex items-start">
@@ -173,63 +173,132 @@
                     </div>
                     <div class="flex items-start">
                         <div class="bg-gray-100 rounded-full p-3 mr-4">
-                            <i class="fas fa-store text-gray-600"></i>
+                            <i class="fas fa-user-shield text-gray-600"></i>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500 font-medium">Total Branches</p>
-                            <p class="text-gray-800">{{ $branch->business->branches()->count() }} branches</p>
+                            <p class="text-sm text-gray-500 font-medium">Business Admin</p>
+                            <p class="text-gray-800">{{ $branch->business->primaryBusinessAdmin ? $branch->business->primaryBusinessAdmin->name : 'Not assigned' }}</p>
                         </div>
                     </div>
                     <div class="flex items-start">
                         <div class="bg-gray-100 rounded-full p-3 mr-4">
-                            <i class="fas fa-calendar text-gray-600"></i>
+                            <i class="fas fa-boxes text-gray-600"></i>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500 font-medium">Branch Created</p>
-                            <p class="text-gray-800">{{ $branch->created_at->format('F d, Y') }}</p>
+                            <p class="text-sm text-gray-500 font-medium">Products (This Branch)</p>
+                            <p class="text-gray-800">{{ $branch->branchProducts()->count() }} items</p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Staff List -->
+        <!-- Managers Section (All Branches) -->
         <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-                <i class="fas fa-users text-purple-600 mr-2"></i>Staff Members
+                <i class="fas fa-user-tie text-green-600 mr-2"></i>All Branch Managers
             </h2>
             
             @php
-                $staff = \App\Models\User::where('branch_id', $branch->id)
-                    ->whereIn('role', ['manager', 'cashier'])
-                    ->orderBy('role')
+                $managers = \App\Models\User::where('business_id', $branch->business_id)
+                    ->where('role', 'manager')
+                    ->with('branch')
                     ->orderBy('name')
                     ->get();
             @endphp
 
-            @if($staff->isEmpty())
-                <div class="text-center py-8 text-gray-500">
-                    <i class="fas fa-users text-4xl mb-3 opacity-50"></i>
-                    <p class="text-sm">No staff members assigned to this branch yet.</p>
+            @if($managers->isEmpty())
+                <div class="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <i class="fas fa-user-tie text-4xl mb-3 text-gray-400"></i>
+                    <p class="text-gray-500">No managers assigned yet.</p>
                 </div>
             @else
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    @foreach($staff as $member)
+                    @foreach($managers as $manager)
                         <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                            <div class="flex items-center justify-between mb-3">
-                                <div class="flex items-center">
-                                    <div class="bg-{{ $member->role === 'manager' ? 'green' : 'orange' }}-100 rounded-full p-2 mr-3">
-                                        <i class="fas fa-{{ $member->role === 'manager' ? 'user-tie' : 'cash-register' }} text-{{ $member->role === 'manager' ? 'green' : 'orange' }}-600"></i>
+                            <div class="flex items-start space-x-3">
+                                <div class="bg-green-100 rounded-full p-3 flex-shrink-0">
+                                    <i class="fas fa-user-tie text-green-600 text-lg"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h3 class="font-semibold text-gray-800 truncate">{{ $manager->name }}</h3>
+                                        <span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">Manager</span>
                                     </div>
-                                    <div>
-                                        <p class="font-semibold text-gray-800">{{ $member->name }}</p>
-                                        <p class="text-xs text-gray-500">{{ ucfirst($member->role) }}</p>
+                                    <div class="space-y-1 text-sm">
+                                        <div class="flex items-center text-gray-600">
+                                            <i class="fas fa-building w-4 mr-2 flex-shrink-0"></i>
+                                            <span class="truncate">{{ $manager->branch ? $manager->branch->name : 'Unassigned' }}</span>
+                                        </div>
+                                        <div class="flex items-center text-gray-600">
+                                            <i class="fas fa-envelope w-4 mr-2 flex-shrink-0"></i>
+                                            <span class="truncate">{{ $manager->email }}</span>
+                                        </div>
+                                        @if($manager->phone)
+                                            <div class="flex items-center text-gray-600">
+                                                <i class="fas fa-phone w-4 mr-2 flex-shrink-0"></i>
+                                                <span>{{ $manager->phone }}</span>
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
-                            <p class="text-sm text-gray-600">
-                                <i class="fas fa-envelope text-gray-400 mr-2"></i>{{ $member->email }}
-                            </p>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
+        <!-- Cashiers Section (All Branches) -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-cash-register text-orange-600 mr-2"></i>All Branch Cashiers
+            </h2>
+            
+            @php
+                $cashiers = \App\Models\User::where('business_id', $branch->business_id)
+                    ->where('role', 'cashier')
+                    ->with('branch')
+                    ->orderBy('name')
+                    ->get();
+            @endphp
+
+            @if($cashiers->isEmpty())
+                <div class="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <i class="fas fa-cash-register text-4xl mb-3 text-gray-400"></i>
+                    <p class="text-gray-500">No cashiers assigned yet.</p>
+                </div>
+            @else
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    @foreach($cashiers as $cashier)
+                        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                            <div class="flex items-start space-x-3">
+                                <div class="bg-orange-100 rounded-full p-3 flex-shrink-0">
+                                    <i class="fas fa-cash-register text-orange-600 text-lg"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h3 class="font-semibold text-gray-800 truncate">{{ $cashier->name }}</h3>
+                                        <span class="bg-orange-100 text-orange-800 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">Cashier</span>
+                                    </div>
+                                    <div class="space-y-1 text-sm">
+                                        <div class="flex items-center text-gray-600">
+                                            <i class="fas fa-building w-4 mr-2 flex-shrink-0"></i>
+                                            <span class="truncate">{{ $cashier->branch ? $cashier->branch->name : 'Unassigned' }}</span>
+                                        </div>
+                                        <div class="flex items-center text-gray-600">
+                                            <i class="fas fa-envelope w-4 mr-2 flex-shrink-0"></i>
+                                            <span class="truncate">{{ $cashier->email }}</span>
+                                        </div>
+                                        @if($cashier->phone)
+                                            <div class="flex items-center text-gray-600">
+                                                <i class="fas fa-phone w-4 mr-2 flex-shrink-0"></i>
+                                                <span>{{ $cashier->phone }}</span>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     @endforeach
                 </div>

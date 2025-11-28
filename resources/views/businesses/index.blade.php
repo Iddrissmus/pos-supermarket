@@ -8,13 +8,32 @@
     <div class="bg-white shadow rounded-lg p-6">
         <div class="flex items-center justify-between mb-4">
             <div>
-                <h1 class="text-2xl font-semibold text-gray-800">Businesses Management</h1>
-                <p class="text-sm text-gray-600">Manage all businesses in the system</p>
+                <h1 class="text-2xl font-semibold text-gray-800">
+                    @if(auth()->user()->role === 'superadmin')
+                        Businesses Management
+                    @else
+                        My Business
+                    @endif
+                </h1>
+                <p class="text-sm text-gray-600">
+                    @if(auth()->user()->role === 'superadmin')
+                        Manage all businesses in the system
+                    @else
+                        Manage your business and branches
+                    @endif
+                </p>
             </div>
-            <a href="{{ route('businesses.create') }}" 
-               class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg inline-flex items-center">
-                <i class="fas fa-plus mr-2"></i>Create New Business
-            </a>
+            @if(auth()->user()->role === 'superadmin')
+                <a href="{{ route('businesses.create') }}" 
+                   class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg inline-flex items-center">
+                    <i class="fas fa-plus mr-2"></i>Create New Business
+                </a>
+            @elseif(auth()->user()->role === 'business_admin')
+                <a href="{{ route('branches.create') }}" 
+                   class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg inline-flex items-center">
+                    <i class="fas fa-plus mr-2"></i>Create Branch
+                </a>
+            @endif
         </div>
 
         @if(session('success'))

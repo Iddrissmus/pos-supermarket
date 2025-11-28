@@ -94,22 +94,42 @@
                                 class="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                             >
                         </div>
-                        <div class="flex space-x-3">
-                            <!-- Category filter-->
-                            <select id="categoryFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                                <option value="">All Categories</option>
+                    </div>
+                    <!-- Category filter buttons -->
+                    <div class="mt-4">
+                        <form method="GET" action="{{ route('sales.terminal') }}" id="terminalCategoryForm">
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" 
+                                        onclick="filterTerminalByCategory('')" 
+                                        class="flex items-center px-3 py-2 text-sm rounded-lg transition-colors {{ !$selectedCategory ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                                    <i class="fas fa-th mr-2"></i>
+                                    All Categories
+                                </button>
                                 @foreach($categories as $cat)
-                                    <option value="{{ $cat->id }}" @if($selectedCategory == $cat->id) selected @endif>
-                                        {{ $cat->name }} ({{ $cat->products_count }})
-                                    </option>
+                                    <button type="button" 
+                                            onclick="filterTerminalByCategory('{{ $cat->id }}')" 
+                                            class="flex items-center px-3 py-2 text-sm rounded-lg transition-colors {{ $selectedCategory == $cat->id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                                        <i class="fas {{ $cat->icon ?? 'fa-tag' }} mr-2"></i>
+                                        {{ $cat->name }}
+                                        <span class="ml-2 text-xs {{ $selectedCategory == $cat->id ? 'bg-white/20' : 'bg-gray-300' }} px-2 py-0.5 rounded-full">
+                                            {{ $cat->products_count }}
+                                        </span>
+                                    </button>
                                 @endforeach
-                            </select>
-                            <button class="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                                <i class="fas fa-filter mr-2 text-gray-600"></i>
-                                <span class="text-gray-700">Filter</span>
-                            </button>
-                            
-                        </div>
+                                @if($uncategorizedCount > 0)
+                                    <button type="button" 
+                                            onclick="filterTerminalByCategory('null')" 
+                                            class="flex items-center px-3 py-2 text-sm rounded-lg transition-colors {{ $selectedCategory === 'null' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                                        <i class="fas fa-question-circle mr-2"></i>
+                                        Uncategorized
+                                        <span class="ml-2 text-xs {{ $selectedCategory === 'null' ? 'bg-white/20' : 'bg-gray-300' }} px-2 py-0.5 rounded-full">
+                                            {{ $uncategorizedCount }}
+                                        </span>
+                                    </button>
+                                @endif
+                            </div>
+                            <input type="hidden" name="category_id" id="terminal_category_id" value="{{ $selectedCategory }}">
+                        </form>
                     </div>
                 </div>
 
@@ -277,6 +297,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+    
+// Category filter function for POS terminal
+function filterTerminalByCategory(categoryId) {
+    document.getElementById('terminal_category_id').value = categoryId;
+    document.getElementById('terminalCategoryForm').submit();
+}
+
     window.POS_TERMINAL = {
         branches: @json($branchOptions),
         catalog: @json($catalog),

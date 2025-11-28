@@ -14,7 +14,7 @@ class BranchAssignmentController extends Controller
      */
     public function index()
     {
-        $admin = Auth::user();
+        $admin = auth()->user();
         
         if ($admin->role === 'superadmin') {
             // Superadmin sees all branches and users
@@ -24,17 +24,18 @@ class BranchAssignmentController extends Controller
                 ->orderBy('name')
                 ->get();
         } elseif ($admin->role === 'business_admin') {
-            // Business admin sees only THEIR assigned branch and its users
-            if (!$admin->branch_id) {
+            // Business admin sees all branches in their business
+            if (!$admin->business_id) {
                 return redirect()->route('dashboard')
-                    ->with('error', 'You have not been assigned to a branch yet. Please contact the superadmin.');
+                    ->with('error', 'You have not been assigned to a business yet. Please contact the superadmin.');
             }
             
-            $branches = Branch::where('id', $admin->branch_id)
+            $branches = Branch::where('business_id', $admin->business_id)
                 ->with('business')
+                ->orderBy('name')
                 ->get();
             $users = User::whereIn('role', ['manager', 'cashier'])
-                ->where('branch_id', $admin->branch_id)
+                ->where('business_id', $admin->business_id)
                 ->with(['branch.business'])
                 ->orderBy('name')
                 ->get();
@@ -51,7 +52,7 @@ class BranchAssignmentController extends Controller
      */
     public function store(Request $request)
     {
-        $admin = Auth::user();
+        $admin = auth()->user();
         
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
@@ -62,19 +63,22 @@ class BranchAssignmentController extends Controller
 
         // Authorization checks based on admin role
         if ($admin->role === 'business_admin') {
-            // Business admin must be assigned to a branch
-            if (!$admin->branch_id) {
-                return back()->with('error', 'You have not been assigned to a branch yet. Please contact the superadmin.');
+            // Business admin must be assigned to a business
+            if (!$admin->business_id) {
+                return back()->with('error', 'You have not been assigned to a business yet. Please contact the superadmin.');
             }
             
-            // Business admin can only assign users to THEIR assigned branch
-            if ($validated['branch_id'] && $validated['branch_id'] != $admin->branch_id) {
-                return back()->with('error', 'You can only assign users to your assigned branch.');
+            // Business admin can only assign users to branches in THEIR business
+            if ($validated['branch_id']) {
+                $branch = Branch::find($validated['branch_id']);
+                if ($branch->business_id != $admin->business_id) {
+                    return back()->with('error', 'You can only assign users to branches in your business.');
+                }
             }
             
-            // Business admin can only manage users in their branch
-            if ($user->branch_id && $user->branch_id != $admin->branch_id) {
-                return back()->with('error', 'You can only manage users in your assigned branch.');
+            // Business admin can only manage users in their business
+            if ($user->business_id != $admin->business_id) {
+                return back()->with('error', 'You can only manage users in your business.');
             }
         }
 

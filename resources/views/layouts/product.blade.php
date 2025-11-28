@@ -256,24 +256,41 @@
                         <input type="text" placeholder="Search" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     </div>
                 </div>
-                <div class="flex space-x-3">
-                    <!-- Category filter-->
-                    <form method="GET" action="{{ route('layouts.product') }}" id="categoryFilterForm">
-                        <select name="category_id" id="categoryFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" onchange="this.form.submit()">
-                            <option value="">All Categories</option>
+                <div>
+                    <!-- Category filter buttons -->
+                    <form method="GET" action="{{ route('layouts.product') }}" id="categoryButtonForm">
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" 
+                                    onclick="filterByCategory('')" 
+                                    class="flex items-center px-4 py-2 rounded-lg transition-colors {{ !$selectedCategory ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                                <i class="fas fa-th mr-2"></i>
+                                All Categories
+                            </button>
                             @foreach($categories as $cat)
-                                <option value="{{ $cat->id }}" @if($selectedCategory == $cat->id) selected @endif>
-                                    {{ $cat->name }} ({{ $cat->products_count }})
-                                </option>
+                                <button type="button" 
+                                        onclick="filterByCategory('{{ $cat->id }}')" 
+                                        class="flex items-center px-4 py-2 rounded-lg transition-colors {{ $selectedCategory == $cat->id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                                    <i class="fas {{ $cat->icon ?? 'fa-tag' }} mr-2"></i>
+                                    {{ $cat->name }}
+                                    <span class="ml-2 text-xs {{ $selectedCategory == $cat->id ? 'bg-white/20' : 'bg-gray-300' }} px-2 py-0.5 rounded-full">
+                                        {{ $cat->products_count }}
+                                    </span>
+                                </button>
                             @endforeach
-                        </select>
+                            @if($uncategorizedCount > 0)
+                                <button type="button" 
+                                        onclick="filterByCategory('null')" 
+                                        class="flex items-center px-4 py-2 rounded-lg transition-colors {{ $selectedCategory === 'null' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                                    <i class="fas fa-question-circle mr-2"></i>
+                                    Uncategorized
+                                    <span class="ml-2 text-xs {{ $selectedCategory === 'null' ? 'bg-white/20' : 'bg-gray-300' }} px-2 py-0.5 rounded-full">
+                                        {{ $uncategorizedCount }}
+                                    </span>
+                                </button>
+                            @endif
+                        </div>
+                        <input type="hidden" name="category_id" id="category_id_input" value="{{ $selectedCategory }}">
                     </form>
-                    @if($selectedCategory)
-                        <a href="{{ route('layouts.product') }}" class="flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors">
-                            <i class="fas fa-times mr-2"></i>
-                            <span>Clear Filter</span>
-                        </a>
-                    @endif
                 </div>
             </div>
         </div>
@@ -560,6 +577,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function showError(message) {
         showNotification(message, 'error');
+    }
+
+    // Category filter function
+    function filterByCategory(categoryId) {
+        document.getElementById('category_id_input').value = categoryId;
+        document.getElementById('categoryButtonForm').submit();
     }
 
     // Remove the old client-side category filter since we're now using server-side filtering

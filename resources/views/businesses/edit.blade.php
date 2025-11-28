@@ -32,10 +32,23 @@
 
     <div class="bg-white shadow rounded-lg p-6">
         <div class="mb-6">
-            <h1 class="text-2xl font-semibold text-gray-800">Edit Business</h1>
-            <p class="text-sm text-gray-600">Update business information and ownership</p>
+            <h1 class="text-2xl font-semibold text-gray-800">
+                @if(auth()->user()->role === 'superadmin')
+                    Edit Business
+                @else
+                    My Business - {{ $business->name }}
+                @endif
+            </h1>
+            <p class="text-sm text-gray-600">
+                @if(auth()->user()->role === 'superadmin')
+                    Update business information and ownership
+                @else
+                    Manage your business branches
+                @endif
+            </p>
         </div>
 
+        @if(auth()->user()->role === 'superadmin')
         <form action="{{ route('businesses.update', $business->id) }}" method="POST" enctype="multipart/form-data">
             @csrf
             @method('PUT')
@@ -231,6 +244,104 @@
                 </div>
             </div>
         </form>
+        @else
+            <!-- Business Info Summary for Business Admin -->
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                    <i class="fas fa-info-circle text-blue-500 mr-2"></i>Business Information
+                </h3>
+                <dl class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <dt class="text-gray-500 font-medium">Business ID</dt>
+                        <dd class="text-gray-900 font-semibold">#{{ $business->id }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500 font-medium">Total Branches</dt>
+                        <dd class="text-gray-900 font-semibold">{{ $business->branches->count() }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500 font-medium">Total Staff</dt>
+                        <dd class="text-gray-900 font-semibold">{{ \App\Models\User::where('business_id', $business->id)->count() }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500 font-medium">Created</dt>
+                        <dd class="text-gray-900 font-semibold">{{ $business->created_at->format('M d, Y') }}</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- Branches Management for Business Admin -->
+            <div class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-700 flex items-center">
+                        <i class="fas fa-building text-green-500 mr-2"></i>Branches Management
+                    </h3>
+                    <button type="button" 
+                            onclick="showAddBranchModal()"
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg inline-flex items-center text-sm">
+                        <i class="fas fa-plus mr-2"></i>Add Branch
+                    </button>
+                </div>
+
+                @if($business->branches->isEmpty())
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-building text-4xl mb-3 opacity-50"></i>
+                        <p class="text-sm">No branches yet. Click "Add Branch" to create one.</p>
+                    </div>
+                @else
+                    <div class="space-y-3">
+                        @foreach($business->branches as $branch)
+                            <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <h4 class="font-semibold text-gray-800 mb-1">{{ $branch->name }}</h4>
+                                        <div class="text-sm text-gray-600 space-y-1">
+                                            @if($branch->address)
+                                                <p><i class="fas fa-map-marker-alt text-gray-400 mr-2"></i>{{ $branch->address }}</p>
+                                            @endif
+                                            @if($branch->region)
+                                                <p><i class="fas fa-map-marked-alt text-gray-400 mr-2"></i>{{ $branch->region }}</p>
+                                            @endif
+                                            @if($branch->contact)
+                                                <p><i class="fas fa-phone text-gray-400 mr-2"></i>{{ $branch->contact }}</p>
+                                            @endif
+                                            <p class="text-xs text-gray-500 mt-2">
+                                                <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                                    {{ \App\Models\User::where('branch_id', $branch->id)->whereIn('role', ['manager', 'cashier'])->count() }} Staff
+                                                </span>
+                                                <span class="bg-purple-100 text-purple-700 px-2 py-1 rounded ml-2">
+                                                    {{ $branch->branchProducts()->count() }} Products
+                                                </span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="flex space-x-2 ml-4">
+                                        <button type="button" 
+                                                onclick="editBranch({{ $branch->id }}, '{{ $branch->name }}', '{{ $branch->address }}', '{{ $branch->contact }}', '{{ $branch->region }}', {{ $branch->latitude ?? 'null' }}, {{ $branch->longitude ?? 'null' }})"
+                                                class="text-blue-600 hover:text-blue-800 px-3 py-1 rounded text-sm">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>
+                                        <button type="button" 
+                                                onclick="deleteBranch({{ $branch->id }}, '{{ $branch->name }}')"
+                                                class="text-red-600 hover:text-red-800 px-3 py-1 rounded text-sm">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+
+            <!-- Actions for Business Admin -->
+            <div class="flex items-center justify-between pt-4 border-t">
+                <a href="{{ route('businesses.index') }}" 
+                   class="text-gray-600 hover:text-gray-800 inline-flex items-center">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to My Business
+                </a>
+            </div>
+        @endif
     </div>
 </div>
 

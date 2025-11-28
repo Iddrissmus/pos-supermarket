@@ -17,7 +17,7 @@
                     <label for="user_id" class="block text-sm font-medium text-gray-700 mb-1">User</label>
                     <select id="user_id" name="user_id" class="w-full border rounded px-3 py-2 @error('user_id') border-red-500 @enderror" required>
                         <option value="">Select manager or cashier</option>
-                        @foreach($assignments as $user)
+                        @foreach($users as $user)
                             <option value="{{ $user->id }}" {{ old('user_id') !== null && (string) old('user_id') === (string) $user->id ? 'selected' : '' }}>
                                 {{ $user->name }} — {{ ucfirst($user->role) }}
                                 @if($user->branch)
@@ -67,7 +67,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
-                    @forelse($assignments as $user)
+                    @forelse($users as $user)
                         <tr>
                             <td class="px-4 py-3 text-gray-800">{{ $user->name }}</td>
                             <td class="px-4 py-3 text-gray-600">{{ ucfirst($user->role) }}</td>

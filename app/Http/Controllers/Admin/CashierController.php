@@ -22,28 +22,29 @@ class CashierController extends Controller
                 ->with('error', 'Access denied. Business Admin privileges required.');
         }
 
-        // Business admin must be assigned to a branch
-        if (!$admin->branch_id) {
+        // Business admin must be assigned to a business
+        if (!$admin->business_id) {
             return redirect()->route('dashboard')
-                ->with('error', 'You have not been assigned to a branch yet. Please contact the superadmin.');
+                ->with('error', 'You have not been assigned to a business yet. Please contact the superadmin.');
         }
 
-        // Get all managers and cashiers in the business admin's assigned branch
+        // Get all managers and cashiers in the business admin's business
         $managers = User::where('role', 'manager')
-            ->where('branch_id', $admin->branch_id)
+            ->where('business_id', $admin->business_id)
             ->with('branch.business')
             ->orderBy('name')
             ->get();
             
         $cashiers = User::where('role', 'cashier')
-            ->where('branch_id', $admin->branch_id)
+            ->where('business_id', $admin->business_id)
             ->with('branch.business')
             ->orderBy('name')
             ->get();
 
-        // Get only the business admin's assigned branch for the dropdown
-        $branches = Branch::where('id', $admin->branch_id)
+        // Get all branches in the business admin's business for the dropdown
+        $branches = Branch::where('business_id', $admin->business_id)
             ->with('business')
+            ->orderBy('name')
             ->get();
 
         return view('admin.cashiers', compact('managers', 'cashiers', 'branches'));
@@ -60,9 +61,9 @@ class CashierController extends Controller
             return back()->with('error', 'Access denied. Business Admin privileges required.');
         }
 
-        // Business admin must be assigned to a branch
-        if (!$admin->branch_id) {
-            return back()->with('error', 'You have not been assigned to a branch yet. Please contact the superadmin.');
+        // Business admin must be assigned to a business
+        if (!$admin->business_id) {
+            return back()->with('error', 'You have not been assigned to a business yet. Please contact the superadmin.');
         }
 
         $validated = $request->validate([
@@ -73,10 +74,11 @@ class CashierController extends Controller
             'branch_id' => 'nullable|exists:branches,id',
         ]);
 
-        // Verify branch is the business admin's assigned branch
+        // Verify branch belongs to the business admin's business
         if ($validated['branch_id']) {
-            if ($validated['branch_id'] != $admin->branch_id) {
-                return back()->with('error', 'You can only assign staff to your assigned branch.');
+            $branch = Branch::find($validated['branch_id']);
+            if ($branch->business_id != $admin->business_id) {
+                return back()->with('error', 'You can only assign staff to branches in your business.');
             }
             
             $branch = Branch::find($validated['branch_id']);
@@ -123,9 +125,9 @@ class CashierController extends Controller
             return back()->with('error', 'Access denied. Business Admin privileges required.');
         }
 
-        // Business admin must be assigned to a branch
-        if (!$admin->branch_id) {
-            return back()->with('error', 'You have not been assigned to a branch yet. Please contact the superadmin.');
+        // Business admin must be assigned to a business
+        if (!$admin->business_id) {
+            return back()->with('error', 'You have not been assigned to a business yet. Please contact the superadmin.');
         }
 
         $validated = $request->validate([
@@ -133,9 +135,10 @@ class CashierController extends Controller
             'branch_id' => 'required|exists:branches,id',
         ]);
 
-        // Verify branch is the business admin's assigned branch
-        if ($validated['branch_id'] != $admin->branch_id) {
-            return back()->with('error', 'You can only assign staff to your assigned branch.');
+        // Verify branch belongs to the business admin's business
+        $branch = Branch::find($validated['branch_id']);
+        if ($branch->business_id != $admin->business_id) {
+            return back()->with('error', 'You can only assign staff to branches in your business.');
         }
 
         $user = User::where('id', $validated['user_id'])
@@ -146,9 +149,9 @@ class CashierController extends Controller
             return back()->with('error', 'Invalid user selected.');
         }
         
-        // Verify user can only be managed if they're in the admin's branch or unassigned
-        if ($user->branch_id && $user->branch_id != $admin->branch_id) {
-            return back()->with('error', 'You can only manage staff in your assigned branch.');
+        // Verify user is in the admin's business
+        if ($user->business_id != $admin->business_id) {
+            return back()->with('error', 'You can only manage staff in your business.');
         }
         
         $branch = Branch::find($validated['branch_id']);
@@ -179,9 +182,9 @@ class CashierController extends Controller
             return back()->with('error', 'Access denied. Business Admin privileges required.');
         }
 
-        // Business admin must be assigned to a branch
-        if (!$admin->branch_id) {
-            return back()->with('error', 'You have not been assigned to a branch yet. Please contact the superadmin.');
+        // Business admin must be assigned to a business
+        if (!$admin->business_id) {
+            return back()->with('error', 'You have not been assigned to a business yet. Please contact the superadmin.');
         }
 
         $validated = $request->validate([
@@ -190,11 +193,11 @@ class CashierController extends Controller
 
         $user = User::where('id', $validated['user_id'])
             ->whereIn('role', ['manager', 'cashier'])
-            ->where('branch_id', $admin->branch_id)
+            ->where('business_id', $admin->business_id)
             ->first();
 
         if (!$user) {
-            return back()->with('error', 'Invalid user selected or user not in your assigned branch.');
+            return back()->with('error', 'Invalid user selected or user not in your business.');
         }
 
         $user->update(['branch_id' => null]);
@@ -213,9 +216,9 @@ class CashierController extends Controller
             return back()->with('error', 'Access denied. Business Admin privileges required.');
         }
 
-        // Business admin must be assigned to a branch
-        if (!$admin->branch_id) {
-            return back()->with('error', 'You have not been assigned to a branch yet. Please contact the superadmin.');
+        // Business admin must be assigned to a business
+        if (!$admin->business_id) {
+            return back()->with('error', 'You have not been assigned to a business yet. Please contact the superadmin.');
         }
 
         $validated = $request->validate([
@@ -224,11 +227,11 @@ class CashierController extends Controller
 
         $user = User::where('id', $validated['user_id'])
             ->whereIn('role', ['manager', 'cashier'])
-            ->where('branch_id', $admin->branch_id)
+            ->where('business_id', $admin->business_id)
             ->first();
 
         if (!$user) {
-            return back()->with('error', 'Invalid user selected or user not in your assigned branch.');
+            return back()->with('error', 'Invalid user selected or user not in your business.');
         }
 
         $userName = $user->name;

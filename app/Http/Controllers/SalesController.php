@@ -86,6 +86,7 @@ class SalesController extends Controller
 
         $user = Auth::user();
         $categoryId = request()->input('category_id');
+        $filterUncategorized = $categoryId === 'null';
         $branchIds = $branches->pluck('id');
 
         // Get categories that have products available in the accessible branches
@@ -109,10 +110,21 @@ class SalesController extends Controller
             ->orderBy('name')
             ->get();
 
+        // Count uncategorized products
+        $uncategorizedCount = 0;
         if ($user->role === 'cashier' && $user->branch_id) {
+            $uncategorizedCount = BranchProduct::where('branch_id', $user->branch_id)
+                ->whereHas('product', function($q) {
+                    $q->whereNull('category_id');
+                })->count();
+
             $productsQuery = BranchProduct::where('branch_id', $user->branch_id)
                 ->with(['product.category']);
-            if ($categoryId) {
+            if ($filterUncategorized) {
+                $productsQuery->whereHas('product', function($q) {
+                    $q->whereNull('category_id');
+                });
+            } elseif ($categoryId) {
                 $productsQuery->whereHas('product', function($q) use ($categoryId) {
                     $q->where('category_id', $categoryId);
                 });
@@ -120,8 +132,16 @@ class SalesController extends Controller
             $products = $productsQuery->paginate(15);
 
         } else {
+            $uncategorizedCount = BranchProduct::whereHas('product', function($q) {
+                $q->whereNull('category_id');
+            })->count();
+
             $productsQuery = BranchProduct::with(['product.category', 'branch']);
-            if ($categoryId) {
+            if ($filterUncategorized) {
+                $productsQuery->whereHas('product', function($q) {
+                    $q->whereNull('category_id');
+                });
+            } elseif ($categoryId) {
                 $productsQuery->whereHas('product', function($q) use ($categoryId) {
                     $q->where('category_id', $categoryId);
                 });
@@ -135,6 +155,7 @@ class SalesController extends Controller
             'categories' => $categories,
             'selectedCategory' => $categoryId,
             'products' => $products,
+            'uncategorizedCount' => $uncategorizedCount,
         ]);
     }
 

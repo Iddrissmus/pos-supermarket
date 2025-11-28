@@ -8,6 +8,31 @@ use Illuminate\Http\Request;
 
 class BranchController extends Controller
 {
+    /**
+     * Show the form for creating a new branch
+     */
+    public function create()
+    {
+        $user = auth()->user();
+        
+        // Get the business for this user
+        if ($user->role === 'superadmin') {
+            // SuperAdmin can create branch for any business
+            // This shouldn't normally be used, but just in case
+            abort(403, 'Please create branches through the business edit page.');
+        } elseif ($user->role === 'business_admin') {
+            $business = Business::find($user->business_id);
+            
+            if (!$business) {
+                abort(404, 'Business not found.');
+            }
+            
+            return view('branches.create', compact('business'));
+        } else {
+            abort(403, 'Unauthorized access');
+        }
+    }
+    
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -29,7 +54,7 @@ class BranchController extends Controller
 
         Branch::create($validated);
 
-        return redirect()->back()->with('success', 'Branch created successfully!');
+        return redirect()->route('businesses.index')->with('success', 'Branch created successfully!');
     }
 
     public function update(Request $request, string $id)
