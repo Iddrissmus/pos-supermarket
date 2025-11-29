@@ -120,45 +120,81 @@
 
             <!-- Region (Auto-filled from map) -->
             <div class="mb-4">
-                <label for="region" class="block text-sm font-medium text-gray-700 mb-2">
+                <label for="location" class="block text-sm font-medium text-gray-700 mb-2">
                     Region <span class="text-red-500">*</span>
                 </label>
-                <select id="region" 
-                        name="region" 
+                <select id="location" 
+                        name="location" 
                         required
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 @error('region') border-red-500 @enderror">
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 @error('location') border-red-500 @enderror">
                     <option value="">Select Region</option>
-                    <option value="Greater Accra" {{ old('region') == 'Greater Accra' ? 'selected' : '' }}>Greater Accra</option>
-                    <option value="Ashanti" {{ old('region') == 'Ashanti' ? 'selected' : '' }}>Ashanti</option>
-                    <option value="Western" {{ old('region') == 'Western' ? 'selected' : '' }}>Western</option>
-                    <option value="Eastern" {{ old('region') == 'Eastern' ? 'selected' : '' }}>Eastern</option>
-                    <option value="Central" {{ old('region') == 'Central' ? 'selected' : '' }}>Central</option>
-                    <option value="Northern" {{ old('region') == 'Northern' ? 'selected' : '' }}>Northern</option>
-                    <option value="Upper East" {{ old('region') == 'Upper East' ? 'selected' : '' }}>Upper East</option>
-                    <option value="Upper West" {{ old('region') == 'Upper West' ? 'selected' : '' }}>Upper West</option>
-                    <option value="Volta" {{ old('region') == 'Volta' ? 'selected' : '' }}>Volta</option>
-                    <option value="Brong Ahafo" {{ old('region') == 'Brong Ahafo' ? 'selected' : '' }}>Brong Ahafo</option>
+                    <option value="Greater Accra" {{ old('location') == 'Greater Accra' ? 'selected' : '' }}>Greater Accra</option>
+                    <option value="Ashanti" {{ old('location') == 'Ashanti' ? 'selected' : '' }}>Ashanti</option>
+                    <option value="Western" {{ old('location') == 'Western' ? 'selected' : '' }}>Western</option>
+                    <option value="Eastern" {{ old('location') == 'Eastern' ? 'selected' : '' }}>Eastern</option>
+                    <option value="Central" {{ old('location') == 'Central' ? 'selected' : '' }}>Central</option>
+                    <option value="Northern" {{ old('location') == 'Northern' ? 'selected' : '' }}>Northern</option>
+                    <option value="Upper East" {{ old('location') == 'Upper East' ? 'selected' : '' }}>Upper East</option>
+                    <option value="Upper West" {{ old('location') == 'Upper West' ? 'selected' : '' }}>Upper West</option>
+                    <option value="Volta" {{ old('location') == 'Volta' ? 'selected' : '' }}>Volta</option>
+                    <option value="Brong Ahafo" {{ old('location') == 'Brong Ahafo' ? 'selected' : '' }}>Brong Ahafo</option>
                 </select>
-                @error('region')
+                @error('location')
                     <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                 @enderror
             </div>
 
             <!-- Contact -->
-            <div class="mb-6">
-                <label for="contact" class="block text-sm font-medium text-gray-700 mb-2">
+            <div class="mb-4">
+                <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">
                     Contact Number
                 </label>
                 <input type="text" 
-                       id="contact" 
-                       name="contact" 
-                       value="{{ old('contact') }}"
+                       id="phone" 
+                       name="phone" 
+                       value="{{ old('phone') }}"
                        placeholder="e.g., 0201234567"
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 @error('contact') border-red-500 @enderror">
-                @error('contact')
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 @error('phone') border-red-500 @enderror">
+                @error('phone')
                     <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                 @enderror
             </div>
+
+            <!-- Email -->
+            <div class="mb-4">
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                    Email Address
+                </label>
+                <input type="email" 
+                       id="email" 
+                       name="email" 
+                       value="{{ old('email') }}"
+                       placeholder="e.g., branch@example.com"
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 @error('email') border-red-500 @enderror">
+                @error('email')
+                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <!-- Notes (for business admins requesting approval) -->
+            @if(auth()->user()->role === 'business_admin')
+            <div class="mb-6">
+                <label for="notes" class="block text-sm font-medium text-gray-700 mb-2">
+                    Additional Notes (Optional)
+                </label>
+                <textarea id="notes" 
+                          name="notes" 
+                          rows="3"
+                          placeholder="Provide any additional information about this branch request..."
+                          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 @error('notes') border-red-500 @enderror">{{ old('notes') }}</textarea>
+                <p class="text-xs text-gray-500 mt-1">
+                    <i class="fas fa-info-circle"></i> This will help the superadmin review your request.
+                </p>
+                @error('notes')
+                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                @enderror
+            </div>
+            @endif
 
             <!-- Actions -->
             <div class="flex items-center justify-between pt-4 border-t border-gray-200">

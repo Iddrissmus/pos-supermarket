@@ -78,7 +78,7 @@ class LoginController extends Controller
      */
     public function loginCashier(Request $request)
     {
-        return $this->handleLogin($request, 'cashier', 'dashboard.cashier');
+        return $this->handleLogin($request, 'cashier', 'sales.terminal');
     }
 
     /**
@@ -180,7 +180,8 @@ class LoginController extends Controller
                 case 'manager':
                     return redirect()->route('dashboard.manager');
                 case 'cashier':
-                    return redirect()->route('dashboard.cashier');
+                    // Redirect cashiers directly to POS terminal
+                    return redirect()->route('sales.terminal');
                 default:
                     Auth::logout();
                     $request->session()->invalidate();

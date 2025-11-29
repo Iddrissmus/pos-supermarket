@@ -207,9 +207,11 @@
 
                 <!-- Actions -->
                 <div class="mt-6 flex justify-end space-x-4 no-print">
-                    <a href="{{ route('sales.create') }}" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg">
-                        <i class="fas fa-plus mr-2"></i>New Sale
-                    </a>
+                    @if(auth()->user()->role === 'cashier')
+                        <a href="{{ route('sales.terminal') }}" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg">
+                            <i class="fas fa-cash-register mr-2"></i>Go to Terminal
+                        </a>
+                    @endif
                     <a href="{{ route('sales.report') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg">
                         <i class="fas fa-chart-bar mr-2"></i>Sales Report
                     </a>

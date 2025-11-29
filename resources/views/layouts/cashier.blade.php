@@ -9,9 +9,9 @@
         <div class="flex justify-between items-center">
             <h1 class="text-2xl font-bold">Cashier Dashboard</h1>
             <div class="flex space-x-3">
-                <button class="bg-green-700 hover:bg-green-800 px-4 py-2 rounded-lg font-medium transition-colors">
-                    <i class="fas fa-plus mr-2"></i>New Sale
-                </button>
+                <a href="{{ route('sales.terminal') }}" class="bg-green-700 hover:bg-green-800 px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center">
+                    <i class="fas fa-cash-register mr-2"></i>Go to Terminal
+                </a>
             </div>
         </div>
     </div>

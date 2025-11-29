@@ -8,7 +8,7 @@ use App\Models\Branch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-class CashierAssignmentController extends Controller
+class StaffAssignmentController extends Controller
 {
     /**
      * Display the cashier assignment interface for the manager

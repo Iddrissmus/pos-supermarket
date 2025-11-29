@@ -29,7 +29,7 @@ Route::get('/', function () {
             'superadmin' => redirect()->route('dashboard.superadmin'),
             'business_admin' => redirect()->route('dashboard.business-admin'),
             'manager' => redirect()->route('dashboard.manager'),
-            'cashier' => redirect()->route('dashboard.cashier'),
+            'cashier' => redirect()->route('sales.terminal'),
             default => view('landing')
         };
     }
@@ -77,6 +77,12 @@ Route::middleware('auth')->group(function () {
         
         // Map view of all businesses and branches
         Route::get('/map', [BusinessController::class, 'map'])->name('businesses.map');
+        
+        // Branch request management
+        Route::get('/branch-requests', [\App\Http\Controllers\SuperAdmin\BranchRequestController::class, 'index'])->name('superadmin.branch-requests.index');
+        Route::get('/branch-requests/{branchRequest}', [\App\Http\Controllers\SuperAdmin\BranchRequestController::class, 'show'])->name('superadmin.branch-requests.show');
+        Route::post('/branch-requests/{branchRequest}/approve', [\App\Http\Controllers\SuperAdmin\BranchRequestController::class, 'approve'])->name('superadmin.branch-requests.approve');
+        Route::post('/branch-requests/{branchRequest}/reject', [\App\Http\Controllers\SuperAdmin\BranchRequestController::class, 'reject'])->name('superadmin.branch-requests.reject');
     });
     
     // Business Admin Map - only their business branches
@@ -106,6 +112,9 @@ Route::middleware('auth')->group(function () {
         Route::post('branches', [BranchController::class, 'store'])->name('branches.store');
         Route::put('branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
         Route::delete('branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');
+        
+        // Category Management
+        Route::resource('categories', \App\Http\Controllers\Admin\CategoryController::class);
     });
 
     // Business Admin Dashboard
@@ -205,15 +214,15 @@ Route::middleware('auth')->group(function () {
             ->name('admin.branch-assignments.store');
             
         // Business Admin creates and manages staff
-        Route::get('/admin/cashiers', [\App\Http\Controllers\Admin\CashierController::class, 'index'])
+        Route::get('/admin/cashiers', [\App\Http\Controllers\Admin\StaffController::class, 'index'])
             ->name('admin.cashiers.index');
-        Route::post('/admin/cashiers/create', [\App\Http\Controllers\Admin\CashierController::class, 'create'])
+        Route::post('/admin/cashiers/create', [\App\Http\Controllers\Admin\StaffController::class, 'create'])
             ->name('admin.cashiers.create');
-        Route::post('/admin/cashiers/assign', [\App\Http\Controllers\Admin\CashierController::class, 'assign'])
+        Route::post('/admin/cashiers/assign', [\App\Http\Controllers\Admin\StaffController::class, 'assign'])
             ->name('admin.cashiers.assign');
-        Route::post('/admin/cashiers/unassign', [\App\Http\Controllers\Admin\CashierController::class, 'unassign'])
+        Route::post('/admin/cashiers/unassign', [\App\Http\Controllers\Admin\StaffController::class, 'unassign'])
             ->name('admin.cashiers.unassign');
-        Route::post('/admin/cashiers/delete', [\App\Http\Controllers\Admin\CashierController::class, 'delete'])
+        Route::post('/admin/cashiers/delete', [\App\Http\Controllers\Admin\StaffController::class, 'delete'])
             ->name('admin.cashiers.delete');
             
         // Business Admin approves manager requests
@@ -245,13 +254,13 @@ Route::middleware('auth')->group(function () {
     // Manager only features - Day-to-day operations
     Route::middleware('role:manager')->group(function () {
         // Managers handle staff assignments at their branch
-        Route::get('/manager/cashiers', [\App\Http\Controllers\Manager\CashierAssignmentController::class, 'index'])
+        Route::get('/manager/cashiers', [\App\Http\Controllers\Manager\StaffAssignmentController::class, 'index'])
             ->name('manager.cashiers.index');
-        Route::post('/manager/cashiers/assign', [\App\Http\Controllers\Manager\CashierAssignmentController::class, 'assign'])
+        Route::post('/manager/cashiers/assign', [\App\Http\Controllers\Manager\StaffAssignmentController::class, 'assign'])
             ->name('manager.cashiers.assign');
-        Route::post('/manager/cashiers/unassign', [\App\Http\Controllers\Manager\CashierAssignmentController::class, 'unassign'])
+        Route::post('/manager/cashiers/unassign', [\App\Http\Controllers\Manager\StaffAssignmentController::class, 'unassign'])
             ->name('manager.cashiers.unassign');
-        Route::post('/manager/cashiers/create', [\App\Http\Controllers\Manager\CashierAssignmentController::class, 'create'])
+        Route::post('/manager/cashiers/create', [\App\Http\Controllers\Manager\StaffAssignmentController::class, 'create'])
             ->name('manager.cashiers.create');
             
         // Managers can request items from Business Admin
@@ -261,6 +270,10 @@ Route::middleware('auth')->group(function () {
             ->name('manager.item-requests.store');
         Route::patch('/manager/item-requests/{stockTransfer}/cancel', [\App\Http\Controllers\Manager\ItemRequestController::class, 'cancel'])
             ->name('manager.item-requests.cancel');
+        Route::get('/manager/item-requests/download-template', [\App\Http\Controllers\Manager\ItemRequestController::class, 'downloadTemplate'])
+            ->name('manager.item-requests.download-template');
+        Route::post('/manager/item-requests/bulk-upload', [\App\Http\Controllers\Manager\ItemRequestController::class, 'uploadBulkRequests'])
+            ->name('manager.item-requests.bulk-upload');
             
         // Manager views reorder requests for their branch
         Route::get('/reorder-requests', [ReorderRequestController::class, 'index'])
@@ -293,14 +306,17 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:cashier')->group(function () {
         Route::get('/cashier/dashboard', [CashierDashboardController::class, 'index'])->name('dashboard.cashier');
 
-        // Sales - ONLY cashiers can create sales
-        Route::get('/sales/create', [SalesController::class, 'create'])->name('sales.create');
+        // Sales - ONLY cashiers can create sales through terminal
+        // Route::get('/sales/create', [SalesController::class, 'create'])->name('sales.create'); // Disabled - use terminal instead
         Route::post('/sales', [SalesController::class, 'store'])->name('sales.store');
         Route::get('/api/product-stock', [SalesController::class, 'getProductStock'])
             ->name('api.product.stock');
         Route::post('/api/calculate-taxes', [SalesController::class, 'calculateTaxes'])
             ->name('api.calculate.taxes');
         Route::get('/terminal', [SalesController::class, 'terminal'])->name('sales.terminal');
+        
+        // Cash drawer management
+        Route::post('/cash-drawer/open', [SalesController::class, 'openDrawer'])->name('cash-drawer.open');
         
         // Note: Cashiers CANNOT access reports - removed these routes:
         // - sales.report

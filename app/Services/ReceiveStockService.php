@@ -6,6 +6,8 @@ use App\Models\BranchProduct;
 use App\Models\StockReceipt;
 use App\Models\StockReceiptItem;
 use App\Models\StockLog;
+use App\Models\User;
+use App\Notifications\StockReceivedNotification;
 use Illuminate\Support\Facades\DB;
 
 class ReceiveStockService
@@ -63,6 +65,9 @@ class ReceiveStockService
 
             // Update receipt total
             $receipt->update(['total_amount' => $totalAmount]);
+
+            // Send notification to business admin and manager
+            $this->notifyStockReceived($receipt);
 
             return $receipt->load(['items.product', 'supplier', 'branch']);
         });
@@ -195,5 +200,35 @@ class ReceiveStockService
             'unit_cost' => $costPrice,
             'total_cost' => $totalCost,
         ];
+    }
+
+    /**
+     * Notify business admin and manager about stock received
+     */
+    private function notifyStockReceived(StockReceipt $receipt)
+    {
+        try {
+            $branch = $receipt->branch;
+            
+            // Notify business admin
+            $businessAdmin = User::where('role', 'business_admin')
+                ->where('business_id', $branch->business_id)
+                ->first();
+            
+            if ($businessAdmin) {
+                $businessAdmin->notify(new StockReceivedNotification($receipt));
+            }
+            
+            // Notify branch manager
+            $manager = User::where('role', 'manager')
+                ->where('branch_id', $branch->id)
+                ->first();
+            
+            if ($manager) {
+                $manager->notify(new StockReceivedNotification($receipt));
+            }
+        } catch (\Exception $e) {
+            logger()->error('Failed to send stock received notification: ' . $e->getMessage());
+        }
     }
 }

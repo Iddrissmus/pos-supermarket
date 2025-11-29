@@ -9,9 +9,11 @@
                     <h1 class="text-2xl font-bold text-gray-800">
                         <i class="fas fa-receipt mr-3 text-green-600"></i>Sales History
                     </h1>
-                    <a href="{{ route('sales.create') }}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
-                        <i class="fas fa-plus mr-2"></i>New Sale
-                    </a>
+                    @if(auth()->user()->role === 'cashier')
+                        <a href="{{ route('sales.terminal') }}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
+                            <i class="fas fa-cash-register mr-2"></i>Go to Terminal
+                        </a>
+                    @endif
                 </div>
             </div>
 
@@ -149,10 +151,14 @@
                     <div class="text-center py-12">
                         <i class="fas fa-shopping-cart text-gray-400 text-6xl mb-4"></i>
                         <h3 class="text-lg font-medium text-gray-900 mb-2">No sales found</h3>
-                        <p class="text-gray-500 mb-6">Start by making your first sale.</p>
-                        <a href="{{ route('sales.create') }}" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg">
-                            <i class="fas fa-plus mr-2"></i>New Sale
-                        </a>
+                        @if(auth()->user()->role === 'cashier')
+                            <p class="text-gray-500 mb-6">Use the POS terminal to make sales.</p>
+                            <a href="{{ route('sales.terminal') }}" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg">
+                                <i class="fas fa-cash-register mr-2"></i>Go to Terminal
+                            </a>
+                        @else
+                            <p class="text-gray-500">Sales will appear here once cashiers make them.</p>
+                        @endif
                     </div>
                 @endif
             </div>

@@ -43,7 +43,7 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithValidation
                         continue;
                     }
 
-            // Find category (case-insensitive, trimmed, supports both parent and subcategories)
+            // Find or create category (case-insensitive, trimmed)
             $categoryName = trim($row['category'] ?? '');
             
             if (empty($categoryName)) {
@@ -57,9 +57,15 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithValidation
                 ->first();
 
             if (!$category) {
-                $this->errors[] = "Row {$rowNumber}: Category '{$categoryName}' not found. Skipping product.";
-                $this->skippedCount++;
-                continue;
+                // Auto-create missing category
+                $category = Category::create([
+                    'business_id' => $this->businessId,
+                    'name' => $categoryName,
+                    'description' => 'Auto-created from product import',
+                    'is_active' => true,
+                    'display_order' => 999,
+                ]);
+                Log::info("Row {$rowNumber}: Auto-created category '{$categoryName}'");
             }                    
                     
                     // Check if product already exists by name
@@ -79,6 +85,35 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithValidation
                     $unitsPerBox = !empty($row['units_per_box']) ? (int)$row['units_per_box'] : 1;
                     $totalUnits = $totalBoxes * $unitsPerBox;
 
+                    // Weight-based selling fields (optional)
+                    $boxWeight = !empty($row['box_weight_kg']) ? (float)$row['box_weight_kg'] : null;
+                    $sellingMode = !empty($row['selling_mode']) ? $row['selling_mode'] : 'unit';
+                    $pricePerKilo = !empty($row['price_per_kilo']) ? (float)$row['price_per_kilo'] : null;
+                    $pricePerBox = !empty($row['price_per_box']) ? (float)$row['price_per_box'] : null;
+                    $weightUnit = !empty($row['weight_unit']) ? $row['weight_unit'] : null;
+                    $pricePerUnitWeight = !empty($row['price_per_unit_weight']) ? (float)$row['price_per_unit_weight'] : null;
+                    $price = !empty($row['price']) ? (float)$row['price'] : null;
+                    $costPrice = !empty($row['cost_price']) ? (float)$row['cost_price'] : null;
+                    
+                    // Validate selling mode
+                    if (!in_array($sellingMode, ['unit', 'weight', 'box', 'both'])) {
+                        $sellingMode = 'unit';
+                    }
+
+                    // Calculate default price for weight-based selling (same logic as ProductController)
+                    if (($sellingMode === 'weight' || $sellingMode === 'box' || $sellingMode === 'both') && empty($price)) {
+                        if ($boxWeight > 0 && $pricePerKilo > 0) {
+                            // Calculate price per unit: (box_weight × price_per_kilo) / units_per_box
+                            $price = round(($boxWeight * $pricePerKilo) / $unitsPerBox, 2);
+                        } elseif ($pricePerBox > 0) {
+                            // If price per box is provided, calculate per unit
+                            $price = round($pricePerBox / $unitsPerBox, 2);
+                        } elseif ($pricePerKilo > 0) {
+                            // Fallback to price per kilo if no box weight
+                            $price = $pricePerKilo;
+                        }
+                    }
+
                     // Create new product (NOT assigned to any branch yet)
                     $product = Product::create([
                         'name' => $row['product_name'],
@@ -90,6 +125,14 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithValidation
                         'total_boxes' => $totalBoxes,
                         'total_units' => $totalUnits,
                         'assigned_units' => 0, // No assignments yet
+                        'box_weight' => $boxWeight,
+                        'selling_mode' => $sellingMode,
+                        'price' => $price,
+                        'cost_price' => $costPrice,
+                        'price_per_kilo' => $pricePerKilo,
+                        'price_per_box' => $pricePerBox,
+                        'weight_unit' => $weightUnit,
+                        'price_per_unit_weight' => $pricePerUnitWeight,
                     ]);
 
                     // Generate barcode and QR code
@@ -129,6 +172,14 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithValidation
             'description' => 'nullable|string',
             'total_boxes' => 'nullable|numeric|min:0',
             'units_per_box' => 'nullable|numeric|min:1',
+            'box_weight_kg' => 'nullable|numeric|min:0',
+            'selling_mode' => 'nullable|in:unit,weight,box,both',
+            'price' => 'nullable|numeric|min:0',
+            'cost_price' => 'nullable|numeric|min:0',
+            'price_per_kilo' => 'nullable|numeric|min:0',
+            'price_per_box' => 'nullable|numeric|min:0',
+            'weight_unit' => 'nullable|in:kg,g,ton,lb,oz',
+            'price_per_unit_weight' => 'nullable|numeric|min:0',
         ];
     }
 

@@ -35,7 +35,9 @@ class NotificationController extends Controller
                     'icon' => $notification->data['icon'] ?? 'fa-bell',
                     'color' => $notification->data['color'] ?? 'blue',
                     'urgency' => $notification->data['urgency'] ?? 'normal',
+                    'action_url' => $notification->data['action_url'] ?? null,
                     'created_at' => $notification->created_at->diffForHumans(),
+                    'read_at' => $notification->read_at,
                 ];
             })
         ]);

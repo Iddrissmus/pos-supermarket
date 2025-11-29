@@ -134,17 +134,50 @@ class BulkAssignmentImport implements ToCollection, WithHeadingRow
                     ? intval($row['reorder_level']) 
                     : 10;
 
-                // Update price if provided, or set default for new records
+                // Update price if provided, otherwise use product's default price
                 if (isset($row['selling_price']) && $row['selling_price'] !== '' && $row['selling_price'] !== null) {
                     $branchProduct->price = floatval($row['selling_price']);
+                } elseif (!$branchProduct->exists && $product->price) {
+                    // Use product's default price for new assignments
+                    $branchProduct->price = $product->price;
                 } elseif (!$branchProduct->exists) {
-                    // Price is required for new records
+                    // Fallback to 0 if no price available
                     $branchProduct->price = 0.00;
                 }
 
-                // Update cost price if provided
+                // Update cost price if provided, otherwise use product's default
                 if (isset($row['cost_price']) && $row['cost_price'] !== '' && $row['cost_price'] !== null) {
                     $branchProduct->cost_price = floatval($row['cost_price']);
+                } elseif (!$branchProduct->exists && $product->cost_price) {
+                    $branchProduct->cost_price = $product->cost_price;
+                }
+
+                // Weight-based pricing fields - use Excel values or product defaults
+                if (isset($row['price_per_kilo']) && $row['price_per_kilo'] !== '' && $row['price_per_kilo'] !== null) {
+                    $branchProduct->price_per_kilo = floatval($row['price_per_kilo']);
+                } elseif (!$branchProduct->exists && $product->price_per_kilo) {
+                    $branchProduct->price_per_kilo = $product->price_per_kilo;
+                }
+                
+                if (isset($row['price_per_box']) && $row['price_per_box'] !== '' && $row['price_per_box'] !== null) {
+                    $branchProduct->price_per_box = floatval($row['price_per_box']);
+                } elseif (!$branchProduct->exists && $product->price_per_box) {
+                    $branchProduct->price_per_box = $product->price_per_box;
+                }
+                
+                if (isset($row['weight_unit']) && $row['weight_unit'] !== '' && $row['weight_unit'] !== null) {
+                    $weightUnit = strtolower(trim($row['weight_unit']));
+                    if (in_array($weightUnit, ['kg', 'g', 'ton', 'lb', 'oz'])) {
+                        $branchProduct->weight_unit = $weightUnit;
+                    }
+                } elseif (!$branchProduct->exists && $product->weight_unit) {
+                    $branchProduct->weight_unit = $product->weight_unit;
+                }
+                
+                if (isset($row['price_per_unit_weight']) && $row['price_per_unit_weight'] !== '' && $row['price_per_unit_weight'] !== null) {
+                    $branchProduct->price_per_unit_weight = floatval($row['price_per_unit_weight']);
+                } elseif (!$branchProduct->exists && $product->price_per_unit_weight) {
+                    $branchProduct->price_per_unit_weight = $product->price_per_unit_weight;
                 }
 
                 // Log what we're about to save

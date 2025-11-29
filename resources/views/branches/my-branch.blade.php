@@ -2,6 +2,19 @@
 
 @section('title', 'My Branch - ' . ($branch->name ?? 'Branch Details'))
 
+@push('styles')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #editMap {
+        height: 350px;
+        width: 100%;
+        border-radius: 0.5rem;
+        border: 2px solid #e5e7eb;
+        margin-bottom: 0.5rem;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="p-6 space-y-6">
     <!-- Success/Error Messages -->
@@ -317,16 +330,51 @@
         <form id="editBranchForm" action="{{ route('branches.update', $branch->id) }}" method="POST">
             @csrf
             @method('PUT')
+            <input type="hidden" id="edit_latitude" name="latitude" value="{{ $branch->latitude }}">
+            <input type="hidden" id="edit_longitude" name="longitude" value="{{ $branch->longitude }}">
             
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Branch Name *</label>
                 <input type="text" name="name" value="{{ $branch->name }}" required
                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
+
+            <!-- Location Selection with Map -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Branch Location
+                </label>
+                <p class="text-xs text-gray-500 mb-2">
+                    <i class="fas fa-info-circle"></i> Click on the map to update location
+                </p>
+                
+                <!-- Search Box -->
+                <div class="mb-3">
+                    <div class="relative">
+                        <input type="text" 
+                               id="editSearch" 
+                               placeholder="Search for a location in Ghana..."
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button type="button" 
+                                onclick="searchEditLocation()"
+                                class="absolute right-2 top-2 text-blue-600 hover:text-blue-800">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Map -->
+                <div id="editMap"></div>
+                
+                <p class="text-xs text-gray-500 mt-1">
+                    <i class="fas fa-map-marker-alt text-blue-500"></i> 
+                    Selected coordinates: <span id="edit-coords-display">{{ $branch->latitude && $branch->longitude ? number_format($branch->latitude, 6) . ', ' . number_format($branch->longitude, 6) : 'Not selected' }}</span>
+                </p>
+            </div>
             
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Address</label>
-                <textarea name="address" rows="2"
+                <textarea id="edit_address" name="address" rows="2"
                           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">{{ $branch->address }}</textarea>
             </div>
             
@@ -338,7 +386,7 @@
 
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Region</label>
-                <select name="region" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <select id="edit_region" name="region" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">Select Region</option>
                     <option value="Greater Accra" {{ $branch->region === 'Greater Accra' ? 'selected' : '' }}>Greater Accra</option>
                     <option value="Ashanti" {{ $branch->region === 'Ashanti' ? 'selected' : '' }}>Ashanti</option>
@@ -373,14 +421,177 @@
     </div>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+let editMap;
+let editMarker;
+
 function showEditBranchModal() {
     document.getElementById('editBranchModal').classList.remove('hidden');
+    
+    // Initialize map after modal is visible
+    setTimeout(() => {
+        initEditMap();
+    }, 100);
 }
 
 function hideEditBranchModal() {
     document.getElementById('editBranchModal').classList.add('hidden');
+    
+    // Clean up map
+    if (editMap) {
+        editMap.remove();
+        editMap = null;
+        editMarker = null;
+    }
 }
+
+// Initialize map centered on Ghana
+function initEditMap() {
+    // Don't reinitialize if map already exists
+    if (editMap) {
+        editMap.invalidateSize();
+        return;
+    }
+    
+    // Define Ghana bounds
+    const ghanaBounds = [
+        [4.5, -3.5],  // Southwest
+        [11.5, 1.5]   // Northeast
+    ];
+    
+    const currentLat = parseFloat(document.getElementById('edit_latitude').value) || 7.9465;
+    const currentLng = parseFloat(document.getElementById('edit_longitude').value) || -1.0232;
+    
+    editMap = L.map('editMap', {
+        center: [currentLat, currentLng],
+        zoom: currentLat !== 7.9465 ? 13 : 7,
+        maxBounds: ghanaBounds,
+        maxBoundsViscosity: 1.0,
+        minZoom: 7,
+        maxZoom: 19
+    });
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        minZoom: 7,
+        maxZoom: 19
+    }).addTo(editMap);
+    
+    // Add existing marker if coordinates exist
+    if (currentLat !== 7.9465 && currentLng !== -1.0232) {
+        setEditMarker(currentLat, currentLng, false);
+    }
+    
+    // Add click event to map
+    editMap.on('click', function(e) {
+        setEditMarker(e.latlng.lat, e.latlng.lng);
+    });
+}
+
+// Set marker on map
+function setEditMarker(lat, lng, reverseGeocode = true) {
+    // Remove existing marker
+    if (editMarker) {
+        editMap.removeLayer(editMarker);
+    }
+    
+    // Add new marker
+    editMarker = L.marker([lat, lng], { draggable: true }).addTo(editMap);
+    
+    // Handle marker drag
+    editMarker.on('dragend', function(e) {
+        const position = e.target.getLatLng();
+        setEditMarker(position.lat, position.lng);
+    });
+    
+    // Update hidden fields
+    document.getElementById('edit_latitude').value = lat;
+    document.getElementById('edit_longitude').value = lng;
+    
+    // Update display
+    document.getElementById('edit-coords-display').textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    
+    // Reverse geocode to get address
+    if (reverseGeocode) {
+        reverseGeocodeEdit(lat, lng);
+    }
+    
+    // Center map on marker
+    editMap.setView([lat, lng], 13);
+}
+
+// Reverse geocode to get address from coordinates
+function reverseGeocodeEdit(lat, lng) {
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
+        headers: {
+            'User-Agent': 'POS-Supermarket-App/1.0'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.display_name) {
+            document.getElementById('edit_address').value = data.display_name;
+            
+            // Try to auto-detect region
+            const address = data.address || {};
+            let region = address.state || address.region || '';
+            
+            if (region) {
+                const regionSelect = document.getElementById('edit_region');
+                for (let option of regionSelect.options) {
+                    if (option.text.toLowerCase().includes(region.toLowerCase()) || 
+                        region.toLowerCase().includes(option.text.toLowerCase())) {
+                        regionSelect.value = option.value;
+                        break;
+                    }
+                }
+            }
+        }
+    })
+    .catch(error => console.error('Reverse geocoding error:', error));
+}
+
+// Search for location
+function searchEditLocation() {
+    const searchQuery = document.getElementById('editSearch').value;
+    if (!searchQuery) {
+        alert('Please enter a location to search');
+        return;
+    }
+    
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)},Ghana&limit=1`, {
+        headers: {
+            'User-Agent': 'POS-Supermarket-App/1.0'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data && data.length > 0) {
+            const result = data[0];
+            setEditMarker(parseFloat(result.lat), parseFloat(result.lon));
+        } else {
+            alert('Location not found. Please try a different search term.');
+        }
+    })
+    .catch(error => {
+        console.error('Search error:', error);
+        alert('Error searching for location. Please try again.');
+    });
+}
+
+// Handle Enter key in search box
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('editSearch');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                searchEditLocation();
+            }
+        });
+    }
+});
 </script>
 @endif
 @endsection

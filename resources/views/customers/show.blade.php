@@ -232,10 +232,12 @@
                            class="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
                             <i class="fas fa-edit mr-2"></i>Edit Customer
                         </a>
-                        <button onclick="createNewSale({{ $customer->id }})" 
-                                class="w-full inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
-                            <i class="fas fa-shopping-cart mr-2"></i>New Sale
-                        </button>
+                        @if(auth()->user()->role === 'cashier')
+                            <a href="{{ route('sales.terminal') }}" 
+                               class="w-full inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
+                                <i class="fas fa-cash-register mr-2"></i>Go to Terminal
+                            </a>
+                        @endif
                         <form action="{{ route('customers.toggle-status', $customer) }}" method="POST" class="w-full">
                             @csrf
                             @method('PATCH')
@@ -251,13 +253,6 @@
         </div>
     </div>
 </div>
-
-<script>
-function createNewSale(customerId) {
-    // Redirect to sales creation with customer pre-selected
-    window.location.href = "{{ route('sales.create') }}?customer_id=" + customerId;
-}
-</script>
 
 <style>
 @media print {

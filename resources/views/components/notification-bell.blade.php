@@ -41,13 +41,15 @@
 
             <template x-for="notification in notifications" :key="notification.id">
                 <div class="px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
-                     @click="markAsRead(notification.id)"
+                     @click="handleNotificationClick(notification)"
                      :class="{'bg-blue-50': !notification.read_at}">
                     <div class="flex items-start space-x-3">
                         <!-- Icon -->
                         <div class="flex-shrink-0">
-                            <div :class="`w-10 h-10 rounded-full flex items-center justify-center bg-${notification.color}-100`">
-                                <i :class="`fas ${notification.icon} text-${notification.color}-600`"></i>
+                            <div :class="`w-10 h-10 rounded-full flex items-center justify-center`"
+                                 :style="`background-color: ${getColorBg(notification.color)}`">
+                                <i :class="`fas ${notification.icon}`" 
+                                   :style="`color: ${getColorText(notification.color)}`"></i>
                             </div>
                         </div>
                         
@@ -63,6 +65,13 @@
                             <div class="flex-shrink-0">
                                 <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
                                     Critical
+                                </span>
+                            </div>
+                        </template>
+                        <template x-if="notification.urgency === 'warning'">
+                            <div class="flex-shrink-0">
+                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-800">
+                                    Warning
                                 </span>
                             </div>
                         </template>
@@ -106,9 +115,22 @@ function notificationBell() {
                 const response = await fetch('{{ route("notifications.unread") }}');
                 const data = await response.json();
                 this.unreadCount = data.count;
-                this.notifications = data.notifications;
+                this.notifications = data.notifications.map(n => ({
+                    ...n,
+                    action_url: n.action_url || null
+                }));
             } catch (error) {
                 console.error('Failed to fetch notifications:', error);
+            }
+        },
+        
+        async handleNotificationClick(notification) {
+            // Mark as read
+            await this.markAsRead(notification.id);
+            
+            // Navigate to action URL if exists
+            if (notification.action_url) {
+                window.location.href = notification.action_url;
             }
         },
         
@@ -140,6 +162,32 @@ function notificationBell() {
             } catch (error) {
                 console.error('Failed to mark all notifications as read:', error);
             }
+        },
+        
+        getColorBg(color) {
+            const colors = {
+                'red': '#fee2e2',
+                'orange': '#ffedd5',
+                'yellow': '#fef3c7',
+                'green': '#d1fae5',
+                'blue': '#dbeafe',
+                'purple': '#ede9fe',
+                'gray': '#f3f4f6'
+            };
+            return colors[color] || colors['blue'];
+        },
+        
+        getColorText(color) {
+            const colors = {
+                'red': '#dc2626',
+                'orange': '#ea580c',
+                'yellow': '#ca8a04',
+                'green': '#059669',
+                'blue': '#2563eb',
+                'purple': '#7c3aed',
+                'gray': '#6b7280'
+            };
+            return colors[color] || colors['blue'];
         }
     }
 }

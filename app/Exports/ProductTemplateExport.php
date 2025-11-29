@@ -22,6 +22,14 @@ class ProductTemplateExport implements FromArray, WithHeadings, WithStyles
                 'Premium quality rice in 25kg bags',
                 100,  // Total boxes in warehouse
                 1,    // Units per box
+                25.0, // Box weight in kg
+                'weight', // Selling mode
+                null, // Price (auto-calculated for weight-based)
+                20.00, // Cost price
+                8.00, // Price per kilo
+                200.00, // Price per box
+                null, // Weight unit (alternative)
+                null, // Price per unit weight
             ],
             [
                 'Frytol Cooking Oil 1L',
@@ -29,6 +37,14 @@ class ProductTemplateExport implements FromArray, WithHeadings, WithStyles
                 'Pure vegetable cooking oil',
                 50,
                 12,
+                12.0,
+                'unit',
+                45.00,
+                35.00,
+                null,
+                null,
+                null,
+                null,
             ],
             [
                 'Golden Tree Sugar 1kg',
@@ -36,6 +52,14 @@ class ProductTemplateExport implements FromArray, WithHeadings, WithStyles
                 'White granulated sugar',
                 200,
                 20,
+                20.0,
+                'both',
+                null,
+                6.00,
+                7.50,
+                150.00,
+                null,
+                null,
             ],
             [
                 'Gari White 1kg',
@@ -43,6 +67,14 @@ class ProductTemplateExport implements FromArray, WithHeadings, WithStyles
                 'Fine quality gari',
                 150,
                 10,
+                10.0,
+                'weight',
+                null,
+                5.00,
+                6.00,
+                60.00,
+                null,
+                null,
             ],
             [
                 'Gino Tomato Paste 70g',
@@ -50,6 +82,14 @@ class ProductTemplateExport implements FromArray, WithHeadings, WithStyles
                 'Tomato paste in tin',
                 500,
                 50,
+                3.5,
+                'unit',
+                2.50,
+                1.80,
+                null,
+                null,
+                null,
+                null,
             ],
         ];
     }
@@ -62,6 +102,14 @@ class ProductTemplateExport implements FromArray, WithHeadings, WithStyles
             'Description',
             'Total Boxes',
             'Units per Box *',
+            'Box Weight (kg)',
+            'Selling Mode',
+            'Price',
+            'Cost Price *',
+            'Price per Kilo',
+            'Price per Box',
+            'Weight Unit',
+            'Price per Unit Weight',
         ];
     }
 

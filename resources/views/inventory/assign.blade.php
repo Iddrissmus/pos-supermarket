@@ -154,11 +154,23 @@
                 </thead>
                 <tbody id="productsTable">
                     @foreach($products as $product)
+                        @php
+                            // Use product's default pricing first, then fall back to first branch assignment
+                            $defaultPrice = $product->price ?? $product->branchProducts->first()?->price ?? 0;
+                            $defaultCostPrice = $product->cost_price ?? $product->branchProducts->first()?->cost_price ?? 0;
+                            
+                            // Format the values for display
+                            $formattedPrice = number_format($defaultPrice, 2, '.', '');
+                            $formattedCost = number_format($defaultCostPrice, 2, '.', '');
+                        @endphp
                         <tr class="product-row hover:bg-gray-50" 
                             data-product-id="{{ $product->id }}"
                             data-category-id="{{ $product->category_id }}"
                             data-name="{{ strtolower($product->name) }}"
-                            data-barcode="{{ strtolower($product->barcode ?? '') }}">
+                            data-barcode="{{ strtolower($product->barcode ?? '') }}"
+                            data-default-price="{{ $formattedPrice }}"
+                            data-default-cost="{{ $formattedCost }}"
+                            title="Debug: Price={{ $formattedPrice }}, Cost={{ $formattedCost }}">
                             <td class="border-b px-4 py-3">
                                 <input type="checkbox" class="product-checkbox rounded" value="{{ $product->id }}">
                             </td>
@@ -255,7 +267,7 @@
                                     class="price-input w-24 border border-gray-300 rounded px-2 py-1 text-center text-sm"
                                     step="0.01"
                                     min="0"
-                                    placeholder="0.00"
+                                    placeholder="{{ $formattedPrice }}"
                                     disabled
                                 >
                             </td>
@@ -265,7 +277,7 @@
                                     class="cost-input w-24 border border-gray-300 rounded px-2 py-1 text-center text-sm"
                                     step="0.01"
                                     min="0"
-                                    placeholder="0.00"
+                                    placeholder="{{ $formattedCost }}"
                                     disabled
                                 >
                             </td>
@@ -460,7 +472,22 @@
 
     // Individual checkbox
     document.querySelectorAll('.product-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', updateSummary);
+        checkbox.addEventListener('change', function() {
+            const row = this.closest('tr');
+            const priceInput = row.querySelector('.price-input');
+            const costInput = row.querySelector('.cost-input');
+            
+            if (this.checked) {
+                // Set placeholders from default pricing when checkbox is checked
+                const defaultPrice = row.dataset.defaultPrice || '0.00';
+                const defaultCost = row.dataset.defaultCost || '0.00';
+                
+                priceInput.placeholder = defaultPrice;
+                costInput.placeholder = defaultCost;
+            }
+            
+            updateSummary();
+        });
     });
 
     // Update summary

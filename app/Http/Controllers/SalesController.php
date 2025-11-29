@@ -7,6 +7,8 @@ use App\Models\Branch;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\SaleItem;
+use App\Models\User;
+use App\Notifications\HighValueSaleNotification;
 use Illuminate\Http\Request;
 use App\Models\BranchProduct;
 use Illuminate\Support\Carbon;
@@ -16,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Services\ReceiveStockService;
+use App\Models\CashDrawerSession;
 
 class SalesController extends Controller
 {
@@ -89,6 +92,19 @@ class SalesController extends Controller
         $filterUncategorized = $categoryId === 'null';
         $branchIds = $branches->pluck('id');
 
+        // Check if cashier has an active cash drawer session for today
+        $hasActiveSession = true; // Default true for non-cashiers
+        $activeSession = null;
+        
+        if ($user->role === 'cashier') {
+            $activeSession = CashDrawerSession::where('user_id', $user->id)
+                ->where('session_date', Carbon::today())
+                ->where('status', 'open')
+                ->first();
+            
+            $hasActiveSession = !is_null($activeSession);
+        }
+
         // Get categories that have products available in the accessible branches
         // This ensures only relevant categories are shown in the filter
         $categories = Category::forBusiness($user->business_id)
@@ -156,7 +172,62 @@ class SalesController extends Controller
             'selectedCategory' => $categoryId,
             'products' => $products,
             'uncategorizedCount' => $uncategorizedCount,
+            'hasActiveSession' => $hasActiveSession,
+            'activeSession' => $activeSession,
         ]);
+    }
+
+    /**
+     * Open cash drawer for the current cashier
+     */
+    public function openDrawer(Request $request)
+    {
+        $user = Auth::user();
+        
+        if ($user->role !== 'cashier') {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'opening_amount' => 'required|numeric|min:0',
+            'opening_notes' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            // Check if there's already an open session today
+            $existingSession = CashDrawerSession::where('user_id', $user->id)
+                ->where('session_date', Carbon::today())
+                ->where('status', 'open')
+                ->first();
+
+            if ($existingSession) {
+                return response()->json([
+                    'error' => 'You already have an open cash drawer session for today.'
+                ], 422);
+            }
+
+            // Create new cash drawer session
+            $session = CashDrawerSession::create([
+                'user_id' => $user->id,
+                'branch_id' => $user->branch_id,
+                'opening_amount' => $validated['opening_amount'],
+                'session_date' => Carbon::today(),
+                'opened_at' => Carbon::now(),
+                'status' => 'open',
+                'opening_notes' => $validated['opening_notes'] ?? null,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cash drawer opened successfully.',
+                'session' => $session,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to open cash drawer: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -216,6 +287,11 @@ class SalesController extends Controller
                 $sale->amount_tendered = $validated['amount_tendered'];
                 $sale->change = max(0, $validated['amount_tendered'] - $sale->total);
                 $sale->save();
+
+                // Send notification for high-value sales (> GHS 500)
+                if ($sale->total > 500) {
+                    $this->notifyHighValueSale($sale);
+                }
 
                 return $sale->fresh(['items.product', 'branch.business', 'cashier']);
             });
@@ -977,5 +1053,35 @@ class SalesController extends Controller
         $data = $this->buildReportData($request);
 
         return view('sales.report', $data);
+    }
+
+    /**
+     * Notify business admin and managers about high-value sale
+     */
+    protected function notifyHighValueSale(Sale $sale)
+    {
+        try {
+            $branch = $sale->branch;
+            
+            // Notify business admin
+            $businessAdmin = User::where('role', 'business_admin')
+                ->where('business_id', $branch->business_id)
+                ->first();
+            
+            if ($businessAdmin) {
+                $businessAdmin->notify(new HighValueSaleNotification($sale));
+            }
+            
+            // Notify branch manager
+            $manager = User::where('role', 'manager')
+                ->where('branch_id', $branch->id)
+                ->first();
+            
+            if ($manager) {
+                $manager->notify(new HighValueSaleNotification($sale));
+            }
+        } catch (\Exception $e) {
+            logger()->error('Failed to send high value sale notification: ' . $e->getMessage());
+        }
     }
 }

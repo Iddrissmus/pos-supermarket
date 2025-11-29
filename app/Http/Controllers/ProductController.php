@@ -28,10 +28,11 @@ class ProductController extends Controller
 
         // Determine which branches the user has access to
         $branchIds = collect();
-        if (($user->role === 'manager' || $user->role === 'business_admin') && $user->branch_id) {
+        if ($user->role === 'manager' && $user->branch_id) {
+            // Managers only see their specific branch
             $branchIds = collect([$user->branch_id]);
         } else {
-            // Superadmin or business admin without specific branch - get all branches
+            // Superadmin and business_admin see all branches in their business
             $branchIds = Branch::where('business_id', $user->business_id)->pluck('id');
         }
 
@@ -57,18 +58,22 @@ class ProductController extends Controller
 
         // Count uncategorized products
         $uncategorizedCount = 0;
-        if (($user->role === 'manager' || $user->role === 'business_admin') && $user->branch_id) {
+        if ($user->role === 'manager' && $user->branch_id) {
+            // Manager: count uncategorized in their branch only
             $uncategorizedCount = BranchProduct::where('branch_id', $user->branch_id)
                 ->whereHas('product', function($q) {
                     $q->whereNull('category_id');
                 })->count();
         } else {
-            $uncategorizedCount = BranchProduct::whereHas('product', function($q) {
-                $q->whereNull('category_id');
-            })->count();
+            // Business admin/superadmin: count uncategorized across all accessible branches
+            $uncategorizedCount = BranchProduct::whereIn('branch_id', $branchIds)
+                ->whereHas('product', function($q) {
+                    $q->whereNull('category_id');
+                })->count();
         }
 
-        if (($user->role === 'manager' || $user->role === 'business_admin') && $user->branch_id) {
+        if ($user->role === 'manager' && $user->branch_id) {
+            // Manager: show only their branch's products
             $productsQuery = BranchProduct::where('branch_id', $user->branch_id)
                 ->with(['product.category']);
             if ($filterUncategorized) {
@@ -97,7 +102,9 @@ class ProductController extends Controller
                           ->orWhere('stock_quantity', '<=', 10);
                 })->count();
         } else {
-            $productsQuery = BranchProduct::with(['product.category', 'branch']);
+            // Business admin/superadmin: show all branches' products
+            $productsQuery = BranchProduct::whereIn('branch_id', $branchIds)
+                ->with(['product.category', 'branch']);
             if ($filterUncategorized) {
                 $productsQuery->whereHas('product', function($q) {
                     $q->whereNull('category_id');
@@ -115,12 +122,15 @@ class ProductController extends Controller
             // Get paginated products for display
             $products = $productsQuery->orderBy('updated_at', 'desc')->paginate(15);
 
-            $totalProducts = Product::count();
-            $inStoreProducts = Product::whereHas('branchProducts')->count();
-            $lowStockProducts = BranchProduct::where(function($query) {
-                $query->whereColumn('stock_quantity', '<=', 'reorder_level')
-                      ->orWhere('stock_quantity', '<=', 10);
-            })->distinct('product_id')->count('product_id');
+            // Calculate stats for all accessible branches
+            $totalProducts = BranchProduct::whereIn('branch_id', $branchIds)->count();
+            $inStoreProducts = BranchProduct::whereIn('branch_id', $branchIds)
+                ->where('stock_quantity', '>', 0)->count();
+            $lowStockProducts = BranchProduct::whereIn('branch_id', $branchIds)
+                ->where(function($query) {
+                    $query->whereColumn('stock_quantity', '<=', 'reorder_level')
+                          ->orWhere('stock_quantity', '<=', 10);
+                })->count();
         }
 
         // Calculate financial metrics for ALL products (not just paginated)
@@ -182,7 +192,8 @@ class ProductController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
-            'category_id' => 'required|exists:categories,id',
+            'category_id' => 'nullable|exists:categories,id',
+            'new_category_name' => 'nullable|string|max:255',
             'image' => 'nullable|image|max:2048',
 
             // optional branch/stock fields
@@ -195,6 +206,14 @@ class ProductController extends Controller
             // Box quantity fields (now required)
             'quantity_of_boxes' => 'required|integer|min:0',
             'quantity_per_box' => 'required|integer|min:1',
+            
+            // Weight-based selling fields (optional)
+            'selling_mode' => 'nullable|in:unit,weight,box,both',
+            'box_weight' => 'nullable|numeric|min:0',
+            'price_per_kilo' => 'nullable|numeric|min:0',
+            'price_per_box' => 'nullable|numeric|min:0',
+            'weight_unit' => 'nullable|in:kg,g,ton,lb,oz',
+            'price_per_unit_weight' => 'nullable|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -234,6 +253,18 @@ class ProductController extends Controller
             $validatedData['business_id'] = $businessId;
             $validatedData['added_by'] = Auth::id();
 
+            // Handle category creation if new category name provided
+            if ($request->input('category_id') === 'new' && $request->filled('new_category_name')) {
+                $newCategory = \App\Models\Category::create([
+                    'business_id' => $businessId,
+                    'name' => $request->input('new_category_name'),
+                    'description' => 'Created during product addition',
+                    'is_active' => true,
+                    'display_order' => 999,
+                ]);
+                $validatedData['category_id'] = $newCategory->id;
+            }
+
             // Calculate total inventory from boxes and units per box
             $totalBoxes = $request->input('quantity_of_boxes', 0);
             $unitsPerBox = $request->input('quantity_per_box', 1);
@@ -243,6 +274,26 @@ class ProductController extends Controller
             $validatedData['total_boxes'] = $totalBoxes;
             $validatedData['total_units'] = $totalUnits;
             $validatedData['assigned_units'] = 0; // Nothing assigned yet
+
+            // For weight-based selling, calculate default price if not provided
+            $sellingMode = $request->input('selling_mode', 'unit');
+            if (($sellingMode === 'weight' || $sellingMode === 'box' || $sellingMode === 'both') && empty($validatedData['price'])) {
+                $boxWeight = $request->input('box_weight', 0); // Weight per box in kg
+                $pricePerKilo = $request->input('price_per_kilo', 0);
+                
+                if ($boxWeight > 0 && $pricePerKilo > 0) {
+                    // Calculate price per unit: (box_weight × price_per_kilo) / units_per_box
+                    $pricePerUnit = ($boxWeight * $pricePerKilo) / $unitsPerBox;
+                    $validatedData['price'] = round($pricePerUnit, 2);
+                } elseif (!empty($request->input('price_per_box'))) {
+                    // If price per box is provided, calculate per unit
+                    $pricePerBox = $request->input('price_per_box');
+                    $validatedData['price'] = round($pricePerBox / $unitsPerBox, 2);
+                } elseif ($pricePerKilo > 0) {
+                    // Fallback to price per kilo if no box weight
+                    $validatedData['price'] = $pricePerKilo;
+                }
+            }
 
             // Handle product image upload (stored in 'image' field)
             if ($request->hasFile('image')) {
@@ -275,9 +326,45 @@ class ProductController extends Controller
                     'quantity_per_box' => $unitsPerBox,
                 ];
                 
-                if ($request->filled('price')) $bpData['price'] = $request->input('price');
-                if ($request->filled('cost_price')) $bpData['cost_price'] = $request->input('cost_price');
+                // Use provided price or fall back to product's default price
+                if ($request->filled('price')) {
+                    $bpData['price'] = $request->input('price');
+                } elseif ($product->price) {
+                    $bpData['price'] = $product->price;
+                }
+                
+                if ($request->filled('cost_price')) {
+                    $bpData['cost_price'] = $request->input('cost_price');
+                } elseif ($product->cost_price) {
+                    $bpData['cost_price'] = $product->cost_price;
+                }
+                
                 if ($request->filled('reorder_level')) $bpData['reorder_level'] = $request->input('reorder_level');
+                
+                // Add weight-based pricing fields (use provided or fall back to product defaults)
+                if ($request->filled('price_per_kilo')) {
+                    $bpData['price_per_kilo'] = $request->input('price_per_kilo');
+                } elseif ($product->price_per_kilo) {
+                    $bpData['price_per_kilo'] = $product->price_per_kilo;
+                }
+                
+                if ($request->filled('price_per_box')) {
+                    $bpData['price_per_box'] = $request->input('price_per_box');
+                } elseif ($product->price_per_box) {
+                    $bpData['price_per_box'] = $product->price_per_box;
+                }
+                
+                if ($request->filled('weight_unit')) {
+                    $bpData['weight_unit'] = $request->input('weight_unit');
+                } elseif ($product->weight_unit) {
+                    $bpData['weight_unit'] = $product->weight_unit;
+                }
+                
+                if ($request->filled('price_per_unit_weight')) {
+                    $bpData['price_per_unit_weight'] = $request->input('price_per_unit_weight');
+                } elseif ($product->price_per_unit_weight) {
+                    $bpData['price_per_unit_weight'] = $product->price_per_unit_weight;
+                }
                 
                 $branchProduct = \App\Models\BranchProduct::create($bpData);
                 

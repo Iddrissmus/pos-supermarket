@@ -3,8 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Branch;
+use App\Models\BranchRequest;
 use App\Models\Business;
+use App\Models\User;
+use App\Notifications\BranchRequestCreated;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
 
 class BranchController extends Controller
 {
@@ -38,23 +43,61 @@ class BranchController extends Controller
         $validated = $request->validate([
             'business_id' => 'required|exists:businesses,id',
             'name' => 'required|string|max:255',
+            'location' => 'required|string|max:255',
             'address' => 'nullable|string|max:500',
-            'contact' => 'nullable|string|max:50',
-            'region' => 'nullable|string|max:100',
+            'phone' => 'nullable|string|max:50',
+            'email' => 'nullable|email|max:255',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
+            'notes' => 'nullable|string|max:1000',
         ]);
 
         $business = Business::findOrFail($validated['business_id']);
-        $user = auth()->user();
+        $user = Auth::user();
 
+        // Check permission
         if ($user->role === 'business_admin' && $business->business_admin_id !== $user->id) {
             abort(403, 'You can only add branches to your own business.');
         }
 
-        Branch::create($validated);
+        // Business admins create requests, superadmins create directly
+        if ($user->role === 'business_admin') {
+            // Create branch request for superadmin approval
+            $branchRequest = BranchRequest::create([
+                'business_id' => $validated['business_id'],
+                'requested_by' => $user->id,
+                'branch_name' => $validated['name'],
+                'location' => $validated['location'],
+                'address' => $validated['address'] ?? null,
+                'phone' => $validated['phone'] ?? null,
+                'email' => $validated['email'] ?? null,
+                'latitude' => $validated['latitude'] ?? null,
+                'longitude' => $validated['longitude'] ?? null,
+                'notes' => $validated['notes'] ?? null,
+                'status' => 'pending',
+            ]);
 
-        return redirect()->route('businesses.index')->with('success', 'Branch created successfully!');
+            // Notify all superadmins
+            $superadmins = User::where('role', 'superadmin')->get();
+            Notification::send($superadmins, new BranchRequestCreated($branchRequest));
+
+            return redirect()->route('businesses.index')
+                ->with('success', 'Branch request submitted successfully! Waiting for superadmin approval.');
+        } else {
+            // Superadmin creates branch directly
+            Branch::create([
+                'business_id' => $validated['business_id'],
+                'name' => $validated['name'],
+                'address' => $validated['address'],
+                'contact' => $validated['phone'],
+                'region' => $validated['location'],
+                'latitude' => $validated['latitude'],
+                'longitude' => $validated['longitude'],
+            ]);
+
+            return redirect()->route('businesses.index')
+                ->with('success', 'Branch created successfully!');
+        }
     }
 
     public function update(Request $request, string $id)

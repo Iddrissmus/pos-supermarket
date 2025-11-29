@@ -31,44 +31,132 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Category *</label>
-                    <select id="product_category" name="category_id" required class="mt-1 block w-full border rounded-md p-2">
-                        <option value="">-- Select Category --</option>
-                        @php
-                            $user = auth()->user();
-                            $categories = \App\Models\Category::where('business_id', $user->business_id)
-                                ->active()
-                                ->parents()
-                                ->with('subcategories')
-                                ->orderBy('display_order')
-                                ->get();
-                        @endphp
-                        @foreach($categories as $category)
-                            <optgroup label="{{ $category->name }}">
+                    <div class="relative">
+                        <!-- Search Input -->
+                        <input type="text" 
+                            id="category_search" 
+                            placeholder="Search categories..." 
+                            class="w-full border rounded-md p-2 pr-10"
+                            autocomplete="off"
+                        />
+                        <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+                        
+                        <!-- Hidden select for form submission -->
+                        <select id="product_category" name="category_id" required class="hidden">
+                            <option value="">-- Select Category --</option>
+                            @php
+                                $user = auth()->user();
+                                $categories = \App\Models\Category::where('business_id', $user->business_id)
+                                    ->active()
+                                    ->parents()
+                                    ->with('subcategories')
+                                    ->orderBy('display_order')
+                                    ->get();
+                            @endphp
+                            @foreach($categories as $category)
                                 @if($category->subcategories->isEmpty())
-                                    <option value="{{ $category->id }}">
+                                    <option value="{{ $category->id }}" data-name="{{ strtolower($category->name) }}">
                                         {{ $category->name }}
                                     </option>
                                 @else
                                     @foreach($category->subcategories as $subcategory)
-                                        <option value="{{ $subcategory->id }}">
-                                            {{ $subcategory->name }}
+                                        <option value="{{ $subcategory->id }}" data-name="{{ strtolower($subcategory->name) }}" data-parent="{{ strtolower($category->name) }}">
+                                            {{ $category->name }} → {{ $subcategory->name }}
                                         </option>
                                     @endforeach
                                 @endif
-                            </optgroup>
-                        @endforeach
-                    </select>
-                    <small class="text-gray-500">Select the most specific category for this product</small>
+                            @endforeach
+                            <option value="new">+ Create New Category</option>
+                        </select>
+                        
+                        <!-- Dropdown Results -->
+                        <div id="category_dropdown" class="hidden absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                            <div id="category_results"></div>
+                            <div class="border-t p-2 hover:bg-gray-50 cursor-pointer text-blue-600" data-value="new">
+                                <i class="fas fa-plus-circle"></i> Create New Category
+                            </div>
+                        </div>
+                    </div>
+                    <input type="text" id="new_category_name" name="new_category_name" placeholder="Enter new category name" class="mt-2 hidden w-full border rounded-md p-2" />
+                    <small class="text-gray-500">Search and select category or create a new one</small>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
+                <!-- Weight-Based Selling (Optional) - MOVED TO TOP -->
+                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <h3 class="text-sm font-semibold text-purple-900 mb-3 flex items-center gap-2">
+                        <i class="fas fa-weight"></i>
+                        Weight-Based Selling (Optional)
+                    </h3>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Selling Mode</label>
+                        <select id="selling_mode" name="selling_mode" class="block w-full border rounded-md p-2">
+                            <option value="unit">By Unit (Default)</option>
+                            <option value="weight">By Weight</option>
+                            <option value="box">By Box</option>
+                            <option value="both">Both Unit & Weight</option>
+                        </select>
+                    </div>
+
+                    <div id="weight_fields" class="space-y-4 hidden">
+                        <!-- Box Weight -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Weight per Box (kg)</label>
+                            <input id="box_weight" name="box_weight" type="number" step="0.001" min="0" class="mt-1 block w-full border rounded-md p-2" placeholder="e.g., 12.500" />
+                            <p class="text-xs text-gray-500 mt-1">Optional: Weight of one full box in kilograms</p>
+                        </div>
+
+                        <!-- Price Per Kilo -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Price per Kilogram</label>
+                            <input id="price_per_kilo" name="price_per_kilo" type="number" step="0.01" min="0" class="mt-1 block w-full border rounded-md p-2" placeholder="e.g., 25.00" />
+                            <p class="text-xs text-gray-500 mt-1">Selling price per kg</p>
+                        </div>
+
+                        <!-- Price Per Box -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Price per Box</label>
+                            <input id="price_per_box" name="price_per_box" type="number" step="0.01" min="0" class="mt-1 block w-full border rounded-md p-2" placeholder="e.g., 300.00" />
+                            <p class="text-xs text-gray-500 mt-1">Selling price for complete box</p>
+                        </div>
+
+                        <!-- Other Weight Units -->
+                        <div class="grid grid-cols-2 gap-4 pt-3 border-t border-purple-200">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Alternative Weight Unit</label>
+                                <select id="weight_unit" name="weight_unit" class="block w-full border rounded-md p-2">
+                                    <option value="">-- None --</option>
+                                    <option value="g">Grams (g)</option>
+                                    <option value="kg">Kilograms (kg)</option>
+                                    <option value="ton">Tons</option>
+                                    <option value="lb">Pounds (lb)</option>
+                                    <option value="oz">Ounces (oz)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Price per Unit Weight</label>
+                                <input id="price_per_unit_weight" name="price_per_unit_weight" type="number" step="0.01" min="0" class="mt-1 block w-full border rounded-md p-2" placeholder="e.g., 0.025" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-purple-700 mt-3">
+                        <i class="fas fa-info-circle"></i>
+                        Enable weight-based selling for products like rice, flour, sugar sold by weight
+                    </p>
+                </div>
+
+                <!-- Regular Pricing -->
+                <div id="regular_pricing" class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Selling Price *</label>
-                        <input id="product_price" name="price" type="number" step="0.01" required class="mt-1 block w-full border rounded-md p-2" />
+                        <label class="block text-sm font-medium text-gray-700">Selling Price <span id="price_required">*</span></label>
+                        <input id="product_price" name="price" type="number" step="0.01" class="mt-1 block w-full border rounded-md p-2" />
+                        <p class="text-xs text-gray-500 mt-1" id="price_hint">Price per unit</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Cost Price *</label>
                         <input id="product_cost_price" name="cost_price" type="number" step="0.01" required class="mt-1 block w-full border rounded-md p-2" />
+                        <p class="text-xs text-gray-500 mt-1">Your purchase cost per unit</p>
                     </div>
                 </div>
 
@@ -141,6 +229,144 @@ document.addEventListener('DOMContentLoaded', function() {
 
     quantityOfBoxesInput.addEventListener('input', calculateTotalUnits);
     quantityPerBoxInput.addEventListener('input', calculateTotalUnits);
+
+    // Category searchable dropdown
+    const categorySearch = document.getElementById('category_search');
+    const categorySelect = document.getElementById('product_category');
+    const categoryDropdown = document.getElementById('category_dropdown');
+    const categoryResults = document.getElementById('category_results');
+    const newCategoryInput = document.getElementById('new_category_name');
+
+    // Build category options array for searching
+    const categoryOptions = Array.from(categorySelect.options).filter(opt => opt.value !== '').map(opt => ({
+        value: opt.value,
+        text: opt.textContent.trim(),
+        name: opt.dataset.name || '',
+        parent: opt.dataset.parent || ''
+    }));
+
+    function filterCategories(searchTerm) {
+        const term = searchTerm.toLowerCase();
+        return categoryOptions.filter(opt => {
+            if (opt.value === 'new') return false;
+            return opt.name.includes(term) || opt.parent.includes(term);
+        });
+    }
+
+    function showDropdown() {
+        categoryDropdown.classList.remove('hidden');
+    }
+
+    function hideDropdown() {
+        setTimeout(() => categoryDropdown.classList.add('hidden'), 200);
+    }
+
+    categorySearch.addEventListener('focus', function() {
+        const filtered = filterCategories(this.value);
+        renderResults(filtered);
+        showDropdown();
+    });
+
+    categorySearch.addEventListener('input', function() {
+        const filtered = filterCategories(this.value);
+        renderResults(filtered);
+        showDropdown();
+    });
+
+    categorySearch.addEventListener('blur', hideDropdown);
+
+    function renderResults(results) {
+        if (results.length === 0) {
+            categoryResults.innerHTML = '<div class="p-3 text-gray-500 text-sm">No categories found</div>';
+            return;
+        }
+
+        categoryResults.innerHTML = results.map(cat => 
+            `<div class="p-2 hover:bg-blue-50 cursor-pointer border-b" data-value="${cat.value}">
+                ${cat.text}
+            </div>`
+        ).join('');
+
+        // Add click handlers
+        categoryResults.querySelectorAll('[data-value]').forEach(el => {
+            el.addEventListener('click', function() {
+                selectCategory(this.dataset.value, this.textContent.trim());
+            });
+        });
+    }
+
+    // Handle "Create New Category" click
+    categoryDropdown.querySelector('[data-value="new"]').addEventListener('click', function() {
+        selectCategory('new', '+ Create New Category');
+    });
+
+    function selectCategory(value, text) {
+        categorySelect.value = value;
+        if (value === 'new') {
+            categorySearch.value = '';
+            newCategoryInput.classList.remove('hidden');
+            newCategoryInput.required = true;
+            categorySelect.required = false;
+        } else {
+            categorySearch.value = text;
+            newCategoryInput.classList.add('hidden');
+            newCategoryInput.required = false;
+            categorySelect.required = true;
+        }
+        hideDropdown();
+    }
+
+    // Show all categories on initial focus
+    categorySearch.addEventListener('focus', function() {
+        if (!this.value) {
+            renderResults(categoryOptions.filter(opt => opt.value !== 'new'));
+        }
+    });
+
+    // Old category change handler (keep for compatibility)
+    categorySelect.addEventListener('change', function() {
+        if (this.value === 'new') {
+            newCategoryInput.classList.remove('hidden');
+            newCategoryInput.required = true;
+            categorySelect.required = false;
+        } else {
+            newCategoryInput.classList.add('hidden');
+            newCategoryInput.required = false;
+            categorySelect.required = true;
+        }
+    });
+
+    // Weight-based selling toggle
+    const sellingModeSelect = document.getElementById('selling_mode');
+    const weightFieldsDiv = document.getElementById('weight_fields');
+    const priceInput = document.getElementById('product_price');
+    const priceRequired = document.getElementById('price_required');
+    const priceHint = document.getElementById('price_hint');
+
+    function toggleWeightFields() {
+        const mode = sellingModeSelect.value;
+        if (mode === 'weight' || mode === 'box' || mode === 'both') {
+            weightFieldsDiv.classList.remove('hidden');
+            // Disable selling price for weight-based selling (use weight pricing instead)
+            priceInput.disabled = true;
+            priceInput.required = false;
+            priceInput.value = ''; // Clear the value
+            priceRequired.classList.add('hidden');
+            priceHint.textContent = 'Not used for weight-based selling';
+            priceInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+        } else {
+            weightFieldsDiv.classList.add('hidden');
+            // Enable and require selling price for unit-based selling
+            priceInput.disabled = false;
+            priceInput.required = true;
+            priceRequired.classList.remove('hidden');
+            priceHint.textContent = 'Price per unit';
+            priceInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
+        }
+    }
+
+    sellingModeSelect.addEventListener('change', toggleWeightFields);
+    toggleWeightFields(); // Initialize on page load
 
     nameInput.addEventListener('blur', function() {
         if (this.value && !skuInput.value) {

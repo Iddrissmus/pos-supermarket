@@ -21,10 +21,24 @@ class Product extends Model
         'total_boxes',
         'total_units',
         'assigned_units',
+        'box_weight',
+        'selling_mode',
+        'price',
+        'cost_price',
+        'price_per_kilo',
+        'price_per_box',
+        'weight_unit',
+        'price_per_unit_weight',
     ];
 
     protected $casts = [
         'is_local_supplier_product' => 'boolean',
+        'box_weight' => 'decimal:3',
+        'price' => 'decimal:2',
+        'cost_price' => 'decimal:2',
+        'price_per_kilo' => 'decimal:2',
+        'price_per_box' => 'decimal:2',
+        'price_per_unit_weight' => 'decimal:2',
     ];
 
     protected static function boot()

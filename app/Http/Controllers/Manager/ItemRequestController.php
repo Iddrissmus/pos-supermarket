@@ -6,8 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\StockTransfer;
 use App\Models\Product;
 use App\Models\Branch;
+use App\Models\BranchProduct;
+use App\Imports\ItemRequestImport;
+use App\Exports\ItemRequestTemplateExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ItemRequestController extends Controller
 {
@@ -104,6 +108,11 @@ class ItemRequestController extends Controller
             return back()->with('error', 'You already have a pending request for this product from this branch.');
         }
 
+        // Fetch pricing information from source branch product
+        $sourceBranchProduct = BranchProduct::where('branch_id', $validated['from_branch_id'])
+            ->where('product_id', $validated['product_id'])
+            ->first();
+
         StockTransfer::create([
             'from_branch_id' => $validated['from_branch_id'],
             'to_branch_id' => $manager->branch_id,
@@ -115,6 +124,13 @@ class ItemRequestController extends Controller
             'status' => 'pending',
             'requested_by' => $manager->id,
             'requested_at' => now(),
+            // Include pricing information from source branch
+            'price' => $sourceBranchProduct->price ?? null,
+            'cost_price' => $sourceBranchProduct->cost_price ?? null,
+            'price_per_kilo' => $sourceBranchProduct->price_per_kilo ?? null,
+            'price_per_box' => $sourceBranchProduct->price_per_box ?? null,
+            'weight_unit' => $sourceBranchProduct->weight_unit ?? null,
+            'price_per_unit_weight' => $sourceBranchProduct->price_per_unit_weight ?? null,
         ]);
 
         return back()->with('success', 'Item request submitted successfully. Requesting ' . $validated['quantity_of_boxes'] . ' boxes (' . $totalQuantity . ' units) for review by an administrator.');
@@ -137,5 +153,41 @@ class ItemRequestController extends Controller
         ]);
 
         return back()->with('success', 'Request cancelled successfully.');
+    }
+
+    /**
+     * Download bulk item request template
+     */
+    public function downloadTemplate()
+    {
+        return Excel::download(new ItemRequestTemplateExport(), 'item_request_template.xlsx');
+    }
+
+    /**
+     * Upload and process bulk item requests
+     */
+    public function uploadBulkRequests(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls|max:2048',
+        ]);
+
+        try {
+            $import = new ItemRequestImport();
+            Excel::import($import, $request->file('file'));
+
+            $errors = $import->getErrors();
+            
+            if (!empty($errors)) {
+                $errorMessage = "Import completed with errors:\n" . implode("\n", $errors);
+                return back()->with('warning', $import->getSummary())
+                    ->with('import_errors', $errors);
+            }
+
+            return back()->with('success', $import->getSummary());
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to process bulk upload: ' . $e->getMessage());
+        }
     }
 }

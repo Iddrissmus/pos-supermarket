@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Receipt #{{ $sale->id }} | {{ config('app.name', 'POS Supermarket') }}</title>
+    <title>Receipt #{{ $sale->id }} | {{ optional($sale->branch->business)->name ?? config('app.name', 'POS Supermarket') }}</title>
     <style>
         :root {
             color-scheme: light;
@@ -157,26 +157,32 @@
 <body>
     <div class="receipt-container">
         <div class="receipt-header">
-            <h1>{{ config('app.name', 'POS Supermarket') }}</h1>
-            <p>Official Receipt</p>
+            <h1>{{ optional($sale->branch->business)->name ?? config('app.name', 'POS Supermarket') }}</h1>
+            <p style="font-size: 16px; font-weight: 600; margin-top: 4px;">{{ optional($sale->branch)->name ?? 'Branch' }}</p>
+            <p style="margin-top: 8px;">{{ optional($sale->branch)->address ?? '' }}</p>
+            @if($sale->branch && $sale->branch->contact)
+                <p style="margin-top: 4px;">Tel: {{ $sale->branch->contact }}</p>
+            @endif
+            <p style="margin-top: 12px; font-size: 12px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 12px;">Official Sales Receipt</p>
         </div>
         <div class="receipt-body">
             <div class="info-grid">
                 <div class="info-card">
                     <div class="info-label">Receipt No.</div>
-                    <div class="info-value">#{{ $sale->id }}</div>
+                    <div class="info-value">#{{ str_pad($sale->id, 6, '0', STR_PAD_LEFT) }}</div>
                 </div>
                 <div class="info-card">
                     <div class="info-label">Date &amp; Time</div>
-                    <div class="info-value">{{ $sale->created_at->format('M d, Y h:i A') }}</div>
-                </div>
-                <div class="info-card">
-                    <div class="info-label">Branch</div>
-                    <div class="info-value">{{ optional($sale->branch)->display_label ?? 'Branch' }}</div>
+                    <div class="info-value">{{ $sale->created_at->format('M d, Y') }}</div>
+                    <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">{{ $sale->created_at->format('h:i A') }}</div>
                 </div>
                 <div class="info-card">
                     <div class="info-label">Cashier</div>
-                    <div class="info-value">{{ $sale->cashier->name ?? 'Cashier' }}</div>
+                    <div class="info-value">{{ $sale->cashier->name ?? 'Staff' }}</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-label">Payment Method</div>
+                    <div class="info-value" style="text-transform: capitalize;">{{ str_replace('_', ' ', $sale->payment_method) }}</div>
                 </div>
                 @if($sale->customer)
                 <div class="info-card">
@@ -184,10 +190,6 @@
                     <div class="info-value">{{ $sale->customer->display_name }}</div>
                 </div>
                 @endif
-                <div class="info-card">
-                    <div class="info-label">Payment Method</div>
-                    <div class="info-value" style="text-transform: capitalize;">{{ str_replace('_', ' ', $sale->payment_method) }}</div>
-                </div>
             </div>
 
             <div>
@@ -252,7 +254,11 @@
             </div>
         </div>
         <div class="receipt-footer">
-            <p>Thank you for shopping with {{ config('app.name', 'POS Supermarket') }}!</p>
+            <p style="margin-bottom: 16px;">Thank you for shopping with us!</p>
+            <p style="font-size: 12px; color: #6b7280;">{{ optional($sale->branch->business)->name ?? config('app.name', 'POS Supermarket') }}</p>
+            @if($sale->branch && $sale->branch->region)
+                <p style="font-size: 11px; color: #9ca3af; margin-top: 4px;">{{ $sale->branch->region }}, Ghana</p>
+            @endif
             <div class="button-group">
                 <button class="button button-secondary" onclick="window.history.back();">Back</button>
                 <button class="button button-primary" onclick="window.print();">Print Receipt</button>

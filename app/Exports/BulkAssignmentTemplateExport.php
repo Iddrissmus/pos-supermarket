@@ -22,7 +22,11 @@ class BulkAssignmentTemplateExport implements FromArray, WithHeadings, WithStyle
                 1,
                 150.00,
                 120.00,
-                5
+                5,
+                6.00,    // Price per kilo
+                150.00,  // Price per box
+                'kg',    // Weight unit
+                6.00,    // Price per unit weight
             ],
             [
                 'Frytol Cooking Oil 1L',
@@ -31,7 +35,11 @@ class BulkAssignmentTemplateExport implements FromArray, WithHeadings, WithStyle
                 12,
                 25.50,
                 18.00,
-                10
+                10,
+                '',
+                '',
+                '',
+                '',
             ],
             [
                 'Golden Tree Sugar 1kg',
@@ -40,7 +48,11 @@ class BulkAssignmentTemplateExport implements FromArray, WithHeadings, WithStyle
                 20,
                 8.50,
                 6.00,
-                8
+                8,
+                8.50,
+                170.00,
+                'kg',
+                8.50,
             ],
             [
                 'Gino Tomato Paste 70g',
@@ -49,7 +61,11 @@ class BulkAssignmentTemplateExport implements FromArray, WithHeadings, WithStyle
                 50,
                 3.50,
                 2.50,
-                20
+                20,
+                '',
+                '',
+                '',
+                '',
             ],
             [
                 'Nido Milk Powder 400g',
@@ -58,7 +74,11 @@ class BulkAssignmentTemplateExport implements FromArray, WithHeadings, WithStyle
                 24,
                 35.00,
                 28.00,
-                6
+                6,
+                87.50,
+                840.00,
+                'kg',
+                87.50,
             ],
         ];
     }
@@ -72,7 +92,11 @@ class BulkAssignmentTemplateExport implements FromArray, WithHeadings, WithStyle
             'Units per Box',
             'Selling Price',
             'Cost Price',
-            'Reorder Level'
+            'Reorder Level',
+            'Price per Kilo',
+            'Price per Box',
+            'Weight Unit',
+            'Price per Unit Weight',
         ];
     }
 

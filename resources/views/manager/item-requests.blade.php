@@ -11,9 +11,15 @@
                 <h1 class="text-2xl font-bold">Stock Transfer Requests</h1>
                 <p class="text-sm text-green-100 mt-1">Request stock transfers for {{ $manager->branch->display_label }}</p>
             </div>
-            <a href="{{ route('dashboard.manager') }}" class="bg-green-700 hover:bg-green-800 px-4 py-2 rounded-lg font-medium transition-colors">
-                <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
-            </a>
+            <div class="flex gap-3">
+                <button onclick="document.getElementById('bulkUploadModal').classList.remove('hidden')" 
+                        class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg font-medium transition-colors">
+                    <i class="fas fa-file-excel mr-2"></i>Bulk Request
+                </button>
+                <a href="{{ route('dashboard.manager') }}" class="bg-green-700 hover:bg-green-800 px-4 py-2 rounded-lg font-medium transition-colors">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                </a>
+            </div>
         </div>
     </div>
 
@@ -23,6 +29,29 @@
             <div class="flex items-start">
                 <i class="fas fa-check-circle text-green-600 mr-3 mt-0.5"></i>
                 <span class="block sm:inline">{{ session('success') }}</span>
+            </div>
+        </div>
+    @endif
+
+    @if(session('warning'))
+        <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <div class="flex items-start">
+                <i class="fas fa-exclamation-triangle text-yellow-600 mr-3 mt-0.5"></i>
+                <div class="flex-1">
+                    <span class="block sm:inline">{{ session('warning') }}</span>
+                    @if(session('import_errors'))
+                        <div class="mt-2 text-sm">
+                            <details class="cursor-pointer">
+                                <summary class="font-semibold">View Errors ({{ count(session('import_errors')) }})</summary>
+                                <ul class="list-disc list-inside mt-2 pl-4">
+                                    @foreach(session('import_errors') as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </details>
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
     @endif
@@ -445,4 +474,88 @@ function updateTotalUnits() {
     }
 }
 </script>
+
+<!-- Bulk Upload Modal -->
+<div id="bulkUploadModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-lg bg-white">
+        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 -m-5 mb-4 px-6 py-4 rounded-t-lg">
+            <div class="flex justify-between items-center text-white">
+                <div class="flex items-center">
+                    <i class="fas fa-file-excel text-2xl mr-3"></i>
+                    <div>
+                        <h3 class="text-xl font-bold">Bulk Item Request Upload</h3>
+                        <p class="text-sm text-indigo-100 mt-1">Request multiple items at once using Excel</p>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('bulkUploadModal').classList.add('hidden')" 
+                        class="text-white hover:text-gray-200 transition-colors">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="mt-4 space-y-4">
+            <!-- Instructions -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 class="font-semibold text-blue-900 mb-2 flex items-center">
+                    <i class="fas fa-info-circle mr-2"></i>How to Use Bulk Upload
+                </h4>
+                <ol class="list-decimal list-inside text-sm text-blue-800 space-y-1">
+                    <li>Download the Excel template below</li>
+                    <li>Fill in the product details, source branch, and quantities</li>
+                    <li>Save the file and upload it using the form below</li>
+                    <li>Review the results and any errors</li>
+                </ol>
+            </div>
+
+            <!-- Template Download -->
+            <div class="flex justify-center">
+                <a href="{{ route('manager.item-requests.download-template') }}" 
+                   class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors inline-flex items-center shadow-md">
+                    <i class="fas fa-download mr-2"></i>Download Template
+                </a>
+            </div>
+
+            <!-- Upload Form -->
+            <form method="POST" action="{{ route('manager.item-requests.bulk-upload') }}" enctype="multipart/form-data" class="space-y-4">
+                @csrf
+                <div>
+                    <label for="bulk_file" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-upload text-indigo-600 mr-1"></i>Upload Filled Template
+                    </label>
+                    <input type="file" id="bulk_file" name="file" accept=".xlsx,.xls" required
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    <p class="text-xs text-gray-500 mt-1">Accepted formats: .xlsx, .xls (Max: 2MB)</p>
+                </div>
+
+                <!-- Template Format Info -->
+                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <h4 class="font-semibold text-purple-900 mb-2">Expected Columns:</h4>
+                    <div class="text-sm text-purple-800 space-y-1">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div><i class="fas fa-check text-purple-600 mr-1"></i>Product Name or Barcode</div>
+                            <div><i class="fas fa-check text-purple-600 mr-1"></i>From Branch</div>
+                            <div><i class="fas fa-check text-purple-600 mr-1"></i>Quantity of Boxes</div>
+                            <div><i class="fas fa-check text-purple-600 mr-1"></i>Units per Box</div>
+                            <div class="col-span-2"><i class="fas fa-check text-purple-600 mr-1"></i>Reason (Optional)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" 
+                            onclick="document.getElementById('bulkUploadModal').classList.add('hidden')"
+                            class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2.5 rounded-lg font-medium transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-medium transition-colors inline-flex items-center shadow-md">
+                        <i class="fas fa-upload mr-2"></i>Upload & Process
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @endsection

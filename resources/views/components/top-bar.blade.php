@@ -27,7 +27,26 @@
     </div>
     
     <div class="flex items-center space-x-6">
-        <!-- Notification Bell (for Business Admin and Manager only) -->
+        <!-- Branch Requests Bell (for SuperAdmin only) -->
+        @if($user->role === 'superadmin')
+            @php
+                $pendingRequestsCount = \App\Models\BranchRequest::where('status', 'pending')->count();
+            @endphp
+            <div class="relative">
+                <a href="{{ route('superadmin.branch-requests.index', ['status' => 'pending']) }}" 
+                   class="text-white hover:bg-white/10 p-2 rounded-lg transition-colors block relative"
+                   title="Pending Branch Requests">
+                    <i class="fas fa-clipboard-list text-lg"></i>
+                    @if($pendingRequestsCount > 0)
+                        <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold">
+                            {{ $pendingRequestsCount }}
+                        </span>
+                    @endif
+                </a>
+            </div>
+        @endif
+        
+        <!-- Notification Bell (for Business Admin and Manager) -->
         @if(in_array($user->role, ['business_admin', 'manager']))
             <div class="relative">
                 <x-notification-bell />

@@ -8,7 +8,7 @@ use App\Models\Branch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-class CashierController extends Controller
+class StaffController extends Controller
 {
     /**
      * Display all managers and cashiers for business admin management

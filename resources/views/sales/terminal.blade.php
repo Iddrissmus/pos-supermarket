@@ -18,6 +18,89 @@
     $defaultBranchId = optional(auth()->user())->branch_id ?? ($branches->first()->id ?? null);
 @endphp
 
+<!-- Cash Drawer Opening Modal -->
+@if(auth()->user()->role === 'cashier' && !$hasActiveSession)
+<div id="cash-drawer-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4">
+        <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl">
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                <i class="fas fa-cash-register"></i>
+                Open Cash Drawer
+            </h2>
+            <p class="text-blue-100 text-sm mt-1">Start your shift by recording your opening cash amount</p>
+        </div>
+        
+        <form id="open-drawer-form" class="p-6 space-y-5">
+            @csrf
+            
+            <!-- Date Display -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-calendar-day text-gray-400"></i> Date
+                </label>
+                <input 
+                    type="text" 
+                    value="{{ \Carbon\Carbon::today()->format('l, F j, Y') }}" 
+                    readonly 
+                    class="w-full border border-gray-300 rounded-lg px-4 py-2.5 bg-gray-50 text-gray-700 font-medium"
+                >
+            </div>
+
+            <!-- Opening Amount -->
+            <div>
+                <label for="opening_amount" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-money-bill-wave text-green-600"></i> Opening Amount (Cash in Drawer) <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-3 flex items-center text-gray-500 font-semibold">GH₵</span>
+                    <input 
+                        type="number" 
+                        id="opening_amount" 
+                        name="opening_amount" 
+                        step="0.01" 
+                        min="0" 
+                        required 
+                        class="w-full border border-gray-300 rounded-lg pl-12 pr-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="0.00"
+                        autofocus
+                    >
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Count all cash in your drawer before starting</p>
+            </div>
+
+            <!-- Opening Notes -->
+            <div>
+                <label for="opening_notes" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-sticky-note text-yellow-600"></i> Notes (Optional)
+                </label>
+                <textarea 
+                    id="opening_notes" 
+                    name="opening_notes" 
+                    rows="3" 
+                    class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                    placeholder="E.g., Change denominations, special instructions..."
+                ></textarea>
+            </div>
+
+            <!-- Error Display -->
+            <div id="drawer-error" class="hidden bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                <i class="fas fa-exclamation-circle"></i> <span id="drawer-error-text"></span>
+            </div>
+
+            <!-- Submit Button -->
+            <button 
+                type="submit" 
+                id="open-drawer-btn"
+                class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-200 flex items-center justify-center gap-2"
+            >
+                <i class="fas fa-lock-open"></i>
+                <span>Open Drawer & Start Shift</span>
+            </button>
+        </form>
+    </div>
+</div>
+@endif
+
 <div class="min-h-screen bg-gray-100 py-6">
     <div class="max-w-7xl mx-auto space-y-6">
         <header class="bg-white rounded-xl shadow px-6 py-4 flex flex-wrap items-center justify-between gap-4">
@@ -133,7 +216,14 @@
                     </div>
                 </div>
 
-                <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 min-h-[200px]"></div>
+                <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 min-h-[200px]" data-drawer-active="{{ auth()->user()->role === 'cashier' ? ($hasActiveSession ? 'true' : 'false') : 'true' }}"></div>
+                
+                @if(auth()->user()->role === 'cashier' && !$hasActiveSession)
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                    <i class="fas fa-exclamation-triangle text-yellow-600 text-2xl mb-2"></i>
+                    <p class="text-sm text-yellow-800 font-medium">Cash drawer must be opened before processing sales</p>
+                </div>
+                @endif
             </section>
 
             <section class="bg-white rounded-xl shadow p-6 space-y-6">
@@ -229,9 +319,9 @@
             <div id="receipt-summary" class="space-y-3 text-sm text-gray-700"></div>
 
             <div class="flex flex-col sm:flex-row sm:justify-end gap-3 pt-2">
-                <a id="print-receipt-link" href="#" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-2 border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 hidden">
+                <a id="print-receipt-link" href="#" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-2 border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50">
                     <i class="fas fa-receipt"></i>
-                    <span>Open full receipt</span>
+                    <span>View & Print Receipt</span>
                 </a>
                 <button type="button" class="inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg" data-close-modal id="done-receipt-btn">
                     <i class="fas fa-check"></i>
@@ -287,22 +377,76 @@ document.addEventListener('DOMContentLoaded', function() {
             if (receiptSummary) receiptSummary.innerHTML = '';
         });
     });
-});
-document.addEventListener('DOMContentLoaded', function() {
-    const doneReceiptBtn = document.getElementById('done-receipt-btn');
-    const printReceiptLink = document.getElementById('print-receipt-link');
-    if (doneReceiptBtn && printReceiptLink) {
-        doneReceiptBtn.addEventListener('click', function() {
-            printReceiptLink.classList.remove('hidden');
+
+    // Cash Drawer Opening Modal Handler
+    const openDrawerForm = document.getElementById('open-drawer-form');
+    if (openDrawerForm) {
+        openDrawerForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('open-drawer-btn');
+            const errorDiv = document.getElementById('drawer-error');
+            const errorText = document.getElementById('drawer-error-text');
+            const openingAmount = document.getElementById('opening_amount').value;
+            const openingNotes = document.getElementById('opening_notes').value;
+            
+            // Disable button and show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Opening...</span>';
+            errorDiv.classList.add('hidden');
+            
+            try {
+                const response = await fetch('{{ route("cash-drawer.open") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        opening_amount: openingAmount,
+                        opening_notes: openingNotes
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Hide modal and reload page to refresh session status
+                    document.getElementById('cash-drawer-modal').remove();
+                    window.location.reload();
+                } else {
+                    // Show error
+                    errorText.textContent = data.error || 'Failed to open cash drawer. Please try again.';
+                    errorDiv.classList.remove('hidden');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-lock-open"></i> <span>Open Drawer & Start Shift</span>';
+                }
+            } catch (error) {
+                console.error('Error opening cash drawer:', error);
+                errorText.textContent = 'Network error. Please check your connection and try again.';
+                errorDiv.classList.remove('hidden');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-lock-open"></i> <span>Open Drawer & Start Shift</span>';
+            }
         });
     }
 });
     
-// Category filter function for POS terminal
-function filterTerminalByCategory(categoryId) {
-    document.getElementById('terminal_category_id').value = categoryId;
-    document.getElementById('terminalCategoryForm').submit();
-}
+// Category filter function for POS terminal (now updates state directly)
+window.filterTerminalByCategory = function(categoryId) {
+    // Find the state object from the POS terminal scope
+    if (typeof renderProducts !== 'undefined') {
+        // Update hidden input
+        document.getElementById('terminal_category_id').value = categoryId;
+        // Update state
+        window.posTerminalState.selectedCategory = categoryId;
+        // Re-render products
+        renderProducts();
+    } else {
+        // Fallback: submit form if renderProducts not available
+        document.getElementById('terminalCategoryForm').submit();
+    }
+};
 
     window.POS_TERMINAL = {
         branches: @json($branchOptions),
@@ -348,15 +492,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const receiptSummary = document.getElementById('receipt-summary');
     const printReceiptLink = document.getElementById('print-receipt-link');
 
-    const categorySelect = document.getElementById('categoryFilter');
+    const categoryInput = document.getElementById('terminal_category_id');
     const state = {
         branchId: Number.isFinite(parseInt(posData.defaultBranchId, 10)) ? parseInt(posData.defaultBranchId, 10) : (posData.branches[0]?.id ?? null),
         cart: [],
         search: '',
         paymentMethod: paymentRadios.length ? paymentRadios[0].value : 'cash',
         currentTaxData: null,
-        selectedCategory: categorySelect ? categorySelect.value : '',
+        selectedCategory: categoryInput ? categoryInput.value : '',
     };
+    
+    // Expose state to global scope for category button handlers
+    window.posTerminalState = state;
 
     const formatMoney = (value) => `₵${(Number(value ?? 0)).toFixed(2)}`;
 
@@ -457,6 +604,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     };
+    
+    // Expose renderProducts globally for category button handlers
+    window.renderProducts = renderProducts;
 
     const updateCategoryFilter = () => {
         if (!categorySelect) return;
@@ -607,6 +757,15 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const addToCart = async (productId) => {
+        // Check if cash drawer is active (for cashiers only)
+        const productGrid = document.getElementById('product-grid');
+        const drawerActive = productGrid?.dataset.drawerActive;
+        
+        if (drawerActive === 'false') {
+            notify('Please open your cash drawer before adding items to cart.', 'error');
+            return;
+        }
+        
         const product = getProduct(productId);
         if (!product) {
             notify('Product not available for this branch.', 'error');
@@ -801,7 +960,17 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
-        printReceiptLink.href = data.receipt_url || '#';
+        // Set receipt URL and handle button state
+        if (data.receipt_url) {
+            printReceiptLink.href = data.receipt_url;
+            printReceiptLink.classList.remove('opacity-50', 'cursor-not-allowed');
+            printReceiptLink.removeAttribute('onclick');
+        } else {
+            printReceiptLink.href = '#';
+            printReceiptLink.classList.add('opacity-50', 'cursor-not-allowed');
+            printReceiptLink.setAttribute('onclick', 'event.preventDefault(); alert("Receipt URL not available");');
+        }
+        
         receiptModal.classList.remove('hidden');
     };
 
@@ -884,13 +1053,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Category select change -> client-side filter
-    if (categorySelect) {
-        categorySelect.addEventListener('change', (event) => {
-            state.selectedCategory = event.target.value;
-            renderProducts();
-        });
-    }
+    // Note: Category filtering is now handled by button clicks via filterTerminalByCategory()
+    // Old dropdown handler removed since we now use category buttons
 
     if (productGrid) {
         productGrid.addEventListener('click', async (event) => {
