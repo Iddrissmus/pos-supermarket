@@ -99,6 +99,11 @@ class User extends Authenticatable
         return $this->hasMany(Sale::class, 'cashier_id');
     }
 
+    public function activityLogs()
+    {
+        return $this->hasMany(ActivityLog::class);
+    }
+
     // Role checking methods
     public function isSuperAdmin(): bool
     {

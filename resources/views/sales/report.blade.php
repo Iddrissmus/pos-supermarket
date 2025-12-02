@@ -11,9 +11,11 @@
                         <i class="fas fa-chart-line mr-3 text-blue-600"></i>Sales Dashboard
                     </h1>
                     <div class="flex space-x-4">
-                        <a href="{{ route('sales.terminal') }}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
-                            <i class="fas fa-cash-register mr-2"></i>POS Terminal
-                        </a>
+                        @if(auth()->user()->role === 'cashier')
+                            <a href="{{ route('sales.terminal') }}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
+                                <i class="fas fa-cash-register mr-2"></i>POS Terminal
+                            </a>
+                        @endif
                         <a href="{{ route('sales.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg">
                             <i class="fas fa-list mr-2"></i>All Sales
                         </a>
@@ -638,9 +640,11 @@
                         <i class="fas fa-chart-bar text-gray-400 text-6xl mb-4"></i>
                         <h3 class="text-lg font-medium text-gray-900 mb-2">No sales data for selected period</h3>
                         <p class="text-gray-500 mb-6">Try adjusting your date range or create some sales.</p>
-                        <a href="{{ route('sales.terminal') }}" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg">
-                            <i class="fas fa-cash-register mr-2"></i>Go to POS Terminal
-                        </a>
+                        @if(auth()->user()->role === 'cashier')
+                            <a href="{{ route('sales.terminal') }}" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg">
+                                <i class="fas fa-cash-register mr-2"></i>Go to POS Terminal
+                            </a>
+                        @endif
                     </div>
                 @endif
             </div>

@@ -13,9 +13,9 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\StockReceiptController;
 use App\Http\Controllers\Auth\RegisterController;
-use App\Http\Controllers\ReorderRequestController;
 use App\Http\Controllers\RequestApprovalController;
 use App\Http\Controllers\ProductDashboardController;
+use App\Http\Controllers\ProductReportController;
 use App\Http\Controllers\SuperAdmin\SystemUserController;
 use App\Http\Controllers\Admin\BranchAssignmentController;
 use App\Http\Controllers\Dashboard\CashierDashboardController;
@@ -244,6 +244,22 @@ Route::middleware('auth')->group(function () {
         Route::get('/sales/report', [SalesController::class, 'report'])->name('sales.report');
         Route::get('/sales/export/csv', [SalesController::class, 'exportCsv'])->name('sales.export.csv');
         Route::get('/sales/export/pdf', [SalesController::class, 'exportPdf'])->name('sales.export.pdf');
+        
+        // Product Analytics Reports
+        Route::prefix('product-reports')->name('product-reports.')->group(function () {
+            Route::get('/', [ProductReportController::class, 'index'])->name('index');
+            Route::get('/performance', [ProductReportController::class, 'performance'])->name('performance');
+            Route::get('/movement', [ProductReportController::class, 'movement'])->name('movement');
+            Route::get('/profitability', [ProductReportController::class, 'profitability'])->name('profitability');
+            Route::get('/trends', [ProductReportController::class, 'trends'])->name('trends');
+            Route::get('/inventory', [ProductReportController::class, 'inventory'])->name('inventory');
+        });
+
+        // Activity Logs (Business Admin only - Security monitoring)
+        Route::prefix('activity-logs')->name('activity-logs.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\ActivityLogController::class, 'index'])->name('index');
+            Route::get('/{activityLog}', [\App\Http\Controllers\ActivityLogController::class, 'show'])->name('show');
+        });
     });
 
     // Manager Dashboard - Can view their own dashboard
@@ -274,10 +290,6 @@ Route::middleware('auth')->group(function () {
             ->name('manager.item-requests.download-template');
         Route::post('/manager/item-requests/bulk-upload', [\App\Http\Controllers\Manager\ItemRequestController::class, 'uploadBulkRequests'])
             ->name('manager.item-requests.bulk-upload');
-            
-        // Manager views reorder requests for their branch
-        Route::get('/reorder-requests', [ReorderRequestController::class, 'index'])
-            ->name('reorder.requests');
         
         // Manager handles daily sales monitoring (but cannot make sales)
         Route::get('/manager/daily-sales', function () {
@@ -294,9 +306,9 @@ Route::middleware('auth')->group(function () {
             ->name('manager.local-product.store');
     });
 
-    // Manager & Cashier - Both can view sales (filtered by controller)
-    Route::middleware('role:manager,cashier')->group(function () {
-        // View sales (filtered in controller by role: cashiers see own, managers see branch)
+    // Business Admin, Manager & Cashier - All can view sales (filtered by controller)
+    Route::middleware('role:business_admin,manager,cashier')->group(function () {
+        // View sales (filtered in controller by role: cashiers see own, managers see branch, business admins see all in business)
         Route::get('/sales', [SalesController::class, 'index'])->name('sales.index');
         Route::get('/sales/{sale}', [SalesController::class, 'show'])->name('sales.show');
         Route::get('/sales/{sale}/receipt', [SalesController::class, 'receipt'])->name('sales.receipt');

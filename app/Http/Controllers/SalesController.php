@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Models\SaleItem;
 use App\Models\User;
 use App\Notifications\HighValueSaleNotification;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use App\Models\BranchProduct;
 use Illuminate\Support\Carbon;
@@ -40,9 +41,15 @@ class SalesController extends Controller
                 // Cashiers can only see their own sales
                 return $query->where('cashier_id', $user->id);
             })
-            ->when($user->branch_id && $user->role !== 'cashier', function ($query) use ($user) {
+            ->when($user->role === 'manager', function ($query) use ($user) {
                 // Managers see all sales from their branch
                 return $query->where('branch_id', $user->branch_id);
+            })
+            ->when($user->role === 'business_admin', function ($query) use ($user) {
+                // Business admins see all sales in their business
+                return $query->whereHas('branch', function ($q) use ($user) {
+                    $q->where('business_id', $user->business_id);
+                });
             })
             ->orderBy('created_at', 'desc')
             ->paginate(20);
@@ -292,6 +299,14 @@ class SalesController extends Controller
                 if ($sale->total > 500) {
                     $this->notifyHighValueSale($sale);
                 }
+
+                // Log sale creation activity
+                ActivityLogger::logModel('create', $sale, [], [
+                    'total' => $sale->total,
+                    'items_count' => count($validated['items']),
+                    'payment_method' => $sale->payment_method,
+                    'branch_id' => $sale->branch_id,
+                ]);
 
                 return $sale->fresh(['items.product', 'branch.business', 'cashier']);
             });
@@ -683,10 +698,17 @@ class SalesController extends Controller
             ? Carbon::parse($endDateInput)->endOfDay()
             : now()->endOfMonth();
 
-        // Base query - respect branch restrictions
+        // Base query - respect role-based restrictions
         $baseQuery = Sale::with(['items.product.primarySupplier', 'branch', 'cashier'])
-            ->when($user->branch_id, function ($query) use ($user) {
+            ->when($user->role === 'manager' || $user->role === 'cashier', function ($query) use ($user) {
+                // Managers and cashiers only see their branch
                 return $query->where('branch_id', $user->branch_id);
+            })
+            ->when($user->role === 'business_admin', function ($query) use ($user) {
+                // Business admins see all branches in their business
+                return $query->whereHas('branch', function ($q) use ($user) {
+                    $q->where('business_id', $user->business_id);
+                });
             })
             ->whereBetween('created_at', [$startDate, $endDate]);
 
@@ -703,8 +725,8 @@ class SalesController extends Controller
 
         // Branch comparison (only for users with access to multiple branches)
         $branchComparison = null;
-        if (!$user->branch_id) {
-            $branchComparison = $this->generateBranchComparison($startDate, $endDate);
+        if ($user->role === 'business_admin' || $user->role === 'superadmin') {
+            $branchComparison = $this->generateBranchComparison($startDate, $endDate, $user);
         }
 
         // Top products analysis
@@ -814,9 +836,12 @@ class SalesController extends Controller
     /**
      * Generate branch comparison data with optimized queries
      */
-    protected function generateBranchComparison(Carbon $startDate, Carbon $endDate): array
+    protected function generateBranchComparison(Carbon $startDate, Carbon $endDate, $user = null): array
     {
         $branches = Branch::with(['business'])
+            ->when($user && $user->role === 'business_admin', function ($query) use ($user) {
+                return $query->where('business_id', $user->business_id);
+            })
             ->whereHas('sales', function ($query) use ($startDate, $endDate) {
                 $query->whereBetween('created_at', [$startDate, $endDate]);
             })
@@ -1019,8 +1044,13 @@ class SalesController extends Controller
         $previousStart = $previousEnd->copy()->subDays($days - 1)->startOfDay();
 
         $previousSales = Sale::with('items')
-            ->when($user->branch_id, function ($query) use ($user) {
+            ->when($user->role === 'manager' || $user->role === 'cashier', function ($query) use ($user) {
                 return $query->where('branch_id', $user->branch_id);
+            })
+            ->when($user->role === 'business_admin', function ($query) use ($user) {
+                return $query->whereHas('branch', function ($q) use ($user) {
+                    $q->where('business_id', $user->business_id);
+                });
             })
             ->whereBetween('created_at', [$previousStart, $previousEnd])
             ->get();

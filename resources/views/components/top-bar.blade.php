@@ -11,10 +11,6 @@
 
 <div class="top-bar flex items-center justify-between px-6 {{ $currentRole['bg'] }}" x-data="{ quickActionsOpen: false, profileOpen: false }">
     <div class="flex items-center space-x-4">
-        <button type="button" class="text-white focus:outline-none hover:bg-white/10 p-2 rounded-lg transition-colors" @click="collapsed = !collapsed">
-            <i class="fas fa-bars text-lg"></i>
-        </button>
-        
         <div class="flex items-center space-x-3">
             <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
                 <i class="fas fa-shopping-cart text-white text-lg"></i>

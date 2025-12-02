@@ -13,41 +13,52 @@
     @stack('styles')
     <style>
         .sidebar {
-            width: 280px;
+            width: 64px;
             height: calc(100vh - 60px);
             position: fixed;
             left: 0;
             top: 60px;
             z-index: 40;
             overflow-y: auto;
+            overflow-x: hidden;
             transition: width 0.3s ease;
         }
         
-        body.collapsed .sidebar {
-            width: 64px;
+        .sidebar:hover {
+            width: 280px;
         }
         
-        body.collapsed .sidebar-text {
+        .sidebar-text {
+            display: none;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .sidebar:hover .sidebar-text {
+            display: inline;
+        }
+        
+        .sidebar-footer {
             display: none;
         }
         
-        body.collapsed .sidebar-footer {
-            display: none;
+        .sidebar:hover .sidebar-footer {
+            display: block;
         }
         
-        body.collapsed .sidebar-item {
+        .sidebar-item {
             justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar:hover .sidebar-item {
+            justify-content: flex-start;
         }
         
         .sidebar-icon {
             min-width: 20px;
             text-align: center;
-        }
-        
-        .sidebar-text {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
         
         .sidebar-item {
@@ -99,16 +110,12 @@
         }
         
         body.auth .main-content {
-            margin-left: 280px;
-        }
-        
-        body.auth.collapsed .main-content {
             margin-left: 64px;
         }
     </style>
     <meta name="csrf-token" content="{{ csrf_token() }}">
 </head>
-<body class="bg-gray-50 @auth auth @endauth" x-data="{ collapsed: false }" x-bind:class="{'collapsed': collapsed}">
+<body class="bg-gray-50 @auth auth @endauth">
     @auth
         <!-- Top Bar -->
         <x-top-bar />

@@ -5,6 +5,7 @@ use App\Models\Branch;
 use App\Models\Product;
 use App\Models\Business;
 use App\Models\Category;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use App\Models\BranchProduct;
 use App\Imports\ProductsImport;
@@ -379,6 +380,14 @@ class ProductController extends Controller
                 ]);
             }
             
+            // Log product creation activity
+            ActivityLogger::logModel('create', $product, [], [
+                'name' => $product->name,
+                'stock_quantity' => $stockQty ?? 0,
+                'price' => $product->price,
+                'branch_id' => $branchId ?? null,
+            ]);
+            
             // JSON for AJAX, redirect for regular form submit
             if ($request->wantsJson() || $request->ajax() || $request->expectsJson()) {
                 return response()->json([
@@ -428,7 +437,22 @@ class ProductController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        // Capture old values for logging
+        $oldValues = [
+            'name' => $product->name,
+            'price' => $product->price,
+            'stock' => $product->stock,
+        ];
+
         $product->update($validator->validated());
+        
+        // Log product update activity
+        ActivityLogger::logModel('update', $product, $oldValues, [
+            'name' => $product->name,
+            'price' => $product->price,
+            'stock' => $product->stock,
+        ]);
+        
         return response()->json($product)->with('success', 'Product updated successfully');
     }
 
@@ -438,8 +462,16 @@ class ProductController extends Controller
     public function destroy(string $id)
     {
         $product = Product::findOrFail($id);
+        
+        // Log product deletion activity
+        ActivityLogger::logModel('delete', $product, [
+            'name' => $product->name,
+            'stock' => $product->stock ?? 0,
+            'price' => $product->price ?? 0,
+        ], []);
+        
         $product->delete();
-        return response()->json(['message' => 'Business deleted successfully'], 204);
+        return response()->json(['message' => 'Product deleted successfully'], 204);
     }
 
     /**

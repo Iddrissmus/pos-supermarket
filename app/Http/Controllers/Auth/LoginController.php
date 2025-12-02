@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -128,8 +129,14 @@ class LoginController extends Controller
                 ]);
             }
 
+            // Log successful login
+            ActivityLogger::logAuth('login', $user->name . ' logged in as ' . ucfirst(str_replace('_', ' ', $expectedRole)), $user->id);
+
             return redirect()->route($redirectRoute);
         }
+
+        // Log failed login attempt
+        ActivityLogger::logFailedLogin($credentials['email']);
 
         throw ValidationException::withMessages([
             'email' => ['The provided credentials do not match our records.'],
@@ -172,6 +179,9 @@ class LoginController extends Controller
                 ]);
             }
 
+            // Log successful login
+            ActivityLogger::logAuth('login', $user->name . ' logged in as ' . ucfirst(str_replace('_', ' ', $user->role)), $user->id);
+
             switch ($user->role) {
                 case 'superadmin':
                     return redirect()->route('dashboard.superadmin');
@@ -192,6 +202,9 @@ class LoginController extends Controller
             }
         }
 
+        // Log failed login attempt
+        ActivityLogger::logFailedLogin($credentials['email']);
+
         throw ValidationException::withMessages([
             'email' => ['The provided credentials do not match our records.'],
         ]);
@@ -202,8 +215,14 @@ class LoginController extends Controller
      */
     public function logout(Request $request)
     {
-        // Store the role before logging out
-        $role = Auth::user()->role ?? null;
+        // Store user info before logging out
+        $user = Auth::user();
+        $role = $user->role ?? null;
+        
+        // Log logout activity
+        if ($user) {
+            ActivityLogger::logAuth('logout', $user->name . ' logged out', $user->id);
+        }
         
         Auth::logout();
         

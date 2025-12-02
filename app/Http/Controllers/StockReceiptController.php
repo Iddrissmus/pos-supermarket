@@ -6,6 +6,7 @@ use App\Models\Branch;
 use App\Models\Product;
 use App\Models\Supplier;
 use App\Models\StockReceipt;
+use App\Services\ActivityLogger;
 use App\Services\ReceiveStockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -92,6 +93,15 @@ class StockReceiptController extends Controller
 
         try {
             $receipt = $this->receiveStockService->receiveStock($validated);
+            
+            // Log stock receipt activity
+            ActivityLogger::logModel('create', $receipt, [], [
+                'receipt_number' => $receipt->receipt_number,
+                'supplier_id' => $receipt->supplier_id,
+                'branch_id' => $receipt->branch_id,
+                'items_count' => count($validated['items']),
+                'total_value' => $receipt->total_cost ?? 0,
+            ]);
             
             return redirect()->route('stock-receipts.show', $receipt)
                 ->with('success', 'Stock received successfully! Receipt #' . $receipt->receipt_number);

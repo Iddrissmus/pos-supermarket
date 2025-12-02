@@ -7,6 +7,7 @@ use App\Models\BranchRequest;
 use App\Models\Business;
 use App\Models\User;
 use App\Notifications\BranchRequestCreated;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
@@ -81,11 +82,18 @@ class BranchController extends Controller
             $superadmins = User::where('role', 'superadmin')->get();
             Notification::send($superadmins, new BranchRequestCreated($branchRequest));
 
+            // Log branch request activity
+            ActivityLogger::logModel('create', $branchRequest, [], [
+                'branch_name' => $branchRequest->branch_name,
+                'location' => $branchRequest->location,
+                'business_id' => $branchRequest->business_id,
+            ]);
+
             return redirect()->route('businesses.index')
                 ->with('success', 'Branch request submitted successfully! Waiting for superadmin approval.');
         } else {
             // Superadmin creates branch directly
-            Branch::create([
+            $branch = Branch::create([
                 'business_id' => $validated['business_id'],
                 'name' => $validated['name'],
                 'address' => $validated['address'],
@@ -93,6 +101,13 @@ class BranchController extends Controller
                 'region' => $validated['location'],
                 'latitude' => $validated['latitude'],
                 'longitude' => $validated['longitude'],
+            ]);
+
+            // Log branch creation activity
+            ActivityLogger::logModel('create', $branch, [], [
+                'name' => $branch->name,
+                'location' => $branch->region,
+                'business_id' => $branch->business_id,
             ]);
 
             return redirect()->route('businesses.index')

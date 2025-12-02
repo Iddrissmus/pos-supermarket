@@ -163,6 +163,22 @@
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider sidebar-text">Operations</p>
                     </div>
                     
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('requests.approval.*') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-clipboard-check sidebar-icon {{ request()->routeIs('requests.approval.*') ? 'text-blue-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('requests.approval.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('requests.approval.*') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">
+                            Request Approvals
+                            @php
+                                $pendingCount = \App\Models\StockTransfer::where('status', 'pending')
+                                    ->whereHas('fromBranch', function($q) {
+                                        $q->where('business_id', auth()->user()->business_id);
+                                    })->count();
+                            @endphp
+                            @if($pendingCount > 0)
+                                <span class="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full">{{ $pendingCount }}</span>
+                            @endif
+                        </a>
+                    </div>
+                    
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('customers.*') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
                         <i class="fas fa-users sidebar-icon {{ request()->routeIs('customers.*') ? 'text-blue-600' : 'text-gray-500' }}"></i>
                         <a href="{{ route('customers.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('customers.*') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">Customers</a>
@@ -171,6 +187,20 @@
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('sales.report*') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
                         <i class="fas fa-chart-bar sidebar-icon {{request()->routeIs('sales.report*') ? 'text-blue-600' : 'text-gray-500'}}"></i>
                         <a href="{{route('sales.report')}}" class="sidebar-text ml-3 text-sm {{request()->routeIs('sales.report*') ? 'text-blue-600 font-semibold' : 'text-gray-700'}}">Business Reports</a>
+                    </div>
+                    
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('product-reports.*') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-chart-pie sidebar-icon {{request()->routeIs('product-reports.*') ? 'text-blue-600' : 'text-gray-500'}}"></i>
+                        <a href="{{route('product-reports.index')}}" class="sidebar-text ml-3 text-sm {{request()->routeIs('product-reports.*') ? 'text-blue-600 font-semibold' : 'text-gray-700'}}">Product Analytics</a>
+                    </div>
+
+                    <div class="mt-4 mb-2 px-3">
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider sidebar-text">Security</p>
+                    </div>
+
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('activity-logs.*') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-history sidebar-icon {{request()->routeIs('activity-logs.*') ? 'text-blue-600' : 'text-gray-500'}}"></i>
+                        <a href="{{route('activity-logs.index')}}" class="sidebar-text ml-3 text-sm {{request()->routeIs('activity-logs.*') ? 'text-blue-600 font-semibold' : 'text-gray-700'}}">Activity Logs</a>
                     </div>
 
                 @elseif($role === 'manager')
@@ -184,14 +214,14 @@
                         <a href="{{ route('manager.cashiers.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('manager.cashiers.*') ? 'text-green-600 font-semibold' : 'text-gray-700' }}">Manage Cashiers</a>
                     </div>
                     
-                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('sales.index') ? 'active bg-green-50' : 'hover:bg-gray-50' }}">
-                        <i class="fas fa-receipt sidebar-icon {{ request()->routeIs('sales.index') ? 'text-green-600' : 'text-gray-500' }}"></i>
-                        <a href="{{ route('sales.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('sales.index') ? 'text-green-600 font-semibold' : 'text-gray-700' }}">Branch Sales</a>
-                    </div>
-                    
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('sales.report*') ? 'active bg-green-50' : 'hover:bg-gray-50' }}">
                         <i class="fas fa-chart-line sidebar-icon {{ request()->routeIs('sales.report*') ? 'text-green-600' : 'text-gray-500' }}"></i>
                         <a href="{{ route('sales.report') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('sales.report*') ? 'text-green-600 font-semibold' : 'text-gray-700' }}">Sales Reports</a>
+                    </div>
+                    
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('product-reports.*') ? 'active bg-green-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-chart-pie sidebar-icon {{ request()->routeIs('product-reports.*') ? 'text-green-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('product-reports.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('product-reports.*') ? 'text-green-600 font-semibold' : 'text-gray-700' }}">Product Analytics</a>
                     </div>
                     
                     <div class="mt-4 mb-2 px-3">
@@ -220,11 +250,6 @@
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('manager.item-requests.*') ? 'active bg-green-50' : 'hover:bg-gray-50' }}">
                         <i class="fas fa-box-open sidebar-icon {{ request()->routeIs('manager.item-requests.*') ? 'text-green-600' : 'text-gray-500' }}"></i>
                         <a href="{{ route('manager.item-requests.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('manager.item-requests.*') ? 'text-green-600 font-semibold' : 'text-gray-700' }}">Request Items</a>
-                    </div>
-                    
-                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('reorder.requests') ? 'active bg-green-50' : 'hover:bg-gray-50' }}">
-                        <i class="fas fa-redo sidebar-icon {{ request()->routeIs('reorder.requests') ? 'text-green-600' : 'text-gray-500' }}"></i>
-                        <a href="{{ route('reorder.requests') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('reorder.requests') ? 'text-green-600 font-semibold' : 'text-gray-700' }}">Reorder Requests</a>
                     </div>
                     
                     <div class="mt-4 mb-2 px-3">
