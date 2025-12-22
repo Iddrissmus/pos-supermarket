@@ -31,14 +31,22 @@
     <div class="bg-white shadow rounded-lg p-6">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-semibold text-gray-800">Create New Staff Member</h2>
-            @if($branches->count() > 0)
-                <div class="text-sm text-gray-600">
-                    <span class="font-medium">Your Branch:</span> 
-                    <span class="text-blue-600">{{ $branches->first()->display_label }}</span>
-                </div>
-            @endif
+            <button type="button" 
+                    onclick="toggleCreateForm()"
+                    id="toggleFormBtn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg inline-flex items-center transition">
+                <i class="fas fa-plus mr-2"></i>Create Staff
+            </button>
         </div>
-        <form method="POST" action="{{ route('admin.cashiers.create') }}" class="space-y-4">
+        
+        @if($branches->count() > 0)
+            <div class="text-sm text-gray-600 mb-4">
+                <span class="font-medium">Your Branch:</span> 
+                <span class="text-blue-600">{{ $branches->first()->display_label }}</span>
+            </div>
+        @endif
+        
+        <form method="POST" action="{{ route('admin.cashiers.create') }}" class="space-y-4 hidden" id="createStaffForm">
             @csrf
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -188,6 +196,7 @@
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current Branch</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -204,6 +213,36 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm text-gray-900">{{ $manager->email }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    @if($manager->status === 'active')
+                                        <span class="px-3 py-1 inline-flex text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                            <i class="fas fa-check-circle mr-1"></i>Active
+                                        </span>
+                                    @elseif($manager->status === 'inactive')
+                                        <span class="px-3 py-1 inline-flex text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                            <i class="fas fa-pause-circle mr-1"></i>Inactive
+                                        </span>
+                                    @else
+                                        <span class="px-3 py-1 inline-flex text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                            <i class="fas fa-ban mr-1"></i>Blocked
+                                        </span>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    @if($manager->status === 'active')
+                                        <span class="px-3 py-1 inline-flex text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                            <i class="fas fa-check-circle mr-1"></i>Active
+                                        </span>
+                                    @elseif($manager->status === 'inactive')
+                                        <span class="px-3 py-1 inline-flex text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                            <i class="fas fa-pause-circle mr-1"></i>Inactive
+                                        </span>
+                                    @else
+                                        <span class="px-3 py-1 inline-flex text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                            <i class="fas fa-ban mr-1"></i>Blocked
+                                        </span>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     @if($manager->branch)
@@ -250,6 +289,46 @@
                                         </form>
                                     @endif
                                     
+                                    <!-- Status Management -->
+                                    <div class="inline-flex items-center space-x-1 ml-2">
+                                        @if($manager->status !== 'active')
+                                            <form method="POST" action="{{ route('admin.cashiers.activate') }}" class="inline">
+                                                @csrf
+                                                <input type="hidden" name="user_id" value="{{ $manager->id }}">
+                                                <button type="submit" 
+                                                        class="text-green-600 hover:text-green-900 text-sm"
+                                                        title="Activate">
+                                                    <i class="fas fa-check-circle"></i>
+                                                </button>
+                                            </form>
+                                        @endif
+                                        
+                                        @if($manager->status !== 'inactive')
+                                            <form method="POST" action="{{ route('admin.cashiers.deactivate') }}" class="inline">
+                                                @csrf
+                                                <input type="hidden" name="user_id" value="{{ $manager->id }}">
+                                                <button type="submit" 
+                                                        class="text-yellow-600 hover:text-yellow-900 text-sm"
+                                                        title="Deactivate">
+                                                    <i class="fas fa-pause-circle"></i>
+                                                </button>
+                                            </form>
+                                        @endif
+                                        
+                                        @if($manager->status !== 'blocked')
+                                            <form method="POST" action="{{ route('admin.cashiers.block') }}" class="inline">
+                                                @csrf
+                                                <input type="hidden" name="user_id" value="{{ $manager->id }}">
+                                                <button type="submit" 
+                                                        class="text-red-600 hover:text-red-900 text-sm"
+                                                        title="Block"
+                                                        onclick="return confirm('Are you sure you want to block {{ $manager->name }}?')">
+                                                    <i class="fas fa-ban"></i>
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                    
                                     <!-- Delete manager -->
                                     <form method="POST" action="{{ route('admin.cashiers.delete') }}" class="inline">
                                         @csrf
@@ -257,7 +336,7 @@
                                         <button type="submit" 
                                                 class="text-red-600 hover:text-red-900 text-sm ml-2"
                                                 onclick="return confirm('Are you sure you want to permanently delete {{ $manager->name }}? This action cannot be undone.')">
-                                            Delete
+                                            <i class="fas fa-trash"></i>
                                         </button>
                                     </form>
                                 </td>
@@ -293,6 +372,7 @@
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current Branch</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -309,6 +389,21 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm text-gray-900">{{ $cashier->email }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    @if($cashier->status === 'active')
+                                        <span class="px-3 py-1 inline-flex text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                            <i class="fas fa-check-circle mr-1"></i>Active
+                                        </span>
+                                    @elseif($cashier->status === 'inactive')
+                                        <span class="px-3 py-1 inline-flex text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                            <i class="fas fa-pause-circle mr-1"></i>Inactive
+                                        </span>
+                                    @else
+                                        <span class="px-3 py-1 inline-flex text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                            <i class="fas fa-ban mr-1"></i>Blocked
+                                        </span>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     @if($cashier->branch)
@@ -355,6 +450,46 @@
                                         </form>
                                     @endif
                                     
+                                    <!-- Status Management -->
+                                    <div class="inline-flex items-center space-x-1 ml-2 border-l border-gray-300 pl-2">
+                                        @if($cashier->status !== 'active')
+                                            <form method="POST" action="{{ route('admin.cashiers.activate') }}" class="inline">
+                                                @csrf
+                                                <input type="hidden" name="user_id" value="{{ $cashier->id }}">
+                                                <button type="submit" 
+                                                        class="text-green-600 hover:text-green-900 text-sm"
+                                                        title="Activate">
+                                                    <i class="fas fa-check-circle"></i>
+                                                </button>
+                                            </form>
+                                        @endif
+                                        
+                                        @if($cashier->status !== 'inactive')
+                                            <form method="POST" action="{{ route('admin.cashiers.deactivate') }}" class="inline">
+                                                @csrf
+                                                <input type="hidden" name="user_id" value="{{ $cashier->id }}">
+                                                <button type="submit" 
+                                                        class="text-yellow-600 hover:text-yellow-900 text-sm"
+                                                        title="Deactivate">
+                                                    <i class="fas fa-pause-circle"></i>
+                                                </button>
+                                            </form>
+                                        @endif
+                                        
+                                        @if($cashier->status !== 'blocked')
+                                            <form method="POST" action="{{ route('admin.cashiers.block') }}" class="inline">
+                                                @csrf
+                                                <input type="hidden" name="user_id" value="{{ $cashier->id }}">
+                                                <button type="submit" 
+                                                        class="text-red-600 hover:text-red-900 text-sm"
+                                                        title="Block"
+                                                        onclick="return confirm('Are you sure you want to block {{ $cashier->name }}?')">
+                                                    <i class="fas fa-ban"></i>
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                    
                                     <!-- Delete cashier -->
                                     <form method="POST" action="{{ route('admin.cashiers.delete') }}" class="inline">
                                         @csrf
@@ -362,7 +497,7 @@
                                         <button type="submit" 
                                                 class="text-red-600 hover:text-red-900 text-sm ml-2"
                                                 onclick="return confirm('Are you sure you want to permanently delete {{ $cashier->name }}? This action cannot be undone.')">
-                                            Delete
+                                            <i class="fas fa-trash"></i>
                                         </button>
                                     </form>
                                 </td>
@@ -447,6 +582,26 @@ function updateBranchOptions() {
             option.disabled = false;
         }
     });
+}
+
+function toggleCreateForm() {
+    const form = document.getElementById('createStaffForm');
+    const btn = document.getElementById('toggleFormBtn');
+    
+    if (form.classList.contains('hidden')) {
+        form.classList.remove('hidden');
+        btn.innerHTML = '<i class="fas fa-times mr-2"></i>Cancel';
+        btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+        btn.classList.add('bg-gray-600', 'hover:bg-gray-700');
+    } else {
+        form.classList.add('hidden');
+        btn.innerHTML = '<i class="fas fa-plus mr-2"></i>Create Staff';
+        btn.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+        btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+        // Reset form
+        form.reset();
+        document.getElementById('generated-password-alert').classList.add('hidden');
+    }
 }
 </script>
 @endsection

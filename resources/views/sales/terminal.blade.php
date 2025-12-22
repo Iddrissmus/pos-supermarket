@@ -101,9 +101,9 @@
 </div>
 @endif
 
-<div class="min-h-screen bg-gray-100 py-6">
-    <div class="max-w-7xl mx-auto space-y-6">
-        <header class="bg-white rounded-xl shadow px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+<div class="min-h-screen bg-gray-100 py-2">
+    <div class="w-full mx-auto space-y-3 px-2 md:px-4">
+        <header class="bg-white rounded-lg shadow px-4 py-3 flex flex-wrap items-center justify-between gap-3">
             <div>
                 <h1 class="text-2xl font-semibold text-gray-900">POS Terminal</h1>
                 <p class="text-sm text-gray-500">Process in-store transactions quickly and accurately</p>
@@ -129,19 +129,17 @@
                     </div>
                 </div>
 
-                {{-- <button id="hold-order-button" type="button" class="inline-flex items-center gap-2 bg-gray-200 text-gray-500 px-4 py-2 rounded-lg cursor-not-allowed" title="Hold order is coming soon" disabled>
-                    <i class="fas fa-pause-circle"></i>
-                    <span>Hold Order</span>
-                </button> --}}
-                {{-- <button id="new-order-button" type="button" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
-                    <i class="fas fa-file-circle-plus"></i>
-                    <span>New Order</span>
-                </button> --}}
+                @if(auth()->user()->role === 'cashier' && $hasActiveSession)
+                <button id="close-drawer-button" type="button" class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
+                    <i class="fas fa-lock"></i>
+                    <span>Close Drawer</span>
+                </button>
+                @endif
             </div>
         </header>
 
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <section class="bg-white rounded-xl shadow p-6 xl:col-span-2 space-y-4">
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-3">
+            <section class="bg-white rounded-lg shadow p-4 xl:col-span-2 space-y-3">
                 {{-- <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div>
                         <h2 class="text-lg font-semibold text-gray-900">Product Catalog</h2>
@@ -160,7 +158,7 @@
                         >
                     </div>
                 </div> --}}
-                <div class="p-6 border-b border-gray-200 bg-gray-50">
+                <div class="p-4 border-b border-gray-200 bg-gray-50">
                     <div class="flex flex-col sm:flex-row gap-4 items-center justify-between">
                         <div>
                             <h2 class="text-lg font-semibold text-gray-900">Product Catalog</h2>
@@ -216,7 +214,7 @@
                     </div>
                 </div>
 
-                <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 min-h-[200px]" data-drawer-active="{{ auth()->user()->role === 'cashier' ? ($hasActiveSession ? 'true' : 'false') : 'true' }}"></div>
+                <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 min-h-[200px]" data-drawer-active="{{ auth()->user()->role === 'cashier' ? ($hasActiveSession ? 'true' : 'false') : 'true' }}"></div>
                 
                 @if(auth()->user()->role === 'cashier' && !$hasActiveSession)
                 <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
@@ -226,7 +224,7 @@
                 @endif
             </section>
 
-            <section class="bg-white rounded-xl shadow p-6 space-y-6">
+            <section class="bg-white rounded-lg shadow p-4 space-y-4">
                 <div class="flex items-center justify-between">
                     <div>
                         <h2 class="text-lg font-semibold text-gray-900">Current Sale</h2>
@@ -332,6 +330,135 @@
     </div>
 </div>
 
+<!-- Cash Drawer Closing Modal -->
+@if(auth()->user()->role === 'cashier' && $hasActiveSession)
+<div id="close-drawer-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-50">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4">
+        <div class="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4 rounded-t-xl">
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                <i class="fas fa-lock"></i>
+                Close Cash Drawer
+            </h2>
+            <p class="text-red-100 text-sm mt-1">End your shift by reconciling your cash drawer</p>
+        </div>
+        
+        <!-- Form Section -->
+        <div id="close-drawer-form-section">
+            <form id="close-drawer-form" class="p-6 space-y-5">
+                <div id="drawer-summary" class="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Opening Amount:</span>
+                        <span class="font-medium" id="summary-opening">₵0.00</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Cash Sales:</span>
+                        <span class="font-medium" id="summary-cash-sales">₵0.00</span>
+                    </div>
+                    <div class="flex justify-between border-t pt-2">
+                        <span class="text-gray-700 font-semibold">Expected Amount:</span>
+                        <span class="font-bold text-blue-600" id="summary-expected">₵0.00</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="actual_amount" class="block text-sm font-medium text-gray-700 mb-2">
+                        Actual Amount Counted <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" 
+                           id="actual_amount" 
+                           name="actual_amount" 
+                           step="0.01" 
+                           min="0" 
+                           required 
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                           placeholder="Enter actual cash amount">
+                    <p class="mt-1 text-xs text-gray-500">Count all cash in the drawer</p>
+                </div>
+
+                <div id="drawer-difference" class="hidden p-3 rounded-lg text-sm font-semibold">
+                    <div class="flex justify-between items-center">
+                        <span>Difference:</span>
+                        <span id="difference-amount">₵0.00</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="closing_notes" class="block text-sm font-medium text-gray-700 mb-2">
+                        Closing Notes (Optional)
+                    </label>
+                    <textarea id="closing_notes" 
+                              name="closing_notes" 
+                              rows="3" 
+                              maxlength="500"
+                              class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                              placeholder="Any notes about the closing..."></textarea>
+                    <p class="mt-1 text-xs text-gray-500">Max 500 characters</p>
+                </div>
+
+                <div id="drawer-close-error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg text-sm">
+                    <span id="drawer-close-error-text"></span>
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button type="button" 
+                            id="cancel-close-drawer" 
+                            class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            id="close-drawer-btn" 
+                            class="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center justify-center gap-2">
+                        <i class="fas fa-lock"></i>
+                        <span>Close Drawer</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Success Section -->
+        <div id="close-drawer-success-section" class="hidden p-6 space-y-5">
+            <div class="text-center">
+                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+                    <i class="fas fa-check-circle text-green-600 text-4xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Cash Drawer Closed Successfully!</h3>
+                <p class="text-sm text-gray-600 mb-6">Your cash drawer has been reconciled and closed.</p>
+            </div>
+
+            <div class="bg-gray-50 rounded-lg p-4 space-y-3 text-sm">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Opening Amount:</span>
+                    <span class="font-semibold text-gray-900" id="success-opening">₵0.00</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Cash Sales:</span>
+                    <span class="font-semibold text-gray-900" id="success-cash-sales">₵0.00</span>
+                </div>
+                <div class="flex justify-between items-center border-t pt-2">
+                    <span class="text-gray-700 font-semibold">Expected Amount:</span>
+                    <span class="font-bold text-blue-600" id="success-expected">₵0.00</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-700 font-semibold">Actual Amount:</span>
+                    <span class="font-bold text-gray-900" id="success-actual">₵0.00</span>
+                </div>
+                <div class="flex justify-between items-center border-t pt-2" id="success-difference-container">
+                    <span class="text-gray-700 font-semibold">Difference:</span>
+                    <span class="font-bold" id="success-difference">₵0.00</span>
+                </div>
+            </div>
+
+            <button type="button" 
+                    id="done-close-drawer" 
+                    class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-colors inline-flex items-center justify-center gap-2">
+                <i class="fas fa-check"></i>
+                <span>Done</span>
+            </button>
+        </div>
+    </div>
+</div>
+@endif
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const amountTenderedInput = document.getElementById('amount-tendered');
@@ -418,16 +545,198 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Show error
                     errorText.textContent = data.error || 'Failed to open cash drawer. Please try again.';
                     errorDiv.classList.remove('hidden');
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<i class="fas fa-lock-open"></i> <span>Open Drawer & Start Shift</span>';
                 }
             } catch (error) {
                 console.error('Error opening cash drawer:', error);
                 errorText.textContent = 'Network error. Please check your connection and try again.';
                 errorDiv.classList.remove('hidden');
+            } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-lock-open"></i> <span>Open Drawer & Start Shift</span>';
             }
+        });
+    }
+
+    // Cash Drawer Closing Modal Handler
+    const closeDrawerButton = document.getElementById('close-drawer-button');
+    const closeDrawerModal = document.getElementById('close-drawer-modal');
+    const closeDrawerForm = document.getElementById('close-drawer-form');
+    const cancelCloseDrawer = document.getElementById('cancel-close-drawer');
+    const actualAmountInput = document.getElementById('actual_amount');
+
+    // Load drawer status when opening modal
+    async function loadDrawerStatus() {
+        try {
+            const response = await fetch('{{ route("cash-drawer.status") }}');
+            const data = await response.json();
+            
+            if (data.has_session && data.session) {
+                const openingEl = document.getElementById('summary-opening');
+                const cashSalesEl = document.getElementById('summary-cash-sales');
+                const expectedEl = document.getElementById('summary-expected');
+                
+                if (openingEl) openingEl.textContent = `₵${parseFloat(data.session.opening_amount || 0).toFixed(2)}`;
+                if (cashSalesEl) cashSalesEl.textContent = `₵${parseFloat(data.cash_sales || 0).toFixed(2)}`;
+                if (expectedEl) expectedEl.textContent = `₵${parseFloat(data.current_expected || 0).toFixed(2)}`;
+                
+                if (actualAmountInput) {
+                    actualAmountInput.placeholder = `Expected: ₵${parseFloat(data.current_expected || 0).toFixed(2)}`;
+                }
+            }
+        } catch (error) {
+            console.error('Error loading drawer status:', error);
+        }
+    }
+
+    // Show close drawer modal
+    if (closeDrawerButton && closeDrawerModal) {
+        closeDrawerButton.addEventListener('click', async function() {
+            await loadDrawerStatus();
+            
+            // Reset modal state - show form, hide success
+            const formSection = document.getElementById('close-drawer-form-section');
+            const successSection = document.getElementById('close-drawer-success-section');
+            if (formSection) formSection.classList.remove('hidden');
+            if (successSection) successSection.classList.add('hidden');
+            
+            // Reset form
+            if (closeDrawerForm) closeDrawerForm.reset();
+            const differenceEl = document.getElementById('drawer-difference');
+            if (differenceEl) differenceEl.classList.add('hidden');
+            
+            closeDrawerModal.classList.remove('hidden');
+            closeDrawerModal.classList.add('flex', 'items-center', 'justify-center');
+        });
+    }
+
+    // Hide modal on cancel
+    if (cancelCloseDrawer && closeDrawerModal) {
+        cancelCloseDrawer.addEventListener('click', function() {
+            closeDrawerModal.classList.add('hidden');
+            if (closeDrawerForm) closeDrawerForm.reset();
+            const differenceEl = document.getElementById('drawer-difference');
+            if (differenceEl) differenceEl.classList.add('hidden');
+            
+            // Reset modal state
+            const formSection = document.getElementById('close-drawer-form-section');
+            const successSection = document.getElementById('close-drawer-success-section');
+            if (formSection) formSection.classList.remove('hidden');
+            if (successSection) successSection.classList.add('hidden');
+        });
+    }
+
+    // Calculate difference as user types
+    if (actualAmountInput) {
+        actualAmountInput.addEventListener('input', function() {
+            const expectedEl = document.getElementById('summary-expected');
+            const differenceEl = document.getElementById('drawer-difference');
+            const differenceAmountEl = document.getElementById('difference-amount');
+            
+            if (expectedEl && differenceEl && differenceAmountEl) {
+                const expected = parseFloat(expectedEl.textContent.replace(/[^\d.]/g, '')) || 0;
+                const actual = parseFloat(actualAmountInput.value) || 0;
+                const difference = actual - expected;
+                
+                if (actual > 0) {
+                    differenceEl.classList.remove('hidden');
+                    differenceAmountEl.textContent = `₵${difference.toFixed(2)}`;
+                    
+                    if (difference > 0) {
+                        differenceEl.className = 'p-3 rounded-lg text-sm font-semibold bg-green-50 text-green-700 border border-green-200';
+                    } else if (difference < 0) {
+                        differenceEl.className = 'p-3 rounded-lg text-sm font-semibold bg-red-50 text-red-700 border border-red-200';
+                    } else {
+                        differenceEl.className = 'p-3 rounded-lg text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200';
+                    }
+                } else {
+                    differenceEl.classList.add('hidden');
+                }
+            }
+        });
+    }
+
+    // Handle close drawer form submission
+    if (closeDrawerForm) {
+        closeDrawerForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('close-drawer-btn');
+            const errorDiv = document.getElementById('drawer-close-error');
+            const errorText = document.getElementById('drawer-close-error-text');
+            const actualAmount = document.getElementById('actual_amount').value;
+            const closingNotes = document.getElementById('closing_notes').value;
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Closing...</span>';
+            if (errorDiv) errorDiv.classList.add('hidden');
+            
+            try {
+                const response = await fetch('{{ route("cash-drawer.close") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        actual_amount: actualAmount,
+                        closing_notes: closingNotes
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to close cash drawer');
+                }
+
+                // Hide form and show success message
+                const formSection = document.getElementById('close-drawer-form-section');
+                const successSection = document.getElementById('close-drawer-success-section');
+                
+                if (formSection && successSection) {
+                    formSection.classList.add('hidden');
+                    successSection.classList.remove('hidden');
+                    
+                    // Populate success summary
+                    document.getElementById('success-opening').textContent = `₵${parseFloat(data.summary.opening_amount).toFixed(2)}`;
+                    document.getElementById('success-cash-sales').textContent = `₵${parseFloat(data.summary.cash_sales).toFixed(2)}`;
+                    document.getElementById('success-expected').textContent = `₵${parseFloat(data.summary.expected_amount).toFixed(2)}`;
+                    document.getElementById('success-actual').textContent = `₵${parseFloat(data.summary.actual_amount).toFixed(2)}`;
+                    
+                    const difference = parseFloat(data.summary.difference);
+                    const differenceEl = document.getElementById('success-difference');
+                    const differenceContainer = document.getElementById('success-difference-container');
+                    
+                    differenceEl.textContent = `₵${Math.abs(difference).toFixed(2)}`;
+                    
+                    // Color code the difference
+                    if (difference > 0) {
+                        differenceEl.className = 'font-bold text-green-600';
+                        differenceContainer.classList.add('bg-green-50', 'border-green-200');
+                    } else if (difference < 0) {
+                        differenceEl.className = 'font-bold text-red-600';
+                        differenceContainer.classList.add('bg-red-50', 'border-red-200');
+                    } else {
+                        differenceEl.className = 'font-bold text-blue-600';
+                        differenceContainer.classList.add('bg-blue-50', 'border-blue-200');
+                    }
+                }
+            } catch (error) {
+                console.error('Error closing drawer:', error);
+                if (errorText) errorText.textContent = error.message || 'Failed to close cash drawer. Please try again.';
+                if (errorDiv) errorDiv.classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-lock"></i> <span>Close Drawer</span>';
+            }
+        });
+    }
+
+    // Handle done button after successful close
+    const doneCloseDrawerBtn = document.getElementById('done-close-drawer');
+    if (doneCloseDrawerBtn) {
+        doneCloseDrawerBtn.addEventListener('click', function() {
+            window.location.reload();
         });
     }
 });
@@ -465,13 +774,11 @@ window.filterTerminalByCategory = function(categoryId) {
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const posData = window.POS_TERMINAL;
-    // debug: ensure catalog exists and is an array
-    console.debug('POS_TERMINAL', posData);
     if (!posData) {
         console.warn('POS_TERMINAL not found on window');
+        return;
     }
     posData.catalog = Array.isArray(posData.catalog) ? posData.catalog : (posData.catalog ? Object.values(posData.catalog) : []);
-    console.debug('POS catalog length', posData.catalog.length);
 
     const branchSelect = document.getElementById('pos-branch');
     const searchInput = document.getElementById('product-search');
@@ -517,8 +824,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const notify = (message, type = 'success') => {
         if (window.ProductManagement && typeof window.ProductManagement.showNotification === 'function') {
             window.ProductManagement.showNotification(message, type);
-        } else {
-            console.log(`[${type}]`, message);
         }
     };
 
@@ -571,7 +876,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('button');
             card.type = 'button';
             const inStock = Number(product.stock_quantity) > 0;
-            card.className = `rounded-lg border transition-all px-4 py-3 text-left ${inStock ? 'border-gray-200 hover:border-blue-500 hover:shadow cursor-pointer' : 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-70'}`;
+            card.className = `rounded-md border transition-all px-3 py-2 text-left ${inStock ? 'border-gray-200 hover:border-blue-500 hover:shadow cursor-pointer' : 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-70'}`;
             card.dataset.productId = product.id;
             card.dataset.price = product.price ?? product.selling_price ?? 0;
             card.dataset.stock = product.stock_quantity ?? 0;
@@ -931,7 +1236,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p class="font-medium text-gray-900 capitalize">${escapeHtml(sale.payment_method ?? state.paymentMethod)}</p>
                 </div>
             </div>
-            <div class="border border-gray-200 rounded-lg divide-y divide-gray-100">
+            <div class="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-64 overflow-y-auto">
                 <table class="w-full text-sm">
                     <tbody>${itemsRows}</tbody>
                 </table>

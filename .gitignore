@@ -22,3 +22,16 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# JMeter test data (contains test credentials)
+/jmeter-tests/users.csv
+/jmeter-tests/results/
+/jmeter-tests/*.jtl
+
+# Deployment scripts (may contain server-specific config)
+/scripts/
+
+# Backup files
+*.old
+*.backup
+*.bak

@@ -46,7 +46,7 @@ class StockTransferCompletedNotification extends Notification
             'icon' => 'fa-exchange-alt',
             'color' => 'blue',
             'urgency' => 'normal',
-            'action_url' => route('products.index'),
+            'action_url' => route('layouts.product'),
         ];
     }
 }

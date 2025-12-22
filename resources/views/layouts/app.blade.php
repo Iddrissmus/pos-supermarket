@@ -106,11 +106,16 @@
         .main-content {
             margin-top: 60px;
             margin-left: 0;
-            transition: margin-left 0.3s ease;
+            padding-left: 0;
+            transition: padding-left 0.3s ease, margin-left 0.3s ease;
         }
         
         body.auth .main-content {
             margin-left: 64px;
+        }
+        
+        body.auth .main-content.sidebar-expanded {
+            padding-left: 216px; /* 280px sidebar - 64px base = 216px extra */
         }
     </style>
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -139,6 +144,25 @@
         <x-notifications position="top-right"/>
         @yield('content')
     </div>
+    
+    <script>
+        // Handle sidebar hover to push content
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.querySelector('.sidebar');
+            const mainContent = document.querySelector('.main-content');
+            
+            if (sidebar && mainContent) {
+                sidebar.addEventListener('mouseenter', function() {
+                    mainContent.classList.add('sidebar-expanded');
+                });
+                
+                sidebar.addEventListener('mouseleave', function() {
+                    mainContent.classList.remove('sidebar-expanded');
+                });
+            }
+        });
+    </script>
+    
     @livewireScripts
     @stack('scripts')
 </body>

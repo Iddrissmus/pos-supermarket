@@ -25,7 +25,27 @@ class ProductController extends Controller
     {
         $user = Auth::user();
         $categoryId = request()->input('category_id');
-        $filterUncategorized = $categoryId === 'null';
+        // Detect filters from query string or dedicated routes
+        $lowStockOnly = request()->boolean('low_stock') || request()->routeIs('products.low-stock');
+        $inStoreOnly = request()->boolean('in_store') || request()->routeIs('products.in-store');
+        $outOfStockOnly = request()->boolean('out_of_stock') || request()->routeIs('products.out-of-stock');
+
+        // In-store scope excludes low stock
+        $applyInStoreScope = function ($query) {
+            $query->where(function($q) {
+                $q->where('stock_quantity', '>', 0)
+                  ->whereColumn('stock_quantity', '>', 'reorder_level')
+                  ->where('stock_quantity', '>', 10);
+            });
+        };
+
+        // ensure only one scope at a time (priority: out_of_stock > low_stock > in_store)
+        if ($outOfStockOnly) {
+            $lowStockOnly = false;
+            $inStoreOnly = false;
+        } elseif ($lowStockOnly) {
+            $inStoreOnly = false;
+        }
 
         // Determine which branches the user has access to
         $branchIds = collect();
@@ -57,34 +77,29 @@ class ProductController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Count uncategorized products
-        $uncategorizedCount = 0;
-        if ($user->role === 'manager' && $user->branch_id) {
-            // Manager: count uncategorized in their branch only
-            $uncategorizedCount = BranchProduct::where('branch_id', $user->branch_id)
-                ->whereHas('product', function($q) {
-                    $q->whereNull('category_id');
-                })->count();
-        } else {
-            // Business admin/superadmin: count uncategorized across all accessible branches
-            $uncategorizedCount = BranchProduct::whereIn('branch_id', $branchIds)
-                ->whereHas('product', function($q) {
-                    $q->whereNull('category_id');
-                })->count();
-        }
-
         if ($user->role === 'manager' && $user->branch_id) {
             // Manager: show only their branch's products
             $productsQuery = BranchProduct::where('branch_id', $user->branch_id)
-                ->with(['product.category']);
-            if ($filterUncategorized) {
-                $productsQuery->whereHas('product', function($q) {
-                    $q->whereNull('category_id');
+                ->with(['product.category'])
+                ->whereHas('product', function($q) {
+                    $q->whereNotNull('category_id');
                 });
-            } elseif ($categoryId) {
+            if ($categoryId) {
                 $productsQuery->whereHas('product', function($q) use ($categoryId) {
                     $q->where('category_id', $categoryId);
                 });
+            }
+            if ($lowStockOnly) {
+                $productsQuery->where(function($query) {
+                    $query->whereColumn('stock_quantity', '<=', 'reorder_level')
+                          ->orWhere('stock_quantity', '<=', 10);
+                });
+            }
+            if ($inStoreOnly) {
+                $applyInStoreScope($productsQuery);
+            }
+            if ($outOfStockOnly) {
+                $productsQuery->where('stock_quantity', '<=', 0);
             }
             
             // Get ALL products for financial metrics calculation
@@ -94,26 +109,56 @@ class ProductController extends Controller
             // Get paginated products for display
             $products = $productsQuery->orderBy('updated_at', 'desc')->paginate(15);
 
-            $totalProducts = BranchProduct::where('branch_id', $user->branch_id)->count();
+            $totalProducts = BranchProduct::where('branch_id', $user->branch_id)
+                ->whereHas('product', function($q) {
+                    $q->whereNotNull('category_id');
+                })
+                ->count();
             $inStoreProducts = BranchProduct::where('branch_id', $user->branch_id)
-                ->where('stock_quantity', '>', 0)->count();
+                ->where(function($q) {
+                    $q->where('stock_quantity', '>', 0)
+                      ->whereColumn('stock_quantity', '>', 'reorder_level')
+                      ->where('stock_quantity', '>', 10);
+                })
+                ->whereHas('product', function($q) {
+                    $q->whereNotNull('category_id');
+                })
+                ->count();
             $lowStockProducts = BranchProduct::where('branch_id', $user->branch_id)
                 ->where(function($query) {
                     $query->whereColumn('stock_quantity', '<=', 'reorder_level')
                           ->orWhere('stock_quantity', '<=', 10);
-                })->count();
+                })
+                ->whereHas('product', function($q) {
+                    $q->whereNotNull('category_id');
+                })
+                ->count();
+            $outOfStockProducts = BranchProduct::where('branch_id', $user->branch_id)
+                ->where('stock_quantity', '<=', 0)
+                ->whereHas('product', function($q) {
+                    $q->whereNotNull('category_id');
+                })
+                ->count();
         } else {
             // Business admin/superadmin: show all branches' products
             $productsQuery = BranchProduct::whereIn('branch_id', $branchIds)
-                ->with(['product.category', 'branch']);
-            if ($filterUncategorized) {
-                $productsQuery->whereHas('product', function($q) {
-                    $q->whereNull('category_id');
+                ->with(['product.category', 'branch'])
+                ->whereHas('product', function($q) {
+                    $q->whereNotNull('category_id');
                 });
-            } elseif ($categoryId) {
+            if ($categoryId) {
                 $productsQuery->whereHas('product', function($q) use ($categoryId) {
                     $q->where('category_id', $categoryId);
                 });
+            }
+            if ($lowStockOnly) {
+                $productsQuery->where(function($query) {
+                    $query->whereColumn('stock_quantity', '<=', 'reorder_level')
+                          ->orWhere('stock_quantity', '<=', 10);
+                });
+            }
+            if ($inStoreOnly) {
+                $applyInStoreScope($productsQuery);
             }
             
             // Get ALL products for financial metrics calculation
@@ -124,14 +169,36 @@ class ProductController extends Controller
             $products = $productsQuery->orderBy('updated_at', 'desc')->paginate(15);
 
             // Calculate stats for all accessible branches
-            $totalProducts = BranchProduct::whereIn('branch_id', $branchIds)->count();
+            $totalProducts = BranchProduct::whereIn('branch_id', $branchIds)
+                ->whereHas('product', function($q) {
+                    $q->whereNotNull('category_id');
+                })
+                ->count();
             $inStoreProducts = BranchProduct::whereIn('branch_id', $branchIds)
-                ->where('stock_quantity', '>', 0)->count();
+                ->where(function($q) {
+                    $q->where('stock_quantity', '>', 0)
+                      ->whereColumn('stock_quantity', '>', 'reorder_level')
+                      ->where('stock_quantity', '>', 10);
+                })
+                ->whereHas('product', function($q) {
+                    $q->whereNotNull('category_id');
+                })
+                ->count();
             $lowStockProducts = BranchProduct::whereIn('branch_id', $branchIds)
                 ->where(function($query) {
                     $query->whereColumn('stock_quantity', '<=', 'reorder_level')
                           ->orWhere('stock_quantity', '<=', 10);
-                })->count();
+                })
+                ->whereHas('product', function($q) {
+                    $q->whereNotNull('category_id');
+                })
+                ->count();
+            $outOfStockProducts = BranchProduct::whereIn('branch_id', $branchIds)
+                ->where('stock_quantity', '<=', 0)
+                ->whereHas('product', function($q) {
+                    $q->whereNotNull('category_id');
+                })
+                ->count();
         }
 
         // Calculate financial metrics for ALL products (not just paginated)
@@ -141,6 +208,7 @@ class ProductController extends Controller
             'total_products' => $totalProducts,
             'in_store_products' => $inStoreProducts,
             'low_stock_products' => $lowStockProducts,
+            'out_of_stock_products' => $outOfStockProducts ?? ($stats['out_of_stock_products'] ?? 0),
         ];
 
         if (request()->wantsJson() || request()->ajax() || request()->expectsJson()) {
@@ -153,8 +221,37 @@ class ProductController extends Controller
             'categories' => $categories,
             'selectedCategory' => $categoryId,
             'financialMetrics' => $financialMetrics,
-            'uncategorizedCount' => $uncategorizedCount
+            'lowStockOnly' => $lowStockOnly,
+            'inStoreOnly' => $inStoreOnly,
+            'outOfStockOnly' => $outOfStockOnly
         ]);
+    }
+
+    /**
+     * Dedicated low stock page
+     */
+    public function lowStock(Request $request)
+    {
+        $request->merge(['low_stock' => true, 'in_store' => null, 'out_of_stock' => null]);
+        return $this->index();
+    }
+
+    /**
+     * Dedicated in-store page
+     */
+    public function inStore(Request $request)
+    {
+        $request->merge(['in_store' => true, 'low_stock' => null, 'out_of_stock' => null]);
+        return $this->index();
+    }
+
+    /**
+     * Dedicated out-of-stock page
+     */
+    public function outOfStock(Request $request)
+    {
+        $request->merge(['out_of_stock' => true, 'low_stock' => null, 'in_store' => null]);
+        return $this->index();
     }
 
     /**
@@ -412,8 +509,37 @@ class ProductController extends Controller
      */
     public function show(string $id)
     {
-        $product = Product::with('business')->findOrFail($id);
-        return response()->json($product);
+        $user = Auth::user();
+        
+        // Load product with all relationships
+        $product = Product::with([
+            'business',
+            'category',
+            'primarySupplier',
+            'addedBy',
+            'branchProducts.branch',
+            'branchProducts' => function($query) use ($user) {
+                // Filter branch products based on user role
+                if ($user->role === 'manager' && $user->branch_id) {
+                    $query->where('branch_id', $user->branch_id);
+                } elseif ($user->role === 'business_admin') {
+                    $branchIds = Branch::where('business_id', $user->business_id)->pluck('id');
+                    $query->whereIn('branch_id', $branchIds);
+                }
+            }
+        ])->findOrFail($id);
+        
+        // Check access permissions
+        if ($user->role === 'business_admin' && $product->business_id !== $user->business_id) {
+            abort(403, 'You do not have permission to view this product.');
+        }
+        
+        // Get all branches for the business (for assignment info)
+        $branches = Branch::where('business_id', $product->business_id)
+            ->orderBy('name')
+            ->get();
+        
+        return view('products.show', compact('product', 'branches'));
     }
 
     /**
@@ -546,9 +672,6 @@ class ProductController extends Controller
         }
     }
 
-    /**
-     * Show bulk assignment page
-     */
     /**
      * Show bulk assignment page (Excel upload)
      */

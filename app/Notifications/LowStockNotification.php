@@ -75,7 +75,7 @@ class LowStockNotification extends Notification
             'urgency' => $this->branchProduct->stock_quantity == 0 ? 'critical' : 'warning',
             'icon' => 'fa-exclamation-triangle',
             'color' => $this->branchProduct->stock_quantity == 0 ? 'red' : 'yellow',
-            'action_url' => route('products.index', ['branch_id' => $this->branch->id]),
+            'action_url' => route('layouts.product', ['branch_id' => $this->branch->id]),
         ];
     }
 }

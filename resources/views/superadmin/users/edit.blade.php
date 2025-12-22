@@ -10,6 +10,73 @@
             <p class="text-sm text-gray-600">Update user information, role, and permissions</p>
         </div>
 
+        <!-- Status Management Section -->
+        <div class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800">User Status</h2>
+                    <p class="text-sm text-gray-600">Manage user access to the system</p>
+                </div>
+                <div>
+                    @if($user->status === 'active')
+                        <span class="px-4 py-2 inline-flex text-sm font-semibold rounded-full bg-green-100 text-green-800">
+                            <i class="fas fa-check-circle mr-2"></i>Active
+                        </span>
+                    @elseif($user->status === 'inactive')
+                        <span class="px-4 py-2 inline-flex text-sm font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                            <i class="fas fa-pause-circle mr-2"></i>Inactive
+                        </span>
+                    @else
+                        <span class="px-4 py-2 inline-flex text-sm font-semibold rounded-full bg-red-100 text-red-800">
+                            <i class="fas fa-ban mr-2"></i>Blocked
+                        </span>
+                    @endif
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-3">
+                @if($user->status !== 'active')
+                    <form action="{{ route('system-users.activate', $user->id) }}" method="POST" class="inline">
+                        @csrf
+                        <button type="submit" 
+                                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg inline-flex items-center transition">
+                            <i class="fas fa-check-circle mr-2"></i>Activate
+                        </button>
+                    </form>
+                @endif
+
+                @if($user->status !== 'inactive')
+                    <form action="{{ route('system-users.deactivate', $user->id) }}" method="POST" class="inline">
+                        @csrf
+                        <button type="submit" 
+                                class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg inline-flex items-center transition">
+                            <i class="fas fa-pause-circle mr-2"></i>Deactivate
+                        </button>
+                    </form>
+                @endif
+
+                @if($user->status !== 'blocked' && $user->id !== auth()->id())
+                    <form action="{{ route('system-users.block', $user->id) }}" method="POST" class="inline">
+                        @csrf
+                        <button type="submit" 
+                                class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg inline-flex items-center transition"
+                                onclick="return confirm('Are you sure you want to block {{ $user->name }}?')">
+                            <i class="fas fa-ban mr-2"></i>Block
+                        </button>
+                    </form>
+                @endif
+            </div>
+
+            <div class="mt-4 p-3 bg-gray-50 rounded-lg">
+                <p class="text-xs text-gray-600">
+                    <i class="fas fa-info-circle mr-1 text-gray-500"></i>
+                    <strong>Active:</strong> User can log in and access the system normally. 
+                    <strong>Inactive:</strong> User account is temporarily disabled. 
+                    <strong>Blocked:</strong> User is permanently blocked from accessing the system.
+                </p>
+            </div>
+        </div>
+
         <form action="{{ route('system-users.update', $user) }}" method="POST">
             @csrf
             @method('PUT')
@@ -66,13 +133,27 @@
 
                 <!-- Password (Optional) -->
                 <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
-                        New Password <span class="text-gray-500 text-xs">(leave blank to keep current)</span>
-                    </label>
-                    <input type="password" 
-                           id="password" 
-                           name="password"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 @error('password') border-red-500 @enderror">
+                    <div class="flex items-center justify-between mb-2">
+                        <label for="password" class="block text-sm font-medium text-gray-700">
+                            New Password <span class="text-gray-500 text-xs">(leave blank to keep current)</span>
+                        </label>
+                        <button type="button" 
+                                onclick="generatePassword()"
+                                class="text-xs text-purple-600 hover:text-purple-800 font-medium">
+                            <i class="fas fa-key mr-1"></i>Generate
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <input type="password" 
+                               id="password" 
+                               name="password"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-purple-500 @error('password') border-red-500 @enderror">
+                        <button type="button"
+                                onclick="togglePasswordVisibility('password', 'eye-password')"
+                                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                            <i id="eye-password" class="fas fa-eye"></i>
+                        </button>
+                    </div>
                     @error('password')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                     @enderror
@@ -83,10 +164,36 @@
                     <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-2">
                         Confirm New Password
                     </label>
-                    <input type="password" 
-                           id="password_confirmation" 
-                           name="password_confirmation"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    <div class="relative">
+                        <input type="password" 
+                               id="password_confirmation" 
+                               name="password_confirmation"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        <button type="button"
+                                onclick="togglePasswordVisibility('password_confirmation', 'eye-confirm')"
+                                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                            <i id="eye-confirm" class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Generated Password Alert -->
+                <div id="generated-password-alert" class="hidden md:col-span-2 bg-green-50 border border-green-200 rounded-lg p-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <p class="text-xs text-green-700 font-medium mb-1">Generated Password:</p>
+                            <code id="generated-password-display" class="text-sm text-green-900 font-mono break-all"></code>
+                        </div>
+                        <button type="button"
+                                onclick="copyPassword()"
+                                class="ml-3 text-green-600 hover:text-green-800"
+                                title="Copy to clipboard">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                    <p class="text-xs text-green-600 mt-2">
+                        <i class="fas fa-info-circle mr-1"></i>Save this password - you'll need to share it with the user!
+                    </p>
                 </div>
 
                 <!-- Role -->
@@ -254,5 +361,50 @@ document.addEventListener('DOMContentLoaded', function() {
         filterBranches(businessSelect.value);
     }
 });
+
+function generatePassword() {
+    const length = 12;
+    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    let password = '';
+    
+    for (let i = 0; i < length; i++) {
+        password += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+    
+    document.getElementById('password').value = password;
+    document.getElementById('password_confirmation').value = password;
+    document.getElementById('generated-password-display').textContent = password;
+    document.getElementById('generated-password-alert').classList.remove('hidden');
+    
+    // Show passwords
+    document.getElementById('password').type = 'text';
+    document.getElementById('password_confirmation').type = 'text';
+    document.getElementById('eye-password').classList.remove('fa-eye');
+    document.getElementById('eye-password').classList.add('fa-eye-slash');
+    document.getElementById('eye-confirm').classList.remove('fa-eye');
+    document.getElementById('eye-confirm').classList.add('fa-eye-slash');
+}
+
+function togglePasswordVisibility(fieldId, eyeId) {
+    const field = document.getElementById(fieldId);
+    const eye = document.getElementById(eyeId);
+    
+    if (field.type === 'password') {
+        field.type = 'text';
+        eye.classList.remove('fa-eye');
+        eye.classList.add('fa-eye-slash');
+    } else {
+        field.type = 'password';
+        eye.classList.remove('fa-eye-slash');
+        eye.classList.add('fa-eye');
+    }
+}
+
+function copyPassword() {
+    const password = document.getElementById('generated-password-display').textContent;
+    navigator.clipboard.writeText(password).then(() => {
+        alert('Password copied to clipboard!');
+    });
+}
 </script>
 @endsection

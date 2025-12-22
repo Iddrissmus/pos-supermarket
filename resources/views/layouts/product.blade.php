@@ -4,6 +4,14 @@
 
 @section('content')
 <div class="p-6 space-y-6">
+    @php
+        $lowStockOnly = $lowStockOnly ?? request()->boolean('low_stock');
+        $inStoreOnly = $inStoreOnly ?? request()->boolean('in_store');
+        $lowStockUrl = route('layouts.product', array_merge(request()->except('page'), ['low_stock' => 1]));
+        $clearLowStockUrl = route('layouts.product', request()->except(['page', 'low_stock']));
+        $inStoreUrl = route('layouts.product', array_merge(request()->except('page'), ['in_store' => 1]));
+        $clearInStoreUrl = route('layouts.product', request()->except(['page', 'in_store']));
+    @endphp
     <!-- Notification Container -->
     <div id="notification-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
 
@@ -181,43 +189,58 @@
         </div>
 
         <!-- In Store -->
-        <div class="bg-white rounded-lg shadow-md p-6">
+        <a href="{{ route('products.in-store') }}" class="block bg-white rounded-lg shadow-md p-6 border transition transform hover:-translate-y-0.5 hover:shadow-lg {{ $inStoreOnly ? 'border-green-300 ring-1 ring-green-200' : 'border-transparent' }}">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-gray-500 text-sm font-medium">In Store</p>
+                    <p class="text-gray-500 text-sm font-medium flex items-center gap-2">
+                        In Store
+                        @if($inStoreOnly)
+                            <span class="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700">Filtered</span>
+                        @endif
+                    </p>
                     <p class="text-3xl font-bold text-green-600 mt-2">{{$stats['in_store_products'] ?? 0}}</p>
                 </div>
                 <div class="bg-green-100 rounded-full p-3">
                     <i class="fas fa-check-circle text-green-600 text-xl"></i>
                 </div>
             </div>
-        </div>
+        </a>
 
         <!-- Low Stock -->
-        <div class="bg-white rounded-lg shadow-md p-6">
+        <a href="{{ route('products.low-stock') }}" class="block bg-white rounded-lg shadow-md p-6 border transition transform hover:-translate-y-0.5 hover:shadow-lg {{ $lowStockOnly ? 'border-red-300 ring-1 ring-red-200' : 'border-transparent' }}">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-gray-500 text-sm font-medium">Low Stock</p>
+                    <p class="text-gray-500 text-sm font-medium flex items-center gap-2">
+                        Low Stock
+                        @if($lowStockOnly)
+                            <span class="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-700">Filtered</span>
+                        @endif
+                    </p>
                     <p class="text-3xl font-bold text-red-600 mt-2">{{$stats['low_stock_products'] ?? 0}}</p>
                 </div>
                 <div class="bg-red-100 rounded-full p-3">
                     <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
                 </div>
             </div>
-        </div>
+        </a>
 
-        <!-- Quick Actions -->
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <p class="text-gray-500 text-sm font-medium mb-3">Quick Actions</p>
-            <div class="space-y-2">
-                <a href="{{route('stock-receipts.index')}}" class="block text-center bg-purple-100 hover:bg-purple-200 text-purple-700 py-2 px-3 rounded-lg text-sm font-medium transition-colors">
-                    <i class="fas fa-truck mr-1"></i>Receive Stock
-                </a>
-                <a href="{{route('sales.report')}}" class="block text-center bg-yellow-100 hover:bg-yellow-200 text-yellow-700 py-2 px-3 rounded-lg text-sm font-medium transition-colors">
-                    <i class="fas fa-chart-bar mr-1"></i>Sales Report
-                </a>
+        <!-- Out of Stock -->
+        <a href="{{ route('products.out-of-stock') }}" class="block bg-white rounded-lg shadow-md p-6 border transition transform hover:-translate-y-0.5 hover:shadow-lg {{ $outOfStockOnly ? 'border-gray-300 ring-1 ring-gray-200' : 'border-transparent' }}">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium flex items-center gap-2">
+                        Out of Stock
+                        @if($outOfStockOnly)
+                            <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">Filtered</span>
+                        @endif
+                    </p>
+                    <p class="text-3xl font-bold text-gray-700 mt-2">{{ $stats['out_of_stock_products'] ?? 0 }}</p>
+                </div>
+                <div class="bg-gray-100 rounded-full p-3">
+                    <i class="fas fa-box-open text-gray-500 text-xl"></i>
+                </div>
             </div>
-        </div>
+        </a>
     </div>
 
     {{-- <livewire:products.manage-products /> --}}
@@ -240,9 +263,39 @@
                             </span>
                         </p>
                     @endif
+                    @if($lowStockOnly)
+                        <p class="text-sm text-red-600 mt-1 flex items-center gap-2">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                                <i class="fas fa-exclamation-triangle mr-1"></i> Low Stock Only
+                            </span>
+                            <a href="{{ route('layouts.product') }}" class="text-blue-600 hover:text-blue-800 text-xs font-medium">
+                                Clear
+                            </a>
+                        </p>
+                    @endif
+                    @if($inStoreOnly)
+                        <p class="text-sm text-green-600 mt-1 flex items-center gap-2">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                                <i class="fas fa-check-circle mr-1"></i> In Store Only
+                            </span>
+                            <a href="{{ route('layouts.product') }}" class="text-blue-600 hover:text-blue-800 text-xs font-medium">
+                                Clear
+                            </a>
+                        </p>
+                    @endif
+                    @if($outOfStockOnly)
+                        <p class="text-sm text-gray-700 mt-1 flex items-center gap-2">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+                                <i class="fas fa-box-open mr-1"></i> Out of Stock Only
+                            </span>
+                            <a href="{{ route('layouts.product') }}" class="text-blue-600 hover:text-blue-800 text-xs font-medium">
+                                Clear
+                            </a>
+                        </p>
+                    @endif
                 </div>
                 <div class="text-sm text-gray-600">
-                    Showing {{ $products->total() }} {{ $selectedCategory ? 'filtered' : 'total' }} products
+                    Showing {{ $products->total() }} {{ $selectedCategory || $lowStockOnly || $inStoreOnly || $outOfStockOnly ? 'filtered' : 'total' }} products
                 </div>
             </div>
         </div>
@@ -277,17 +330,6 @@
                                     </span>
                                 </button>
                             @endforeach
-                            @if($uncategorizedCount > 0)
-                                <button type="button" 
-                                        onclick="filterByCategory('null')" 
-                                        class="flex items-center px-4 py-2 rounded-lg transition-colors {{ $selectedCategory === 'null' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
-                                    <i class="fas fa-question-circle mr-2"></i>
-                                    Uncategorized
-                                    <span class="ml-2 text-xs {{ $selectedCategory === 'null' ? 'bg-white/20' : 'bg-gray-300' }} px-2 py-0.5 rounded-full">
-                                        {{ $uncategorizedCount }}
-                                    </span>
-                                </button>
-                            @endif
                         </div>
                         <input type="hidden" name="category_id" id="category_id_input" value="{{ $selectedCategory }}">
                     </form>
@@ -300,10 +342,10 @@
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Product Name
+                            Barcode
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Barcode
+                            Product Name
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Category
@@ -337,6 +379,12 @@
                         <tr class="hover:bg-gray-50 transition-colors" data-category-id="{{ $product->category->id ?? '' }}">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
+                                    <i class="fas fa-barcode text-gray-400 mr-2"></i>
+                                    <span class="text-sm text-gray-600 font-mono">{{ $product->barcode ?? 'N/A' }}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
                                     <img 
                                         src="{{ $product->qr_code_url }}" 
                                         alt="QR Code for {{ $product->name }}" 
@@ -347,14 +395,11 @@
                                     <div class="w-10 h-10 rounded-lg bg-gray-200 items-center justify-center mr-3" style="display:none;">
                                         <i class="fas fa-qrcode text-gray-400"></i>
                                     </div>
-                                    <span class="text-sm font-medium text-gray-900">{{ $product->name ?? 'N/A' }}</span>
+                                    <a href="{{ route('products.show', $product->id) }}" class="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors">
+                                        {{ $product->name ?? 'N/A' }}
+                                    </a>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <i class="fas fa-barcode text-gray-400 mr-2"></i>
-                                    <span class="text-sm text-gray-600 font-mono">{{ $product->barcode ?? 'N/A' }}</span>
-                                </div>                            </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 @if($product->category)
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-{{ $product->category->color ?? 'gray' }}-100 text-{{ $product->category->color ?? 'gray' }}-800">
@@ -388,9 +433,9 @@
                                             {{ \Illuminate\Support\Str::limit($branchProduct->branch->name ?? 'Branch', 15) }}
                                         </span>
                                     @endif
-                                    <button type="button" class="text-blue-600 hover:text-blue-800 transition-colors" title="Edit">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
+                                    <a href="{{ route('products.show', $product->id) }}" class="text-blue-600 hover:text-blue-800 transition-colors" title="View/Edit">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
                                     <button type="button" class="text-red-600 hover:text-red-800 transition-colors" title="Delete">
                                         <i class="fas fa-trash"></i>
                                     </button>

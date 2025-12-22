@@ -1,7 +1,7 @@
 <div x-data="notificationBell()" x-init="init()" class="relative">
     <!-- Notification Bell Icon -->
-    <button @click="toggleDropdown" class="relative text-gray-600 hover:text-gray-800 focus:outline-none">
-        <i class="fas fa-bell text-xl"></i>
+    <button @click="toggleDropdown" class="relative text-white hover:bg-white/10 p-2 rounded-lg transition-colors focus:outline-none">
+        <i class="fas fa-bell text-lg"></i>
         <!-- Unread Count Badge -->
         <span x-show="unreadCount > 0" 
               x-text="unreadCount > 9 ? '9+' : unreadCount"
@@ -23,11 +23,16 @@
         <!-- Header -->
         <div class="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
             <h3 class="text-sm font-semibold text-gray-800">Notifications</h3>
-            <button @click="markAllAsRead" 
-                    x-show="unreadCount > 0"
-                    class="text-xs text-blue-600 hover:text-blue-800">
-                Mark all read
-            </button>
+            <div class="flex items-center gap-3">
+                <a href="{{ route('notifications.index') }}" class="text-xs text-blue-600 hover:text-blue-800">
+                    View all
+                </a>
+                <button @click="markAllAsRead" 
+                        x-show="unreadCount > 0"
+                        class="text-xs text-blue-600 hover:text-blue-800">
+                    Mark all read
+                </button>
+            </div>
         </div>
 
         <!-- Notification List -->

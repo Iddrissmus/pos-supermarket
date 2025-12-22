@@ -205,8 +205,6 @@
 
 <script>
 function openApprovalModal(requestId, action) {
-    console.log('Opening modal for request:', requestId, 'action:', action);
-    
     const modal = document.getElementById('approvalModal');
     const form = document.getElementById('approvalForm');
     const title = document.getElementById('modalTitle');
@@ -244,7 +242,6 @@ function openApprovalModal(requestId, action) {
     note.value = '';
     modal.classList.remove('hidden');
     modal.classList.add('flex');
-    console.log('Modal opened successfully');
 }
 
 function closeApprovalModal() {
@@ -252,7 +249,6 @@ function closeApprovalModal() {
     if (modal) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
-        console.log('Modal closed');
     }
 }
 
@@ -266,7 +262,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    console.log('Approval page JavaScript loaded');
 });
 </script>
 @endsection

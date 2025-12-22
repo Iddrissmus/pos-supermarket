@@ -81,12 +81,19 @@
                                 : ($summary['total_revenue'] > 0 ? 100 : 0);
                             $revenueDiff = $summary['total_revenue'] - $periodComparison['previous_revenue'];
                         @endphp
-                        <p class="text-xl font-bold {{ $revenueChange >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                            <i class="fas fa-arrow-{{ $revenueChange >= 0 ? 'up' : 'down' }} mr-1"></i>
+                        @php
+                            $revenueIsPositive = $revenueChange > 0;
+                            $revenueIsZero = abs($revenueChange) < 0.0001;
+                            $revenueClass = $revenueIsZero ? 'text-gray-500' : ($revenueIsPositive ? 'text-green-600' : 'text-red-600');
+                            $revenueIcon = $revenueIsZero ? 'minus' : ($revenueIsPositive ? 'arrow-up' : 'arrow-down');
+                            $revenueSign = $revenueIsZero ? '' : ($revenueIsPositive ? '+' : '-');
+                        @endphp
+                        <p class="text-xl font-bold {{ $revenueClass }}">
+                            <i class="fas fa-{{ $revenueIcon }} mr-1"></i>
                             {{ number_format(abs($revenueChange), 1) }}%
                         </p>
                         <p class="text-xs text-gray-600 mt-1">
-                            {{ $revenueChange >= 0 ? '+' : '-' }}₵{{ number_format(abs($revenueDiff), 2) }}
+                            {{ $revenueIsZero ? '₵0.00' : $revenueSign . '₵' . number_format(abs($revenueDiff), 2) }}
                         </p>
                     </div>
                     <div class="border-l border-blue-300 pl-6">
@@ -99,12 +106,19 @@
                                 : ($summary['total_profit'] > 0 ? 100 : 0);
                             $profitDiff = $summary['total_profit'] - $periodComparison['previous_profit'];
                         @endphp
-                        <p class="text-xl font-bold {{ $profitChange >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                            <i class="fas fa-arrow-{{ $profitChange >= 0 ? 'up' : 'down' }} mr-1"></i>
+                        @php
+                            $profitIsPositive = $profitChange > 0;
+                            $profitIsZero = abs($profitChange) < 0.0001;
+                            $profitClass = $profitIsZero ? 'text-gray-500' : ($profitIsPositive ? 'text-green-600' : 'text-red-600');
+                            $profitIcon = $profitIsZero ? 'minus' : ($profitIsPositive ? 'arrow-up' : 'arrow-down');
+                            $profitSign = $profitIsZero ? '' : ($profitIsPositive ? '+' : '-');
+                        @endphp
+                        <p class="text-xl font-bold {{ $profitClass }}">
+                            <i class="fas fa-{{ $profitIcon }} mr-1"></i>
                             {{ number_format(abs($profitChange), 1) }}%
                         </p>
                         <p class="text-xs text-gray-600 mt-1">
-                            {{ $profitChange >= 0 ? '+' : '-' }}₵{{ number_format(abs($profitDiff), 2) }}
+                            {{ $profitIsZero ? '₵0.00' : $profitSign . '₵' . number_format(abs($profitDiff), 2) }}
                         </p>
                     </div>
                     <div class="border-l border-blue-300 pl-6">
@@ -116,8 +130,14 @@
                                 ? (($summary['total_sales'] - $periodComparison['previous_sales_count']) / $periodComparison['previous_sales_count']) * 100 
                                 : ($summary['total_sales'] > 0 ? 100 : 0);
                         @endphp
-                        <p class="text-xl font-bold {{ $salesChange >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                            <i class="fas fa-arrow-{{ $salesChange >= 0 ? 'up' : 'down' }} mr-1"></i>
+                        @php
+                            $salesIsPositive = $salesChange > 0;
+                            $salesIsZero = abs($salesChange) < 0.0001;
+                            $salesClass = $salesIsZero ? 'text-gray-500' : ($salesIsPositive ? 'text-green-600' : 'text-red-600');
+                            $salesIcon = $salesIsZero ? 'minus' : ($salesIsPositive ? 'arrow-up' : 'arrow-down');
+                        @endphp
+                        <p class="text-xl font-bold {{ $salesClass }}">
+                            <i class="fas fa-{{ $salesIcon }} mr-1"></i>
                             {{ number_format(abs($salesChange), 1) }}%
                         </p>
                         <p class="text-xs text-gray-600 mt-1">
@@ -700,8 +720,6 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         const chartData = @json($chartData);
-
-        console.debug('[Sales Report] Chart data payload:', chartData);
 
         if (!chartData.labels || chartData.labels.length === 0) {
             console.warn('[Sales Report] No chart data available');

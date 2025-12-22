@@ -98,7 +98,7 @@ class ProductReportController extends Controller
         )
         ->groupBy('products.id', 'products.name', 'products.barcode', 'products.category_id')
         ->orderBy('total_revenue', 'desc')
-        ->paginate(50);
+        ->paginate(20);
         
         // Get categories and branches for filters
         $categories = Category::orderBy('name')->get();
@@ -146,7 +146,7 @@ class ProductReportController extends Controller
             $query->where('branch_id', $branchId);
         }
         
-        $movements = $query->orderBy('created_at', 'desc')->paginate(100);
+        $movements = $query->orderBy('created_at', 'desc')->paginate(20);
         
         // Get movement summary
         $summary = StockLog::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
@@ -342,6 +342,13 @@ class ProductReportController extends Controller
             'products.name as product_name',
             'products.barcode',
             'products.category_id',
+            DB::raw('COALESCE(branch_products.cost_price, products.cost_price, 0) as effective_cost_price'),
+            DB::raw('(branch_products.stock_quantity * COALESCE(branch_products.cost_price, products.cost_price, 0)) as stock_value'),
+            DB::raw('CASE 
+                WHEN branch_products.reorder_level > 0 
+                     THEN (branch_products.stock_quantity / branch_products.reorder_level) * 100
+                ELSE 0
+            END as stock_percentage'),
             DB::raw('CASE 
                 WHEN branch_products.stock_quantity <= branch_products.reorder_level THEN "low"
                 WHEN branch_products.stock_quantity > (branch_products.reorder_level * 3) THEN "overstock"
@@ -350,7 +357,7 @@ class ProductReportController extends Controller
         )
         ->orderBy('stock_status')
         ->orderBy('products.name')
-        ->paginate(100);
+        ->paginate(20);
         
         // Get summary stats
         $summaryQuery = BranchProduct::join('products', 'branch_products.product_id', '=', 'products.id');

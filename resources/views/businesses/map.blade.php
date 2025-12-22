@@ -11,6 +11,8 @@
         height: calc(100vh - 120px);
         width: 100%;
         border-radius: 0.5rem;
+        position: relative;
+        z-index: 1;
     }
     .leaflet-popup-content {
         min-width: 250px;
@@ -138,7 +140,7 @@
     </div>
 
     <!-- Map Container -->
-    <div class="bg-white rounded-lg shadow-lg p-4">
+    <div class="bg-white rounded-lg shadow-lg p-4" style="position: relative; z-index: 1;">
         <div id="map"></div>
     </div>
 

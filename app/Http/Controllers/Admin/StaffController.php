@@ -240,4 +240,103 @@ class StaffController extends Controller
 
         return back()->with('success', "{$userRole} {$userName} has been permanently deleted from the system.");
     }
+
+    /**
+     * Activate a staff member
+     */
+    public function activate(Request $request)
+    {
+        $admin = Auth::user();
+        
+        if (!in_array($admin->role, ['business_admin', 'superadmin'])) {
+            return back()->with('error', 'Access denied.');
+        }
+
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $user = User::where('id', $validated['user_id'])
+            ->whereIn('role', ['manager', 'cashier'])
+            ->first();
+
+        if (!$user) {
+            return back()->with('error', 'Invalid user selected.');
+        }
+
+        // Business admin can only manage staff in their business
+        if ($admin->role === 'business_admin' && $user->business_id != $admin->business_id) {
+            return back()->with('error', 'You can only manage staff in your business.');
+        }
+
+        $user->update(['status' => 'active']);
+
+        return back()->with('success', ucfirst($user->role) . " {$user->name} has been activated.");
+    }
+
+    /**
+     * Deactivate a staff member
+     */
+    public function deactivate(Request $request)
+    {
+        $admin = Auth::user();
+        
+        if (!in_array($admin->role, ['business_admin', 'superadmin'])) {
+            return back()->with('error', 'Access denied.');
+        }
+
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $user = User::where('id', $validated['user_id'])
+            ->whereIn('role', ['manager', 'cashier'])
+            ->first();
+
+        if (!$user) {
+            return back()->with('error', 'Invalid user selected.');
+        }
+
+        // Business admin can only manage staff in their business
+        if ($admin->role === 'business_admin' && $user->business_id != $admin->business_id) {
+            return back()->with('error', 'You can only manage staff in your business.');
+        }
+
+        $user->update(['status' => 'inactive']);
+
+        return back()->with('success', ucfirst($user->role) . " {$user->name} has been deactivated.");
+    }
+
+    /**
+     * Block a staff member
+     */
+    public function block(Request $request)
+    {
+        $admin = Auth::user();
+        
+        if (!in_array($admin->role, ['business_admin', 'superadmin'])) {
+            return back()->with('error', 'Access denied.');
+        }
+
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $user = User::where('id', $validated['user_id'])
+            ->whereIn('role', ['manager', 'cashier'])
+            ->first();
+
+        if (!$user) {
+            return back()->with('error', 'Invalid user selected.');
+        }
+
+        // Business admin can only manage staff in their business
+        if ($admin->role === 'business_admin' && $user->business_id != $admin->business_id) {
+            return back()->with('error', 'You can only manage staff in your business.');
+        }
+
+        $user->update(['status' => 'blocked']);
+
+        return back()->with('success', ucfirst($user->role) . " {$user->name} has been blocked.");
+    }
 }

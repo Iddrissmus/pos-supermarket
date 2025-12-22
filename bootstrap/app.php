@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Support\Facades\Auth;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -15,6 +16,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
         ]);
+        
+        // Allow login routes, logout, and SuperAdmin routes during maintenance mode
+        // SuperAdmin routes are protected by 'role:superadmin' middleware
+        $middleware->preventRequestsDuringMaintenance(
+            except: [
+                'login/*',      // Allow all login routes
+                'logout',
+                'superadmin/*', // Allow all SuperAdmin routes (protected by role middleware)
+            ]
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

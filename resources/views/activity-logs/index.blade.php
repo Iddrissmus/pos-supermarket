@@ -14,7 +14,12 @@
             <div class="text-right">
                 <div class="text-sm text-gray-500">Security Monitoring</div>
                 <div class="text-lg font-semibold text-blue-600">
-                    <i class="fas fa-shield-alt mr-2"></i>Business Admin Only
+                    <i class="fas fa-shield-alt mr-2"></i>
+                    @if(auth()->user()->role === 'superadmin')
+                        System-Wide
+                    @else
+                        Business Admin Only
+                    @endif
                 </div>
             </div>
         </div>
@@ -74,7 +79,24 @@
     <!-- Filters -->
     <div class="bg-white rounded-lg shadow-md p-6 mb-6">
         <form method="GET" action="{{ route('activity-logs.index') }}" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-{{ auth()->user()->role === 'superadmin' ? '6' : '5' }} gap-4">
+                <!-- Business Filter (SuperAdmin only) -->
+                @if(auth()->user()->role === 'superadmin' && isset($businesses))
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-building mr-2"></i>Business
+                        </label>
+                        <select name="business_id" class="w-full border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">All Businesses</option>
+                            @foreach($businesses as $business)
+                                <option value="{{ $business->id }}" {{ request('business_id') == $business->id ? 'selected' : '' }}>
+                                    {{ $business->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
+
                 <!-- Search -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">

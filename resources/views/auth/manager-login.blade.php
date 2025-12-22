@@ -52,6 +52,7 @@
                     </label>
                     <input type="email" 
                            name="email" 
+                           id="email"
                            value="{{ old('email') }}"
                            class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-green-500 transition-colors @error('email') border-red-500 @enderror" 
                            placeholder="manager@pos.com"
@@ -127,6 +128,44 @@
     </div>
 
     <script>
+        const role = 'manager';
+        
+        // Autofill credentials on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            const stored = localStorage.getItem(`lastLogin_${role}`);
+            
+            if (stored && emailInput && passwordInput) {
+                try {
+                    const credentials = JSON.parse(stored);
+                    if (credentials.email && !emailInput.value) {
+                        emailInput.value = credentials.email;
+                    }
+                    if (credentials.password && !passwordInput.value) {
+                        passwordInput.value = credentials.password;
+                    }
+                } catch (e) {
+                    console.error('Failed to parse stored credentials', e);
+                }
+            }
+        });
+        
+        // Store credentials on form submit
+        document.querySelector('form').addEventListener('submit', function() {
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            
+            if (emailInput && passwordInput) {
+                const credentials = {
+                    email: emailInput.value,
+                    password: passwordInput.value,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem(`lastLogin_${role}`, JSON.stringify(credentials));
+            }
+        });
+        
         function togglePassword() {
             const passwordInput = document.getElementById('password');
             const toggleIcon = document.getElementById('toggleIcon');

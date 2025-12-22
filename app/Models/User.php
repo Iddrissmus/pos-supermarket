@@ -39,6 +39,7 @@ class User extends Authenticatable
         'branch_id',
         'business_id',
         'branch_role_key',
+        'status',
     ];
 
     protected static function booted(): void
@@ -87,6 +88,11 @@ class User extends Authenticatable
     public function branch()
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function business()
+    {
+        return $this->belongsTo(Business::class, 'business_id');
     }
 
     public function managedBusiness()
@@ -172,5 +178,13 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Scope a query to only include active users.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
     }
 }

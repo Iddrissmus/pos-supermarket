@@ -31,11 +31,11 @@ class HighValueSaleNotification extends Notification
         return [
             'type' => 'high_value_sale',
             'title' => 'High Value Sale',
-            'message' => "GHS " . number_format($this->sale->total_amount, 2) . " sale completed at {$this->sale->branch->name}",
+            'message' => "GHS " . number_format($this->sale->total, 2) . " sale completed at {$this->sale->branch->name}",
             'sale_id' => $this->sale->id,
             'branch_id' => $this->sale->branch_id,
             'branch_name' => $this->sale->branch->name,
-            'total_amount' => number_format($this->sale->total_amount, 2),
+            'total_amount' => number_format($this->sale->total, 2),
             'item_count' => $this->itemCount,
             'cashier_name' => $this->sale->cashier->name,
             'payment_method' => $this->sale->payment_method,

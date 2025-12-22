@@ -92,6 +92,26 @@ class LoginController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        // Check if user exists and is active before attempting login
+        $user = \App\Models\User::where('email', $credentials['email'])->first();
+        
+        if ($user) {
+            // Check user status
+            if ($user->status === 'blocked') {
+                ActivityLogger::logFailedLogin($credentials['email']);
+                throw ValidationException::withMessages([
+                    'email' => ['Your account has been blocked. Please contact the system administrator.'],
+                ]);
+            }
+            
+            if ($user->status === 'inactive') {
+                ActivityLogger::logFailedLogin($credentials['email']);
+                throw ValidationException::withMessages([
+                    'email' => ['Your account is inactive. Please contact the system administrator.'],
+                ]);
+            }
+        }
+
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
 

@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\StockTransfer;
 use App\Models\BranchProduct;
 use App\Models\StockLog;
+use App\Models\User;
+use App\Notifications\StockTransferCompletedNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -117,6 +119,9 @@ class RequestApprovalController extends Controller
                 ]);
             });
 
+            // Send notifications after transaction completes
+            $this->notifyTransferCompletion($stockTransfer->fresh(['fromBranch', 'toBranch', 'product']));
+
             return back()->with('success', 'Request approved successfully. Stock has been transferred.');
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to approve request: ' . $e->getMessage());
@@ -170,5 +175,33 @@ class RequestApprovalController extends Controller
         }
 
         return false;
+    }
+
+    /**
+     * Send notifications to managers when stock transfer is completed
+     */
+    private function notifyTransferCompletion(StockTransfer $transfer): void
+    {
+        try {
+            // Notify sender branch manager
+            $fromBranchManagers = User::where('role', 'manager')
+                ->where('branch_id', $transfer->from_branch_id)
+                ->get();
+
+            foreach ($fromBranchManagers as $manager) {
+                $manager->notify(new StockTransferCompletedNotification($transfer, false));
+            }
+
+            // Notify recipient branch manager
+            $toBranchManagers = User::where('role', 'manager')
+                ->where('branch_id', $transfer->to_branch_id)
+                ->get();
+
+            foreach ($toBranchManagers as $manager) {
+                $manager->notify(new StockTransferCompletedNotification($transfer, true));
+            }
+        } catch (\Exception $e) {
+            logger()->error('Failed to send stock transfer completion notifications: ' . $e->getMessage());
+        }
     }
 }

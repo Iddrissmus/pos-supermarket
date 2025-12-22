@@ -17,6 +17,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Exports\SalesReportExport;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Services\ReceiveStockService;
 use App\Models\CashDrawerSession;
@@ -233,6 +234,150 @@ class SalesController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Failed to open cash drawer: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Close cash drawer and reconcile
+     */
+    public function closeDrawer(Request $request)
+    {
+        $user = Auth::user();
+        
+        if ($user->role !== 'cashier') {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'actual_amount' => 'required|numeric|min:0',
+            'closing_notes' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            // Find the active session for today
+            $session = CashDrawerSession::where('user_id', $user->id)
+                ->where('session_date', Carbon::today())
+                ->where('status', 'open')
+                ->first();
+
+            if (!$session) {
+                return response()->json([
+                    'error' => 'No open cash drawer session found for today.'
+                ], 422);
+            }
+
+            // Calculate expected amount: opening amount + cash sales
+            $cashSales = Sale::where('cashier_id', $user->id)
+                ->where('payment_method', 'cash')
+                ->whereDate('created_at', $session->session_date)
+                ->sum('total');
+
+            $expectedAmount = $session->opening_amount + $cashSales;
+            $actualAmount = $validated['actual_amount'];
+            $difference = $actualAmount - $expectedAmount;
+
+            // Handle unique constraint: Check if closed session exists and delete it first
+            // The unique constraint on (user_id, session_date, status) prevents updating
+            // from 'open' to 'closed' if a closed session already exists
+            $existingClosedSession = CashDrawerSession::where('user_id', $user->id)
+                ->where('session_date', Carbon::today())
+                ->where('status', 'closed')
+                ->first();
+
+            DB::transaction(function () use ($session, $expectedAmount, $actualAmount, $difference, $validated, $existingClosedSession) {
+                if ($existingClosedSession) {
+                    Log::warning('Deleting existing closed cash drawer session to allow status update', [
+                        'existing_session_id' => $existingClosedSession->id,
+                        'user_id' => $existingClosedSession->user_id,
+                        'session_date' => $existingClosedSession->session_date,
+                    ]);
+                    $existingClosedSession->delete();
+                }
+
+                $session->update([
+                    'expected_amount' => $expectedAmount,
+                    'actual_amount' => $actualAmount,
+                    'difference' => $difference,
+                    'closed_at' => Carbon::now(),
+                    'status' => 'closed',
+                    'closing_notes' => $validated['closing_notes'] ?? null,
+                ]);
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cash drawer closed successfully.',
+                'session' => $session->fresh(),
+                'summary' => [
+                    'opening_amount' => $session->opening_amount,
+                    'cash_sales' => $cashSales,
+                    'expected_amount' => $expectedAmount,
+                    'actual_amount' => $actualAmount,
+                    'difference' => $difference,
+                    'is_over' => $difference > 0,
+                    'is_short' => $difference < 0,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to close cash drawer: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get current cash drawer session status
+     */
+    public function getDrawerStatus(Request $request)
+    {
+        $user = Auth::user();
+        
+        if ($user->role !== 'cashier') {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        try {
+            $session = CashDrawerSession::where('user_id', $user->id)
+                ->where('session_date', Carbon::today())
+                ->where('status', 'open')
+                ->first();
+
+            if (!$session) {
+                return response()->json([
+                    'has_session' => false,
+                    'message' => 'No open cash drawer session'
+                ]);
+            }
+
+            // Calculate current expected amount
+            $cashSales = Sale::where('cashier_id', $user->id)
+                ->where('payment_method', 'cash')
+                ->whereDate('created_at', $session->session_date)
+                ->sum('total');
+
+            $expectedAmount = $session->opening_amount + $cashSales;
+            $totalSales = Sale::where('cashier_id', $user->id)
+                ->whereDate('created_at', $session->session_date)
+                ->count();
+            $totalRevenue = Sale::where('cashier_id', $user->id)
+                ->whereDate('created_at', $session->session_date)
+                ->sum('total');
+
+            return response()->json([
+                'has_session' => true,
+                'session' => $session,
+                'current_expected' => $expectedAmount,
+                'opening_amount' => $session->opening_amount,
+                'cash_sales' => $cashSales,
+                'total_sales' => $totalSales,
+                'total_revenue' => $totalRevenue,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to get drawer status: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -692,11 +837,11 @@ class SalesController extends Controller
         // Date range handling
         $startDate = $startDateInput
             ? Carbon::parse($startDateInput)->startOfDay()
-            : now()->startOfMonth();
+            : now()->startOfDay();
 
         $endDate = $endDateInput
             ? Carbon::parse($endDateInput)->endOfDay()
-            : now()->endOfMonth();
+            : now()->endOfDay();
 
         // Base query - respect role-based restrictions
         $baseQuery = Sale::with(['items.product.primarySupplier', 'branch', 'cashier'])

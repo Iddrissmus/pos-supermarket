@@ -153,10 +153,12 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($inventory as $item)
                         @php
-                            $stockValue = $item->stock_quantity * $item->cost_price;
-                            $stockPercentage = $item->reorder_level > 0 
+                            $stockValue = $item->stock_value ?? ($item->stock_quantity * ($item->effective_cost_price ?? 0));
+                            $stockPercentage = $item->stock_percentage ?? (
+                                $item->reorder_level > 0 
                                 ? ($item->stock_quantity / $item->reorder_level) * 100 
-                                : 100;
+                                    : 0
+                            );
                         @endphp
                         <tr class="hover:bg-gray-50 {{ $item->stock_status == 'low' ? 'bg-red-50' : ($item->stock_status == 'overstock' ? 'bg-orange-50' : '') }}">
                             <td class="px-6 py-4">
@@ -200,10 +202,10 @@
                                     <div class="w-full bg-gray-200 rounded-full h-2 max-w-[100px]">
                                         @php
                                             $barColor = 'bg-red-500';
-                                            if ($stockPercentage > 100) $barColor = 'bg-orange-500';
-                                            elseif ($stockPercentage > 50) $barColor = 'bg-green-500';
-                                            elseif ($stockPercentage > 25) $barColor = 'bg-yellow-500';
-                                            $barWidth = min($stockPercentage, 100);
+                                            if ($stockPercentage > 120) $barColor = 'bg-orange-500';
+                                            elseif ($stockPercentage >= 90) $barColor = 'bg-green-500';
+                                            elseif ($stockPercentage >= 50) $barColor = 'bg-yellow-500';
+                                            $barWidth = min(max($stockPercentage, 0), 120);
                                         @endphp
                                         <div class="{{ $barColor }} h-2 rounded-full" style="width: {{ $barWidth }}%"></div>
                                     </div>

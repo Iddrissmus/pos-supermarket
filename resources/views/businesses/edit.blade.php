@@ -49,6 +49,79 @@
         </div>
 
         @if(auth()->user()->role === 'superadmin')
+        <!-- Business Status Management -->
+        <div class="bg-white shadow rounded-lg p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                        <i class="fas fa-toggle-on text-indigo-600 mr-2"></i>
+                        Business Status
+                    </h3>
+                    <p class="text-sm text-gray-600 mt-1">Manage business access and availability</p>
+                </div>
+                <div class="flex items-center">
+                    <span class="text-xs text-gray-500 mr-2">Current:</span>
+                    @if($business->status === 'active')
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                            <i class="fas fa-check-circle mr-1"></i>Active
+                        </span>
+                    @elseif($business->status === 'inactive')
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+                            <i class="fas fa-pause-circle mr-1"></i>Inactive
+                        </span>
+                    @elseif($business->status === 'blocked')
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                            <i class="fas fa-ban mr-1"></i>Blocked
+                        </span>
+                    @endif
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4">
+                <!-- Activate Button -->
+                <form action="{{ route('businesses.activate', $business->id) }}" method="POST">
+                    @csrf
+                    <button type="submit" 
+                            class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg {{ $business->status === 'active' ? 'opacity-50 cursor-not-allowed' : '' }}"
+                            {{ $business->status === 'active' ? 'disabled' : '' }}>
+                        <i class="fas fa-check-circle mr-2"></i>Activate
+                    </button>
+                </form>
+
+                <!-- Disable Button -->
+                <form action="{{ route('businesses.disable', $business->id) }}" method="POST">
+                    @csrf
+                    <button type="submit" 
+                            class="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-3 px-4 rounded-lg {{ $business->status === 'inactive' ? 'opacity-50 cursor-not-allowed' : '' }}"
+                            {{ $business->status === 'inactive' ? 'disabled' : '' }}>
+                        <i class="fas fa-pause-circle mr-2"></i>Disable
+                    </button>
+                </form>
+
+                <!-- Block Button -->
+                <form action="{{ route('businesses.block', $business->id) }}" method="POST" 
+                      onsubmit="return confirm('Are you sure you want to block this business?');">
+                    @csrf
+                    <button type="submit" 
+                            class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-lg {{ $business->status === 'blocked' ? 'opacity-50 cursor-not-allowed' : '' }}"
+                            {{ $business->status === 'blocked' ? 'disabled' : '' }}>
+                        <i class="fas fa-ban mr-2"></i>Block
+                    </button>
+                </form>
+            </div>
+
+            <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p class="text-xs text-gray-700">
+                    <i class="fas fa-info-circle text-blue-600 mr-1"></i>
+                    <span class="font-semibold">Active:</span> Full access • 
+                    <span class="font-semibold">Inactive:</span> Temporarily disabled • 
+                    <span class="font-semibold">Blocked:</span> Permanently restricted
+                </p>
+            </div>
+        </div>
+        @endif
+
+        @if(auth()->user()->role === 'superadmin')
         <form action="{{ route('businesses.update', $business->id) }}" method="POST" enctype="multipart/form-data">
             @csrf
             @method('PUT')
@@ -80,12 +153,15 @@
                     <option value="">No Admin Assigned</option>
                     @foreach($availableAdmins as $admin)
                         <option value="{{ $admin->id }}" 
-                                {{ old('business_admin_id', $business->primaryBusinessAdmin?->id) == $admin->id ? 'selected' : '' }}>
+                                {{ old('business_admin_id', $business->primaryBusinessAdmin?->id) == $admin->id ? 'selected' : '' }}
+                                @if($admin->business_id && $admin->business_id != $business->id) style="color: #d97706;" @endif>
                             {{ $admin->name }} ({{ $admin->email }})
-                            @if($admin->business_id && $admin->business_id != $business->id)
-                                - Currently assigned to: {{ $admin->managedBusiness->name ?? 'Business #' . $admin->business_id }}
+                            @if($admin->business_id === null)
+                                ✓ Available
                             @elseif($admin->business_id == $business->id)
-                                - Current admin
+                                ★ Current Admin
+                            @else
+                                ⚠ Assigned to: {{ $admin->managedBusiness->name ?? 'Business #' . $admin->business_id }}
                             @endif
                         </option>
                     @endforeach
@@ -99,7 +175,7 @@
                     </p>
                 @else
                     <p class="text-blue-600 text-xs mt-1">
-                        <i class="fas fa-info-circle"></i> You can assign or reassign a business admin here, or leave it unassigned.
+                        <i class="fas fa-info-circle"></i> You can assign any business admin. Reassigning will move them from their current business.
                     </p>
                 @endif
             </div>

@@ -10,7 +10,26 @@
         $branch = $user->branch; // Business admin's assigned branch
         $totalManagers = \App\Models\User::where('role', 'manager')->where('branch_id', $user->branch_id)->count();
         $totalCashiers = \App\Models\User::where('role', 'cashier')->where('branch_id', $user->branch_id)->count();
-        // $branchProducts = \App\Models\BranchProduct::where('branch_id', $user->branch_id)->with('product')->get()->count();
+        $branchIds = \App\Models\Branch::where('business_id', $user->business_id)->pluck('id');
+        $lowStockCount = \App\Models\BranchProduct::whereIn('branch_id', $branchIds)
+            ->whereRaw('stock_quantity <= reorder_level')
+            ->count();
+        $outOfStockCount = \App\Models\BranchProduct::whereIn('branch_id', $branchIds)
+            ->where('stock_quantity', '<=', 0)
+            ->count();
+        $topProducts = \App\Models\SaleItem::join('sales', 'sale_items.sale_id', '=', 'sales.id')
+            ->join('products', 'sale_items.product_id', '=', 'products.id')
+            ->whereIn('sales.branch_id', $branchIds)
+            ->groupBy('products.id', 'products.name', 'products.barcode')
+            ->select(
+                'products.name as product_name',
+                'products.barcode',
+                \DB::raw('SUM(sale_items.quantity) as total_qty'),
+                \DB::raw('SUM(sale_items.total) as total_revenue')
+            )
+            ->orderByDesc('total_revenue')
+            ->limit(5)
+            ->get();
     @endphp
 
     <!-- Welcome Header -->
@@ -101,6 +120,74 @@
                         <i class="fas fa-box text-orange-600 text-2xl"></i>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Product Highlights -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Stock Health -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <p class="text-sm text-gray-500">Low Stock Items</p>
+                        <p class="text-3xl font-bold text-red-600">{{ number_format($lowStockCount) }}</p>
+                    </div>
+                    <div class="bg-red-100 p-3 rounded-full">
+                        <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Out of Stock</p>
+                        <p class="text-2xl font-bold text-gray-700">{{ number_format($outOfStockCount) }}</p>
+                    </div>
+                    <div class="bg-gray-100 p-3 rounded-full">
+                        <i class="fas fa-box-open text-gray-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Products -->
+            <div class="bg-white rounded-lg shadow-md p-6 lg:col-span-2">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                        <i class="fas fa-star text-amber-500"></i> Product Highlights
+                    </h3>
+                    <a href="{{ route('product-reports.performance') }}" class="text-sm text-blue-600 hover:text-blue-800">
+                        View Performance →
+                    </a>
+                </div>
+                @if($topProducts->count() > 0)
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Qty Sold</th>
+                                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                @foreach($topProducts as $product)
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-4 py-3">
+                                            <div class="font-medium text-gray-900">{{ $product->product_name }}</div>
+                                            <div class="text-xs text-gray-500">{{ $product->barcode }}</div>
+                                        </td>
+                                        <td class="px-4 py-3 text-right text-sm font-semibold text-gray-900">
+                                            {{ number_format($product->total_qty) }}
+                                        </td>
+                                        <td class="px-4 py-3 text-right text-sm font-semibold text-green-600">
+                                            GH₵ {{ number_format($product->total_revenue, 2) }}
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <p class="text-sm text-gray-500">No product sales yet for this business.</p>
+                @endif
             </div>
         </div>
 

@@ -1,0 +1,31 @@
+product_id,name,price,cost_price,category,stock_quantity
+1,Coca Cola 500ml,3.50,2.00,Beverages,500
+2,Pepsi 500ml,3.50,2.00,Beverages,400
+3,Fanta Orange 500ml,3.50,2.00,Beverages,350
+4,Rice 5kg,45.00,30.00,Grains,200
+5,Rice 10kg,85.00,60.00,Grains,150
+6,Rice 25kg,200.00,150.00,Grains,80
+7,Cooking Oil 1L,18.00,12.00,Cooking,300
+8,Cooking Oil 5L,80.00,60.00,Cooking,100
+9,Milk Full Cream 1L,12.00,8.00,Dairy,250
+10,Milk Low Fat 1L,12.00,8.00,Dairy,200
+11,Bread White 500g,5.00,3.50,Bakery,400
+12,Bread Wheat 500g,6.00,4.00,Bakery,350
+13,Sugar 1kg,8.50,6.00,Grains,500
+14,Sugar 5kg,40.00,30.00,Grains,120
+15,Salt 500g,2.50,1.50,Seasoning,600
+16,Tomato Paste 400g,6.00,4.00,Canned,300
+17,Chicken Breast 1kg,28.00,20.00,Meat,150
+18,Beef Stew Meat 1kg,35.00,25.00,Meat,120
+19,Eggs 30pcs,25.00,18.00,Dairy,200
+20,Yogurt 500ml,8.50,6.00,Dairy,180
+21,Butter 250g,15.00,10.00,Dairy,150
+22,Cheese Cheddar 200g,22.00,15.00,Dairy,100
+23,Pasta 500g,7.00,5.00,Grains,400
+24,Spaghetti 500g,7.50,5.00,Grains,350
+25,Noodles Instant 5pk,12.00,8.00,Instant,500
+26,Detergent Powder 1kg,18.00,12.00,Cleaning,200
+27,Soap Bar 3pk,6.00,4.00,Cleaning,400
+28,Shampoo 500ml,15.00,10.00,Personal Care,250
+29,Toothpaste 100g,8.00,5.50,Personal Care,300
+30,Tissue Rolls 4pk,10.00,7.00,Paper,350

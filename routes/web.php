@@ -13,13 +13,17 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\StockReceiptController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\GuestBusinessSignupController;
 use App\Http\Controllers\RequestApprovalController;
 use App\Http\Controllers\ProductDashboardController;
 use App\Http\Controllers\ProductReportController;
 use App\Http\Controllers\SuperAdmin\SystemUserController;
+use App\Http\Controllers\SuperAdmin\BusinessSignupRequestController;
+use App\Http\Controllers\SuperAdmin\LogViewerController;
 use App\Http\Controllers\Admin\BranchAssignmentController;
 use App\Http\Controllers\Dashboard\CashierDashboardController;
 use App\Http\Controllers\Dashboard\ManagerDashboardController;
+use App\Http\Controllers\SetupController;
 
 Route::get('/', function () {
     // If user is logged in, redirect to their dashboard
@@ -35,6 +39,18 @@ Route::get('/', function () {
     }
     return view('landing');
 });
+
+Route::middleware('web')->group(function () {
+    Route::get('/setup', [SetupController::class, 'show'])->name('setup.show');
+    Route::get('/setup/csrf-token', [SetupController::class, 'csrfToken'])->name('setup.csrf-token');
+    Route::post('/setup/test-connection', [SetupController::class, 'testConnection'])->name('setup.test-connection');
+    Route::post('/setup/import', [SetupController::class, 'import'])->name('setup.import');
+    Route::post('/setup/admin-register', [SetupController::class, 'registerAdmin'])->name('setup.admin-register');
+});
+
+// Public route: guest business signup from landing page
+Route::post('/business-signup', [GuestBusinessSignupController::class, 'store'])
+    ->name('business-signup.store');
 
 // Authentication - Role-specific login pages
 Route::middleware('guest')->group(function () {
@@ -71,9 +87,36 @@ Route::middleware('auth')->group(function () {
         Route::get('/superadmin/dashboard', function () {
             return view('dashboard.superadmin');
         })->name('dashboard.superadmin');
+
+        Route::get('/superadmin/logs', [LogViewerController::class, 'index'])->name('superadmin.logs');
+        Route::get('/superadmin/logs/download', [LogViewerController::class, 'download'])->name('superadmin.logs.download');
+        Route::post('/superadmin/logs/clear', [LogViewerController::class, 'clear'])->name('superadmin.logs.clear');
+        
+        // Settings management
+        Route::get('/superadmin/settings', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'index'])->name('superadmin.settings.index');
+        Route::get('/superadmin/settings/general', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'general'])->name('superadmin.settings.general');
+        Route::post('/superadmin/settings/general', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'updateGeneral'])->name('superadmin.settings.general.update');
+        Route::get('/superadmin/settings/sms', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'sms'])->name('superadmin.settings.sms');
+        Route::post('/superadmin/settings/sms', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'updateSms'])->name('superadmin.settings.sms.update');
+        Route::post('/superadmin/settings/sms/test', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'testSms'])->name('superadmin.settings.sms.test');
+        Route::get('/superadmin/settings/email', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'email'])->name('superadmin.settings.email');
+        Route::post('/superadmin/settings/email', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'updateEmail'])->name('superadmin.settings.email.update');
+        Route::post('/superadmin/settings/email/test', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'testEmail'])->name('superadmin.settings.email.test');
+        Route::get('/superadmin/settings/payment', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'payment'])->name('superadmin.settings.payment');
+        Route::post('/superadmin/settings/payment', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'updatePayment'])->name('superadmin.settings.payment.update');
+        Route::get('/superadmin/settings/paystack', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'paystack'])->name('superadmin.settings.paystack');
+        Route::post('/superadmin/settings/paystack', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'updatePaystack'])->name('superadmin.settings.paystack.update');
         
         // SuperAdmin can manage all system users
         Route::resource('system-users', SystemUserController::class);
+        
+        // User status management
+        Route::post('system-users/{systemUser}/activate', [SystemUserController::class, 'activate'])->name('system-users.activate');
+        Route::post('system-users/{systemUser}/deactivate', [SystemUserController::class, 'deactivate'])->name('system-users.deactivate');
+        Route::post('system-users/{systemUser}/block', [SystemUserController::class, 'block'])->name('system-users.block');
+        
+        // Bulk delete unassigned users
+        Route::post('system-users/bulk-delete', [SystemUserController::class, 'bulkDestroy'])->name('system-users.bulk-delete');
         
         // Map view of all businesses and branches
         Route::get('/map', [BusinessController::class, 'map'])->name('businesses.map');
@@ -83,10 +126,21 @@ Route::middleware('auth')->group(function () {
         Route::get('/branch-requests/{branchRequest}', [\App\Http\Controllers\SuperAdmin\BranchRequestController::class, 'show'])->name('superadmin.branch-requests.show');
         Route::post('/branch-requests/{branchRequest}/approve', [\App\Http\Controllers\SuperAdmin\BranchRequestController::class, 'approve'])->name('superadmin.branch-requests.approve');
         Route::post('/branch-requests/{branchRequest}/reject', [\App\Http\Controllers\SuperAdmin\BranchRequestController::class, 'reject'])->name('superadmin.branch-requests.reject');
+
+        // Business signup requests (from public landing page)
+        Route::get('/business-signup/requests', [BusinessSignupRequestController::class, 'index'])
+            ->name('superadmin.business-signup-requests.index');
+        Route::get('/business-signup/requests/{businessSignupRequest}', [BusinessSignupRequestController::class, 'show'])
+            ->name('superadmin.business-signup-requests.show');
+        Route::post('/business-signup/requests/{businessSignupRequest}/approve', [BusinessSignupRequestController::class, 'approve'])
+            ->name('superadmin.business-signup-requests.approve');
+        Route::post('/business-signup/requests/{businessSignupRequest}/reject', [BusinessSignupRequestController::class, 'reject'])
+            ->name('superadmin.business-signup-requests.reject');
     });
     
-    // Business Admin Map - only their business branches
+    // Business Admin specific routes
     Route::middleware('role:business_admin')->group(function () {
+        Route::get('/my-business', [BusinessController::class, 'myBusiness'])->name('my-business');
         Route::get('/my-branches-map', [BusinessController::class, 'myMap'])->name('businesses.myMap');
     });
     
@@ -97,6 +151,11 @@ Route::middleware('auth')->group(function () {
         Route::put('businesses/{business}', [BusinessController::class, 'update'])->name('businesses.update');
         Route::patch('businesses/{business}', [BusinessController::class, 'update']);
         Route::delete('businesses/{business}', [BusinessController::class, 'destroy'])->name('businesses.destroy');
+        
+        // Business status management
+        Route::post('businesses/{business}/activate', [BusinessController::class, 'activate'])->name('businesses.activate');
+        Route::post('businesses/{business}/disable', [BusinessController::class, 'disable'])->name('businesses.disable');
+        Route::post('businesses/{business}/block', [BusinessController::class, 'block'])->name('businesses.block');
     });
     
     // Both SuperAdmin and Business Admin can view and edit (for branch management)
@@ -108,8 +167,10 @@ Route::middleware('auth')->group(function () {
 
     // Branch Management (SuperAdmin and Business Admin can manage branches)
     Route::middleware('role:superadmin,business_admin')->group(function () {
+        Route::get('branches', [BranchController::class, 'index'])->name('branches.index');
         Route::get('branches/create', [BranchController::class, 'create'])->name('branches.create');
         Route::post('branches', [BranchController::class, 'store'])->name('branches.store');
+        Route::get('branches/{branch}/edit', [BranchController::class, 'edit'])->name('branches.edit');
         Route::put('branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
         Route::delete('branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');
         
@@ -169,6 +230,10 @@ Route::middleware('auth')->group(function () {
 
         // Product viewing (Business Admin/SuperAdmin can create, Manager can only view)
         Route::get('/product', [ProductController::class, 'index'])->name('layouts.product');
+        Route::get('/product/low-stock', [ProductController::class, 'lowStock'])->name('products.low-stock');
+        Route::get('/product/in-store', [ProductController::class, 'inStore'])->name('products.in-store');
+        Route::get('/product/out-of-stock', [ProductController::class, 'outOfStock'])->name('products.out-of-stock');
+        Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
     });
     
     // Business Admin & SuperAdmin ONLY - Product Creation/Editing
@@ -224,8 +289,28 @@ Route::middleware('auth')->group(function () {
             ->name('admin.cashiers.unassign');
         Route::post('/admin/cashiers/delete', [\App\Http\Controllers\Admin\StaffController::class, 'delete'])
             ->name('admin.cashiers.delete');
-            
-        // Business Admin approves manager requests
+        
+        // Staff status management (Business Admin and SuperAdmin)
+        Route::post('/admin/cashiers/activate', [\App\Http\Controllers\Admin\StaffController::class, 'activate'])
+            ->name('admin.cashiers.activate');
+        Route::post('/admin/cashiers/deactivate', [\App\Http\Controllers\Admin\StaffController::class, 'deactivate'])
+            ->name('admin.cashiers.deactivate');
+        Route::post('/admin/cashiers/block', [\App\Http\Controllers\Admin\StaffController::class, 'block'])
+            ->name('admin.cashiers.block');
+    });
+    
+    // SuperAdmin can also manage staff status
+    Route::middleware('role:superadmin')->group(function () {
+        Route::post('/admin/cashiers/activate', [\App\Http\Controllers\Admin\StaffController::class, 'activate'])
+            ->name('admin.cashiers.activate');
+        Route::post('/admin/cashiers/deactivate', [\App\Http\Controllers\Admin\StaffController::class, 'deactivate'])
+            ->name('admin.cashiers.deactivate');
+        Route::post('/admin/cashiers/block', [\App\Http\Controllers\Admin\StaffController::class, 'block'])
+            ->name('admin.cashiers.block');
+    });
+    
+    // Business Admin only
+    Route::middleware('role:business_admin')->group(function () {
         Route::get('/requests/approval', [RequestApprovalController::class, 'index'])
             ->name('requests.approval.index');
         Route::post('/requests/{stockTransfer}/approve', [RequestApprovalController::class, 'approve'])
@@ -329,6 +414,8 @@ Route::middleware('auth')->group(function () {
         
         // Cash drawer management
         Route::post('/cash-drawer/open', [SalesController::class, 'openDrawer'])->name('cash-drawer.open');
+        Route::post('/cash-drawer/close', [SalesController::class, 'closeDrawer'])->name('cash-drawer.close');
+        Route::get('/cash-drawer/status', [SalesController::class, 'getDrawerStatus'])->name('cash-drawer.status');
         
         // Note: Cashiers CANNOT access reports - removed these routes:
         // - sales.report

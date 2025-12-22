@@ -55,6 +55,25 @@
                         <a href="{{ route('superadmin.branch-requests.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('superadmin.branch-requests.*') ? 'text-purple-600 font-semibold' : 'text-gray-700' }}">Branch Requests</a>
                     </div>
                     
+                    <div class="mt-4 mb-2 px-3">
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider sidebar-text">Security</p>
+                    </div>
+
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('activity-logs.*') ? 'active bg-purple-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-history sidebar-icon {{ request()->routeIs('activity-logs.*') ? 'text-purple-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('activity-logs.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('activity-logs.*') ? 'text-purple-600 font-semibold' : 'text-gray-700' }}">Activity Logs</a>
+                    </div>
+
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('superadmin.logs') ? 'active bg-purple-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-file-alt sidebar-icon {{ request()->routeIs('superadmin.logs') ? 'text-purple-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('superadmin.logs') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('superadmin.logs') ? 'text-purple-600 font-semibold' : 'text-gray-700' }}">Laravel Logs</a>
+                    </div>
+                    
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('superadmin.settings.*') ? 'active bg-purple-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-cog sidebar-icon {{ request()->routeIs('superadmin.settings.*') ? 'text-purple-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('superadmin.settings.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('superadmin.settings.*') ? 'text-purple-600 font-semibold' : 'text-gray-700' }}">Settings</a>
+                    </div>
+                    
                     {{-- <div class="mt-4 mb-2 px-3">
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider sidebar-text">Inventory</p>
                     </div>
@@ -95,9 +114,9 @@
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider sidebar-text">Business Management</p>
                     </div>
                     
-                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('businesses.index') || request()->routeIs('businesses.edit') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
-                        <i class="fas fa-building sidebar-icon {{ request()->routeIs('businesses.index') || request()->routeIs('businesses.edit') ? 'text-blue-600' : 'text-gray-500' }}"></i>
-                        <a href="{{ route('businesses.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('businesses.index') || request()->routeIs('businesses.edit') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">My Business</a>
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('my-business') || request()->routeIs('businesses.show') || request()->routeIs('businesses.edit') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-building sidebar-icon {{ request()->routeIs('my-business') || request()->routeIs('businesses.show') || request()->routeIs('businesses.edit') ? 'text-blue-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('my-business') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('my-business') || request()->routeIs('businesses.show') || request()->routeIs('businesses.edit') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">My Business</a>
                     </div>
                     
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('businesses.myMap') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
@@ -339,3 +358,16 @@
     </div>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.sidebar-item').forEach(function (item) {
+        const link = item.querySelector('a[href]');
+        if (!link) return;
+        item.style.cursor = 'pointer';
+        item.addEventListener('click', function (e) {
+            if (e.target.closest('a')) return;
+            link.click();
+        });
+    });
+});
+</script>

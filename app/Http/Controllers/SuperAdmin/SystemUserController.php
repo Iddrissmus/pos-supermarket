@@ -17,11 +17,26 @@ class SystemUserController extends Controller
      */
     public function index()
     {
-        $users = User::with(['managedBusiness', 'branch.business'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+        // Get all users grouped by business
+        $usersByBusiness = User::with(['managedBusiness', 'branch.business', 'business'])
+            ->orderBy('business_id')
+            ->orderBy('role')
+            ->orderBy('name')
+            ->get()
+            ->groupBy(function($user) {
+                if ($user->business_id) {
+                    return $user->business_id;
+                }
+                return 'unassigned';
+            });
+        
+        // Get business details for each group
+        $businesses = Business::whereIn('id', $usersByBusiness->keys()->filter(fn($k) => $k !== 'unassigned'))
+            ->orderBy('name')
+            ->get()
+            ->keyBy('id');
             
-        return view('superadmin.users.index', compact('users'));
+        return view('superadmin.users.index', compact('usersByBusiness', 'businesses'));
     }
 
     /**
@@ -181,5 +196,74 @@ class SystemUserController extends Controller
 
         return redirect()->route('system-users.index')
             ->with('success', "User {$userName} has been deleted successfully!");
+    }
+
+    /**
+     * Activate a user
+     */
+    public function activate(User $systemUser)
+    {
+        $systemUser->update(['status' => 'active']);
+        return back()->with('success', "User {$systemUser->name} has been activated.");
+    }
+
+    /**
+     * Deactivate a user
+     */
+    public function deactivate(User $systemUser)
+    {
+        $systemUser->update(['status' => 'inactive']);
+        return back()->with('success', "User {$systemUser->name} has been deactivated.");
+    }
+
+    /**
+     * Block a user
+     */
+    public function block(User $systemUser)
+    {
+        // Prevent blocking yourself
+        if ($systemUser->id === auth()->id()) {
+            return back()->with('error', 'You cannot block your own account!');
+        }
+        
+        $systemUser->update(['status' => 'blocked']);
+        return back()->with('success', "User {$systemUser->name} has been blocked.");
+    }
+
+    /**
+     * Bulk delete multiple unassigned users
+     */
+    public function bulkDestroy(Request $request)
+    {
+        $validated = $request->validate([
+            'user_ids' => 'required|array',
+            'user_ids.*' => 'required|exists:users,id',
+        ]);
+
+        $userIds = $validated['user_ids'];
+        $currentUserId = auth()->id();
+
+        // Filter out current user and only allow unassigned users
+        $usersToDelete = User::whereIn('id', $userIds)
+            ->whereNull('business_id')
+            ->where('id', '!=', $currentUserId)
+            ->get();
+
+        if ($usersToDelete->isEmpty()) {
+            return back()->with('error', 'No valid unassigned users selected for deletion.');
+        }
+
+        $deletedCount = $usersToDelete->count();
+        $deletedNames = $usersToDelete->pluck('name')->toArray();
+
+        // Delete the users
+        User::whereIn('id', $usersToDelete->pluck('id'))->delete();
+
+        $message = $deletedCount === 1 
+            ? "User {$deletedNames[0]} has been deleted successfully!"
+            : "{$deletedCount} users have been deleted successfully!";
+
+        return redirect()->route('system-users.index')
+            ->with('success', $message);
     }
 }

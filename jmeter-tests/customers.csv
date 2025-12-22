@@ -1,0 +1,11 @@
+name,email,phone,address,customer_type,credit_limit,payment_terms
+John Mensah,john.mensah@email.com,0241234567,Accra Main Street,individual,500.00,immediate
+Mary Adu,mary.adu@email.com,0241234568,Tema Community 1,individual,300.00,net_15
+Kwame Boateng,kwame.boateng@email.com,0241234569,Kumasi Adum,business,2000.00,net_30
+Akosua Darko,akosua.darko@email.com,0241234570,Takoradi Market Circle,individual,400.00,immediate
+Yaw Asante,yaw.asante@email.com,0241234571,Cape Coast University,business,1500.00,net_30
+Abena Osei,abena.osei@email.com,0241234572,Sunyani Town,individual,250.00,net_15
+Kofi Owusu,kofi.owusu@email.com,0241234573,Ho Volta Region,individual,350.00,immediate
+Ama Gyasi,ama.gyasi@email.com,0241234574,Tamale North,business,3000.00,net_60
+Kwabena Manu,kwabena.manu@email.com,0241234575,Wa Upper West,individual,200.00,immediate
+Efua Amoako,efua.amoako@email.com,0241234576,Bolgatanga,individual,450.00,net_15

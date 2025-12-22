@@ -16,19 +16,31 @@ class BusinessController extends Controller
      */
     public function index()
     {
+        // Only superadmin can see all businesses list
+        if (auth()->user()->role !== 'superadmin') {
+            abort(403, 'Unauthorized access');
+        }
+
+        $businesses = Business::with('primaryBusinessAdmin')->paginate(15);
+        return view('businesses.index', compact('businesses'));
+    }
+
+    /**
+     * Show business admin's card view of their business
+     */
+    public function myBusiness()
+    {
         $user = auth()->user();
 
-        if ($user->role === 'superadmin'){
-            //they can see all businesses 
-            $businesses = Business::with('primaryBusinessAdmin')->paginate(15);
+        // Only business admin can access
+        if ($user->role !== 'business_admin') {
+            abort(403, 'Unauthorized access');
         }
-        else {
-            //business admin sees only their business
-            $businesses = Business::with('primaryBusinessAdmin')
-                ->where('id', $user->business_id)
-                ->paginate(15);
-        }
-        return view('businesses.index', compact('businesses'));
+
+        $business = Business::with(['primaryBusinessAdmin', 'branches.manager'])
+            ->findOrFail($user->business_id);
+        
+        return view('businesses.business-admin-view', compact('business'));
     }
 
     /**
@@ -141,11 +153,11 @@ class BusinessController extends Controller
         
         // Only superadmin can change business admin assignment
         if ($user->role === 'superadmin') {
+            // Show all business admins, with info about their current assignments
             $availableAdmins = User::where('role', 'business_admin')
-                ->where(function($q) use ($business) {
-                    $q->whereNull('business_id')
-                      ->orWhere('business_id', $business->id);
-                })
+                ->with('managedBusiness')
+                ->orderByRaw('CASE WHEN business_id IS NULL THEN 0 WHEN business_id = ? THEN 1 ELSE 2 END', [$business->id])
+                ->orderBy('name')
                 ->get();
         } else {
             // Business admin cannot change their assignment
@@ -199,7 +211,7 @@ class BusinessController extends Controller
         }
         
         return redirect()->route('businesses.index')
-            ->with('success', 'Business updated successfully');
+            ->with('success', "Business '{$business->name}' updated successfully.");
     }
 
     /**
@@ -213,10 +225,11 @@ class BusinessController extends Controller
         }
         
         $business = Business::findOrFail($id);
+        $businessName = $business->name;
         $business->delete();
         
         return redirect()->route('businesses.index')
-            ->with('success', 'Business deleted successfully');
+            ->with('success', "Business '{$businessName}' deleted successfully.");
     }
     
     /**
@@ -315,5 +328,53 @@ class BusinessController extends Controller
         }
         
         return view('businesses.my-map', compact('mapData', 'branchesWithoutCoordinates', 'business'));
+    }
+
+    /**
+     * Activate a business
+     */
+    public function activate(Business $business)
+    {
+        // Only superadmin can activate businesses
+        if (auth()->user()->role !== 'superadmin') {
+            abort(403, 'Only Super Admin can activate businesses.');
+        }
+
+        $business->update(['status' => 'active']);
+
+        return redirect()->route('businesses.index')
+            ->with('success', "Business '{$business->name}' has been activated successfully.");
+    }
+
+    /**
+     * Disable a business
+     */
+    public function disable(Business $business)
+    {
+        // Only superadmin can disable businesses
+        if (auth()->user()->role !== 'superadmin') {
+            abort(403, 'Only Super Admin can disable businesses.');
+        }
+
+        $business->update(['status' => 'inactive']);
+
+        return redirect()->route('businesses.index')
+            ->with('success', "Business '{$business->name}' has been disabled.");
+    }
+
+    /**
+     * Block a business
+     */
+    public function block(Business $business)
+    {
+        // Only superadmin can block businesses
+        if (auth()->user()->role !== 'superadmin') {
+            abort(403, 'Only Super Admin can block businesses.');
+        }
+
+        $business->update(['status' => 'blocked']);
+
+        return redirect()->route('businesses.index')
+            ->with('success', "Business '{$business->name}' has been blocked.");
     }
 }

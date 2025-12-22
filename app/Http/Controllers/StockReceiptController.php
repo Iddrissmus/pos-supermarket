@@ -116,8 +116,15 @@ class StockReceiptController extends Controller
      */
     public function show(StockReceipt $stockReceipt)
     {
-    $stockReceipt->load(['items.product', 'supplier', 'branch.business', 'createdBy']);
-        
+        $stockReceipt->load(['items.product', 'supplier', 'branch.business', 'createdBy']);
+
+        // Ensure total_amount is accurate for legacy records
+        $computedTotal = $stockReceipt->items->sum('line_total');
+        if (is_null($stockReceipt->total_amount) || (float) $stockReceipt->total_amount !== (float) $computedTotal) {
+            $stockReceipt->total_amount = $computedTotal;
+            $stockReceipt->save();
+        }
+
         return view('inventory.receipts.show', compact('stockReceipt'));
     }
 

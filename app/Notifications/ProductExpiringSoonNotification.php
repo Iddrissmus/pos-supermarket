@@ -46,7 +46,7 @@ class ProductExpiringSoonNotification extends Notification
             'icon' => 'fa-exclamation-triangle',
             'color' => $color,
             'urgency' => $urgency,
-            'action_url' => route('products.index', ['branch_id' => $this->branchProduct->branch_id]),
+            'action_url' => route('layouts.product', ['branch_id' => $this->branchProduct->branch_id]),
         ];
     }
 }

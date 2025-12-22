@@ -42,8 +42,8 @@
             </div>
         @endif
         
-        <!-- Notification Bell (for Business Admin and Manager) -->
-        @if(in_array($user->role, ['business_admin', 'manager']))
+        <!-- Notification Bell (for SuperAdmin, Business Admin and Manager) -->
+        @if(in_array($user->role, ['superadmin', 'business_admin', 'manager']))
             <div class="relative">
                 <x-notification-bell />
             </div>

@@ -1,181 +1,329 @@
 # POS Supermarket
 
-A small Laravel-based Point Of Sale (POS) application for managing businesses, branches, products and stock. This project includes an automatic reorder system per branch which creates pending reorder requests (stored in `stock_transfers` with `status = 'pending'`) and a manager UI to review requests.
-
-This README contains everything a new developer or contributor needs to get started on Windows (XAMPP) and development workflows.
+A Laravel-based Point Of Sale (POS) application for managing businesses, branches, products and stock. This project includes an automatic reorder system per branch which creates pending reorder requests and a manager UI to review requests.
 
 ---
 
-## Quick links
+## 📚 Documentation
 
-- Pending reorder UI: /reorder-requests (login required)
+- **[USER_GUIDE.md](USER_GUIDE.md)** - Quick start guide for first-time users
+- **[COMMANDS_REFERENCE.md](COMMANDS_REFERENCE.md)** - Complete command reference
+- **[FEATURE_REVIEW_REPORT.md](FEATURE_REVIEW_REPORT.md)** - Feature implementation audit
+- **[SECURITY_AUDIT.md](SECURITY_AUDIT.md)** - Security audit report
+
+---
+
+## Quick Links
+
+- Pending reorder UI: `/reorder-requests` (login required)
 - Artisan reorder check: `php artisan stock:check-reorder`
 
 ---
 
 ## Requirements
 
-- PHP 8.1+ (project tested with PHP 8.3)
-- Composer
-- SQLite (bundled) or MySQL (XAMPP)
-- Node.js + npm (for frontend assets)
-- XAMPP (on Windows) or any local LAMP/LEMP stack
+- **PHP 8.1+** (tested with PHP 8.3+)
+- **Composer**
+- **MySQL** (or SQLite for development)
+- **Node.js + npm** (for frontend assets)
+- **Nginx + PHP-FPM** (production) or php artisan serve (development)
+- **Redis** (recommended for sessions and caching)
 
 ---
 
-## Local Setup (Windows + XAMPP)
+## Local Setup
 
-1. Clone the repository:
+### 1. Clone the Repository
 
 ```bash
 git clone <repo-url> pos-supermarket
 cd pos-supermarket
 ```
 
-2. Install Composer dependencies:
+### 2. Install Dependencies
 
 ```bash
 composer install
+npm install
 ```
 
-3. Copy the environment file and generate app key:
+### 3. Environment Configuration
 
 ```bash
-copy .env.example .env
+cp .env.example .env
 php artisan key:generate
 ```
 
-4. Configure your `.env` database. You can use the included SQLite file for quick local testing:
+Edit `.env` and configure:
+- Database connection (MySQL or SQLite)
+- Redis connection (if using Redis for sessions/cache)
+- SMS service credentials (optional)
 
-- Using SQLite (recommended for quick start):
-	- `DB_CONNECTION=sqlite`
-	- Create `database/database.sqlite` (empty file) and ensure `DB_DATABASE` points to it. The `.env.example` in this repo may already be set accordingly.
-
-- Using MySQL (XAMPP):
-	- Start MySQL via XAMPP control panel
-	- Create a database (for example `pos_supermarket`)
-	- Update `.env` with your DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME and DB_PASSWORD
-
-5. Migrate the database and seed (when seeds are provided):
+### 4. Database Setup
 
 ```bash
-php artisan migrate --seed
+php artisan migrate
+php artisan db:seed
 ```
 
-6. Install frontend dependencies and build assets (optional):
+### 5. Build Frontend Assets
 
 ```bash
-npm install
-npm run dev
+npm run dev    # For development
+npm run build  # For production
 ```
 
-7. Serve the application (development):
+### 6. Start the Application
 
+**Development (single user):**
 ```bash
 php artisan serve
+# Access at http://localhost:8000
 ```
 
-Open `http://127.0.0.1:8000` in your browser.
+**Production (concurrent users):**
+```bash
+# Use the provided setup script
+bash scripts/setup_nginx.sh
+
+# Or manually configure Nginx + PHP-FPM
+# Server will run on http://localhost:8000 automatically
+```
 
 ---
 
-## Important artisan commands
+## Production Deployment
 
-- Run the auto-reorder scan (scans all branch_products and creates pending transfers):
+For production environments with multiple concurrent users:
+
+### 1. Server Optimization
+
+Run the optimization script:
+```bash
+bash scripts/optimize_server.sh
+```
+
+This will:
+- Install and configure Redis
+- Optimize Laravel caches (config, routes, views)
+- Add database indexes
+- Configure PHP opcache
+
+### 2. Nginx + PHP-FPM Setup
 
 ```bash
+bash scripts/setup_nginx.sh
+```
+
+This configures:
+- Nginx web server on port 8000
+- PHP-FPM with 10 workers (handles 10-20 concurrent requests)
+- Redis sessions and caching
+- Auto-start services on boot
+
+### 3. Performance Monitoring
+
+Monitor system resources during operation:
+```bash
+bash scripts/monitor_performance.sh
+```
+
+### 4. Managing Services
+
+```bash
+# Check service status
+sudo systemctl status nginx php8.4-fpm redis-server
+
+# Restart services
+sudo systemctl restart nginx php8.4-fpm
+
+# Stop services
+sudo systemctl stop nginx php8.4-fpm
+
+# Disable auto-start on boot
+sudo systemctl disable nginx php8.4-fpm redis-server
+```
+
+---
+
+## Important Artisan Commands
+
+### Stock Management
+
+```bash
+# Run auto-reorder scan (creates pending transfer requests)
 php artisan stock:check-reorder
 ```
 
-- Run all tests:
+### Cache Management
 
 ```bash
-vendor\\bin\\phpunit
-```
+# Clear all caches
+php artisan optimize:clear
 
-- Clear cache, config, routes (useful while developing):
-
-```bash
+# Or clear individually:
 php artisan config:clear
 php artisan route:clear
 php artisan cache:clear
 php artisan view:clear
+
+# Rebuild caches (production)
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+### Testing
+
+```bash
+# Run all tests
+vendor/bin/phpunit
+
+# Run specific test file
+vendor/bin/phpunit tests/Feature/ProductTest.php
 ```
 
 ---
 
-## How the auto-reorder system works
+## How the Auto-Reorder System Works
 
-- Each branch has product assignments stored in `branch_products` (columns include `stock_quantity` and `reorder_level`).
-- When stock changes, code should call `BranchProduct::adjustStock($delta, $action, $note)` which:
-	- Updates the `stock_quantity` for that branch/product (never below 0)
-	- Creates a `stock_logs` entry recording the change
-	- Runs a lightweight per-item reorder check via `App\\Services\\StockReorderService::checkItem($branchId, $productId)` which:
-		- Checks if `stock_quantity <= reorder_level` and `reorder_level > 0`
-		- Creates a `stock_logs` entry with `action = 'reorder_requested'` if one hasn't been created in the last 24 hours
-		- Creates a pending `stock_transfers` record with `status = 'pending'` if none already exists for that branch/product
+- Each branch has product assignments in `branch_products` (with `stock_quantity` and `reorder_level`)
+- When stock changes, code calls `BranchProduct::adjustStock($delta, $action, $note)` which:
+  - Updates `stock_quantity` (never below 0)
+  - Creates a `stock_logs` entry
+  - Runs reorder check via `App\Services\StockReorderService::checkItem($branchId, $productId)`
+- The reorder check:
+  - Triggers when `stock_quantity <= reorder_level` and `reorder_level > 0`
+  - Creates `stock_logs` entry with `action = 'reorder_requested'` (max once per 24 hours)
+  - Creates pending `stock_transfers` record if none exists
 
-Notes & choices made:
-- Pending reorder requests are stored in `stock_transfers` (reusing that table for simplicity). The `from_branch_id` field is set to `REORDER_SOURCE_BRANCH_ID` from `.env` if configured, otherwise set to the branch id.
-- The `checkItem()` method is deliberately lightweight and runs inside a transaction to avoid race conditions.
-- A scheduled command is available (`php artisan stock:check-reorder`) that does a full scan using a DB cursor (memory-efficient) and will create requests if needed. This is safe to schedule hourly in production cron.
-
----
-
-## Manager UI
-
-- Managers can view pending requests at `/reorder-requests` (must be logged in). The list is paginated to avoid large memory usage.
-- A quick link is available in the sidebar under "Messages".
+**Notes:**
+- Pending reorder requests stored in `stock_transfers` table with `status = 'pending'`
+- `from_branch_id` set to `REORDER_SOURCE_BRANCH_ID` from `.env` or branch ID
+- Operations run in transactions to prevent race conditions
 
 ---
 
-## Performance & scaling notes
+## User Roles & Permissions
 
-- The project avoids loading entire tables into memory for large operations by using `cursor()` and pagination where appropriate.
-- Heavy or long-running tasks should be moved to queues (Laravel queues + workers). If you expect a large number of sales/updates, dispatch reorder checks as jobs rather than running them inline.
-- Add DB indexes on frequently filtered columns for large datasets:
-	- `branches.manager_id`
-	- `branch_products.branch_id`, `branch_products.product_id`
-	- `stock_transfers.to_branch_id`, `stock_transfers.product_id`, `stock_transfers.status`
+- **SuperAdmin**: Full system access, manage all businesses
+- **Business Admin**: Manage own business, branches, products, view reports
+- **Manager**: Manage branch products, approve stock requests, view branch reports
+- **Cashier**: Process sales at assigned branch only
 
 ---
 
 ## Testing
 
-- Tests live in the `tests/` directory. Run them with:
+Tests are located in `tests/` directory:
 
 ```bash
-vendor\\bin\\phpunit
+# Run all tests
+vendor/bin/phpunit
+
+# Run with coverage
+vendor/bin/phpunit --coverage-html coverage
 ```
 
-- Use `RefreshDatabase` in tests to run migrations in-memory or on SQLite test DB.
+Tests use `RefreshDatabase` trait for clean test environments.
+
+---
+
+## Performance Testing
+
+JMeter test plans available in `jmeter-tests/`:
+
+```bash
+cd jmeter-tests
+jmeter -n -t POS_Supermarket.jmx -l results/test.jtl -e -o results/report
+```
+
+Test configurations:
+- 104 test users (30 cashiers, 25 managers, 25 business admins, 20 superadmins)
+- Tests authentication, sessions, CSRF protection
+- Baseline: 5 users (0% error, ~470ms avg)
+- Load test: 100+ users with Nginx + PHP-FPM
 
 ---
 
 ## Troubleshooting
 
-- PHP memory errors during large scans: check you are running the scheduled command in production with a worker and/or increase `memory_limit` in `php.ini` or use queue workers so web requests are not impacted.
-- If routes not found, run:
+### PHP Memory Errors
+- Increase `memory_limit` in `php.ini`
+- Use queue workers for large operations
+- Run scheduled commands with proper memory allocation
 
+### Routes Not Found
 ```bash
 php artisan route:clear
 php artisan route:list
 ```
 
+### Permission Errors (Nginx)
+```bash
+# Fix project permissions
+sudo chown -R $USER:www-data /path/to/project
+sudo chmod -R 755 /path/to/project
+sudo chmod -R 775 storage bootstrap/cache
+
+# Fix parent directory execute permissions
+chmod +x ~
+chmod +x ~/Projects
+```
+
+### Session/Cache Issues
+```bash
+php artisan optimize:clear
+php artisan config:cache
+sudo systemctl restart php8.4-fpm nginx
+```
+
 ---
 
-## Contribution guide
+## Contribution Guide
 
-- Follow PSR-12 code style.
-- Add tests for any new behavior. Keep controllers thin and move business logic into services.
-- Use pagination or cursors for any list endpoints.
+- Follow **PSR-12** code style
+- Add tests for new features
+- Keep controllers thin, move business logic to services
+- Use pagination for list endpoints
+- Document breaking changes
+
+---
+
+## Project Structure
+
+```
+app/
+├── Http/Controllers/    # Route controllers
+├── Models/             # Eloquent models
+├── Services/           # Business logic services
+├── Livewire/          # Livewire components
+├── Imports/           # Excel/CSV import handlers
+└── Exports/           # Excel/CSV export handlers
+
+resources/
+├── views/             # Blade templates
+├── js/                # JavaScript assets
+└── css/               # CSS assets
+
+database/
+├── migrations/        # Database migrations
+└── seeders/          # Database seeders
+
+scripts/
+├── setup_nginx.sh          # Production server setup
+├── optimize_server.sh      # Performance optimization
+└── monitor_performance.sh  # System monitoring
+
+jmeter-tests/          # Load testing configuration
+```
 
 ---
 
 ## Contact
 
-If you need help, add an issue describing your problem, or reach out to the repository owner.
+For help or issues, please create an issue in the repository or contact the project maintainer.
 
 ---
 
-Thank you for using POS Supermarket!
+**Thank you for using POS Supermarket!**
