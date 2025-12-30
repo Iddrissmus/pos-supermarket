@@ -2,6 +2,10 @@
 
 @section('title', 'Sales Terminal')
 
+@push('scripts')
+<script src="https://js.paystack.co/v1/inline.js"></script>
+@endpush
+
 @section('content')
 @php
     $branchOptions = $branches->map(fn($branch) => [
@@ -110,15 +114,14 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-4">
-                <div class="flex items-center gap-2">
-                    <span class="text-sm text-gray-500 uppercase tracking-wide">Branch</span>
-                    <select id="pos-branch" class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
-                        @foreach($branches as $branch)
-                            <option value="{{ $branch->id }}" {{ $defaultBranchId === $branch->id ? 'selected' : '' }}>
-                                {{ $branch->display_label }}
-                            </option>
-                        @endforeach
-                    </select>
+                <!-- Branch Selection (Fixed) -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                    <div class="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700 font-medium">
+                        {{ $branches->firstWhere('id', $defaultBranchId)->display_label ?? 'No Branch Assigned' }}
+                    </div>
+                     <!-- Hidden input to maintain JS functionality -->
+                    <input type="hidden" id="pos-branch" value="{{ $defaultBranchId }}">
                 </div>
 
                 <div class="hidden md:flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-lg border border-gray-200">
@@ -239,7 +242,7 @@
                     Your cart is empty. Add items from the catalog to get started.
                 </div>
 
-                <div id="cart-table-container" class="hidden overflow-hidden border border-gray-200 rounded-lg">
+                <div id="cart-table-container" class="hidden overflow-x-auto border border-gray-200 rounded-lg">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                             <tr>
@@ -766,8 +769,14 @@ window.filterTerminalByCategory = function(categoryId) {
         csrfToken: "{{ csrf_token() }}",
         cashier: {
             name: "{{ auth()->user()->name ?? 'Cashier' }}",
+            email: "{{ auth()->user()->email ?? 'cashier@example.com' }}",
         },
         defaultBranchId: @json($defaultBranchId),
+        paystack: {
+            publicKey: "{{ \App\Models\Setting::get('paystack_public_key') }}",
+            enabled: {{ \App\Models\Setting::get('paystack_enabled') == '1' ? 'true' : 'false' }},
+            merchantEmail: "{{ \App\Models\Setting::get('paystack_merchant_email') }}"
+        }
     };
 </script>
 
@@ -954,6 +963,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const adjustTenderInputForPaymentMethod = (total) => {
+        const amountTenderedInput = document.getElementById('amount-tendered');
+        const changeDisplay = document.getElementById('change-display');
+        const checkoutButton = document.getElementById('checkout-button');
+
+        if (!amountTenderedInput) return;
+
+        // If Paystack is disabled, treat everything like cash (or keep default behavior)
+        const paystackEnabled = window.POS_TERMINAL.paystack && window.POS_TERMINAL.paystack.enabled;
+        const isDigitalPayment = (state.paymentMethod === 'card' || state.paymentMethod === 'mobile_money');
+
+        if (isDigitalPayment && paystackEnabled) {
+            amountTenderedInput.disabled = true;
+            amountTenderedInput.value = total.toFixed(2);
+            if (changeDisplay) {
+                 changeDisplay.innerHTML = '<span class="text-blue-600 text-sm"><i class="fas fa-lock mr-1"></i> Exact amount charged via Paystack</span>';
+            }
+            if (checkoutButton) {
+                checkoutButton.disabled = total <= 0;
+            }
+        } else {
+            // Cash or Paystack disabled
+            if (amountTenderedInput.disabled) {
+                amountTenderedInput.disabled = false;
+                // If switching back to cash, maybe clear if it was auto-filled? 
+                // Or just leave it. Let's clear it to force entry if it matches total exactly
+                if (Math.abs(parseFloat(amountTenderedInput.value) - total) < 0.01) {
+                    amountTenderedInput.value = '';
+                }
+                amountTenderedInput.dispatchEvent(new Event('input')); // Trigger recalculation of change
+            }
+        }
+    };
+
     const updateCartUI = async () => {
         const itemCount = state.cart.reduce((sum, item) => sum + item.quantity, 0);
         const subtotal = state.cart.reduce((sum, item) => sum + (item.quantity * item.price), 0);
@@ -1008,6 +1051,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cartTotal) {
             cartTotal.textContent = formatMoney(total);
         }
+
+        // Adjust input based on payment method and new total
+        adjustTenderInputForPaymentMethod(total);
 
         if (checkoutButton) {
             checkoutButton.disabled = !itemCount || !state.branchId;
@@ -1290,20 +1336,81 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        const amountTenderedInput = document.getElementById('amount-tendered');
+        const amountTendered = amountTenderedInput ? parseFloat(amountTenderedInput.value) || 0 : 0;
+        
+        // Check for sufficient amount tendered (Cash only logic primarily, but good safety check)
+        const subtotal = state.cart.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+        const total = state.currentTaxData ? state.currentTaxData.total : subtotal;
+        
+        // Note: For Card/MoMo, usually we charge the exact amount, so tendered = total.
+        // We'll enforce this check mainly for cash, or ensure tendered is auto-filled for others.
+        
+        const paymentMethod = state.paymentMethod;
+
+        // Paystack Integration
+        const paystackConfig = window.POS_TERMINAL.paystack;
+        
+        if ((paymentMethod === 'card' || paymentMethod === 'mobile_money') && paystackConfig && paystackConfig.enabled) {
+            
+            // Prepare Paystack Transaction
+            const email = window.POS_TERMINAL.cashier.email;
+            const ref = 'POS_' + Math.floor((Math.random() * 1000000000) + 1);
+            
+            toggleCheckoutLoading(true);
+            
+            const handler = PaystackPop.setup({
+                key: paystackConfig.publicKey,
+                email: email,
+                amount: Math.ceil(total * 100), // convert to kobo/pesewas
+                currency: 'GHS', // Adjust as needed
+                ref: ref,
+                metadata: {
+                    custom_fields: [
+                        {
+                            display_name: "Branch",
+                            variable_name: "branch",
+                            value: window.POS_TERMINAL.branches.find(b => b.id == state.branchId)?.name
+                        },
+                        {
+                            display_name: "Cashier",
+                            variable_name: "cashier",
+                            value: window.POS_TERMINAL.cashier.name
+                        }
+                    ]
+                },
+                callback: function(response) {
+                    // Payment successful, proceed to backend record
+                    completeSalePayload(state.branchId, paymentMethod, state.cart, amountTendered || total, response.reference);
+                },
+                onClose: function() {
+                    toggleCheckoutLoading(false);
+                    notify('Payment window closed', 'info');
+                }
+            });
+            
+            handler.openIframe();
+            return; // Halt execution, wait for callback
+        }
+
+        // Standard Cash Flow or Paystack Disabled
+        await completeSalePayload(state.branchId, paymentMethod, state.cart, amountTendered);
+    };
+
+    const completeSalePayload = async (branchId, paymentMethod, cartItems, amountTendered, reference = null) => {
         clearError();
         toggleCheckoutLoading(true);
 
-        const amountTenderedInput = document.getElementById('amount-tendered');
-        const amountTendered = amountTenderedInput ? parseFloat(amountTenderedInput.value) || 0 : 0;
         const payload = {
-            branch_id: state.branchId,
-            payment_method: state.paymentMethod,
-            items: state.cart.map(item => ({
+            branch_id: branchId,
+            payment_method: paymentMethod,
+            items: cartItems.map(item => ({
                 product_id: item.product_id,
                 quantity: item.quantity,
                 price: item.price,
             })),
             amount_tendered: amountTendered,
+            payment_reference: reference // Pass reference if available
         };
 
         try {
@@ -1401,6 +1508,12 @@ document.addEventListener('DOMContentLoaded', () => {
             radio.addEventListener('change', (event) => {
                 if (event.target.checked) {
                     state.paymentMethod = event.target.value;
+                    
+                    // Recalculate current total to update UI immediately
+                    const currentTotal = state.cart.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+                    const total = state.currentTaxData ? state.currentTaxData.total : currentTotal;
+                    
+                    adjustTenderInputForPaymentMethod(total);
                 }
             });
         });

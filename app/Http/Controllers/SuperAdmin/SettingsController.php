@@ -26,7 +26,6 @@ class SettingsController extends Controller
             'general' => $this->isConfigured('general'),
             'sms' => $this->isConfigured('sms'),
             'email' => $this->isConfigured('email'),
-            'payment' => $this->isConfigured('payment'),
             'paystack' => $this->isConfigured('paystack'),
             'pos' => $this->isConfigured('pos'),
         ];
@@ -333,51 +332,7 @@ class SettingsController extends Controller
         }
     }
 
-    /**
-     * Show payment settings form.
-     */
-    public function payment()
-    {
-        $settings = Setting::where('group', 'payment')->get()->pluck('value', 'key');
-        
-        return view('superadmin.settings.payment', [
-            'cash_enabled' => $settings['cash_enabled'] ?? '1',
-            'card_enabled' => $settings['card_enabled'] ?? '1',
-            'mobile_money_enabled' => $settings['mobile_money_enabled'] ?? '1',
-        ]);
-    }
 
-    /**
-     * Update payment settings.
-     */
-    public function updatePayment(Request $request)
-    {
-        $validated = $request->validate([
-            'cash_enabled' => 'nullable|boolean',
-            'card_enabled' => 'nullable|boolean',
-            'mobile_money_enabled' => 'nullable|boolean',
-        ]);
-
-        $cashEnabled = isset($validated['cash_enabled']) && $validated['cash_enabled'] ? '1' : '0';
-        $cardEnabled = isset($validated['card_enabled']) && $validated['card_enabled'] ? '1' : '0';
-        $mobileMoneyEnabled = isset($validated['mobile_money_enabled']) && $validated['mobile_money_enabled'] ? '1' : '0';
-
-        Setting::set('cash_enabled', $cashEnabled, 'payment', 'boolean', 'Cash payment enabled');
-        Setting::set('card_enabled', $cardEnabled, 'payment', 'boolean', 'Card payment enabled');
-        Setting::set('mobile_money_enabled', $mobileMoneyEnabled, 'payment', 'boolean', 'Mobile money payment enabled');
-
-        // Also update .env file if writable
-        $this->updateEnvPaymentSettings([
-            'cash_enabled' => $cashEnabled,
-            'card_enabled' => $cardEnabled,
-            'mobile_money_enabled' => $mobileMoneyEnabled,
-        ]);
-
-        Log::info('Payment settings updated', ['updated_by' => Auth::user()?->email ?? 'unknown']);
-
-        return redirect()->route('superadmin.settings.payment')
-            ->with('success', 'Payment settings updated successfully!');
-    }
 
     /**
      * Show Paystack settings form.
@@ -404,34 +359,85 @@ class SettingsController extends Controller
         $validated = $request->validate([
             'public_key' => 'required|string|max:255',
             'secret_key' => 'required|string|max:255',
-            'merchant_email' => 'required|email|max:255',
-            'webhook_url' => 'nullable|url|max:500',
-            'test_mode' => 'nullable|boolean',
-            'enabled' => 'nullable|boolean',
         ]);
 
         Setting::set('paystack_public_key', $validated['public_key'], 'paystack', 'text', 'Paystack public key');
         Setting::set('paystack_secret_key', $validated['secret_key'], 'paystack', 'text', 'Paystack secret key');
-        Setting::set('paystack_merchant_email', $validated['merchant_email'], 'paystack', 'text', 'Paystack merchant email');
-        Setting::set('paystack_webhook_url', $validated['webhook_url'] ?? url('/api/paystack/webhook'), 'paystack', 'text', 'Paystack webhook URL');
         
-        // Handle checkboxes - they may not be in request if unchecked
-        $testMode = isset($validated['test_mode']) && $validated['test_mode'];
-        $enabled = isset($validated['enabled']) && $validated['enabled'];
-        
+        // Auto-detect test mode based on key prefix
+        $testMode = str_starts_with($validated['public_key'], 'pk_test') || str_starts_with($validated['secret_key'], 'sk_test');
         Setting::set('paystack_test_mode', $testMode ? '1' : '0', 'paystack', 'boolean', 'Paystack test mode');
-        Setting::set('paystack_enabled', $enabled ? '1' : '0', 'paystack', 'boolean', 'Paystack enabled status');
+        
+        // Always enable if keys are present (simplified flow)
+        $enabled = true;
+        Setting::set('paystack_enabled', '1', 'paystack', 'boolean', 'Paystack enabled status');
 
         // Also update .env file if writable
-        $this->updateEnvPaystackSettings($validated + [
+        $this->updateEnvPaystackSettings([
+            'public_key' => $validated['public_key'],
+            'secret_key' => $validated['secret_key'],
             'test_mode' => $testMode,
             'enabled' => $enabled,
+            // defaulted/removed fields
+            'merchant_email' => '', 
+            'webhook_url' => url('/api/paystack/webhook'),
         ]);
 
         Log::info('Paystack settings updated', ['updated_by' => Auth::user()?->email ?? 'unknown']);
 
         return redirect()->route('superadmin.settings.paystack')
             ->with('success', 'Paystack settings updated successfully!');
+    }
+
+    /**
+     * Test Paystack connection.
+     */
+    public function testPaystack(Request $request)
+    {
+        $validated = $request->validate([
+            'public_key' => 'required|string',
+            'secret_key' => 'required|string',
+        ]);
+
+        try {
+            $start = microtime(true);
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'Authorization' => 'Bearer ' . $validated['secret_key'],
+                'Cache-Control' => 'no-cache',
+            ])->get('https://api.paystack.co/bank?perPage=1'); 
+            
+            $duration = round((microtime(true) - $start) * 1000, 2);
+
+            if ($response->successful()) {
+                // Infer mode from keys
+                $isTestKey = str_starts_with($validated['public_key'], 'pk_test') || str_starts_with($validated['secret_key'], 'sk_test');
+                $mode = $isTestKey ? 'Test Mode' : 'Live Mode';
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Connection established successfully.',
+                    'details' => [
+                        'mode' => $mode,
+                        'latency' => $duration . 'ms',
+                        'status' => 'Active',
+                    ]
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Connection failed: ' . $response->json('message', 'Invalid credentials or API error'),
+                    'details' => [
+                        'latency' => $duration . 'ms',
+                        'status_code' => $response->status()
+                    ]
+                ], 422);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -453,8 +459,6 @@ class SettingsController extends Controller
                 return $settings->whereIn('key', ['sms_username', 'sms_password'])->whereNotNull('value')->count() >= 2;
             case 'email':
                 return $settings->whereIn('key', ['mail_host', 'mail_from_address'])->whereNotNull('value')->count() >= 2;
-            case 'payment':
-                return $settings->where('key', 'cash_enabled')->whereNotNull('value')->isNotEmpty();
             case 'paystack':
                 return $settings->whereIn('key', ['paystack_public_key', 'paystack_secret_key'])->whereNotNull('value')->count() >= 2;
             case 'pos':
@@ -555,45 +559,7 @@ class SettingsController extends Controller
         }
     }
 
-    /**
-     * Update payment settings in .env file.
-     */
-    private function updateEnvPaymentSettings(array $settings): bool
-    {
-        $envPath = base_path('.env');
-        
-        if (!File::exists($envPath) || !File::isWritable($envPath)) {
-            Log::warning('.env file not writable, skipping payment settings update');
-            return false;
-        }
 
-        $contents = File::get($envPath);
-        
-        $envMappings = [
-            'PAYMENT_CASH_ENABLED' => ($settings['cash_enabled'] ?? '1') === '1' ? 'true' : 'false',
-            'PAYMENT_CARD_ENABLED' => ($settings['card_enabled'] ?? '1') === '1' ? 'true' : 'false',
-            'PAYMENT_MOBILE_MONEY_ENABLED' => ($settings['mobile_money_enabled'] ?? '1') === '1' ? 'true' : 'false',
-        ];
-
-        foreach ($envMappings as $key => $value) {
-            $line = $key . '=' . $value;
-            
-            if (preg_match("/^{$key}=.*$/m", $contents)) {
-                $contents = preg_replace("/^{$key}=.*$/m", $line, $contents);
-            } else {
-                $contents .= PHP_EOL . $line;
-            }
-        }
-
-        try {
-            File::put($envPath, $contents);
-            Log::info('Payment settings updated in .env file');
-            return true;
-        } catch (\Throwable $e) {
-            Log::warning('.env payment settings update failed', ['error' => $e->getMessage()]);
-            return false;
-        }
-    }
 
     /**
      * Update Paystack settings in .env file.

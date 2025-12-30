@@ -96,31 +96,7 @@
                     </div>
                 </a>
 
-                <!-- Payment Settings -->
-                <a href="{{ route('superadmin.settings.payment') }}" class="block bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-yellow-500 hover:shadow-lg transition-all cursor-pointer">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-credit-card text-yellow-600 text-xl"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-lg font-semibold text-gray-900">Payment Settings</h3>
-                                <p class="text-sm text-gray-500">Payment methods configuration</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center">
-                            @if($configured['payment'])
-                                <span class="w-3 h-3 bg-green-500 rounded-full" title="Configured"></span>
-                            @else
-                                <span class="w-3 h-3 bg-gray-300 rounded-full" title="Not configured"></span>
-                            @endif
-                        </div>
-                    </div>
-                    <div class="flex items-center text-yellow-600 text-sm font-medium">
-                        <span>Configure</span>
-                        <i class="fas fa-chevron-right ml-2"></i>
-                    </div>
-                </a>
+
 
                 <!-- Paystack Configuration -->
                 <a href="{{ route('superadmin.settings.paystack') }}" class="block bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-indigo-500 hover:shadow-lg transition-all cursor-pointer">

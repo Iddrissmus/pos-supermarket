@@ -82,6 +82,10 @@ Route::get('/register', [RegisterController::class, 'showRegistrationForm'])->na
 Route::post('/register', [RegisterController::class, 'register'])->name('register.post')->middleware('guest');
 
 Route::middleware('auth')->group(function () {
+    // User Profile
+    Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
+
     // SuperAdmin Dashboard
     Route::middleware('role:superadmin')->group(function () {
         Route::get('/superadmin/dashboard', function () {
@@ -102,10 +106,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/superadmin/settings/email', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'email'])->name('superadmin.settings.email');
         Route::post('/superadmin/settings/email', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'updateEmail'])->name('superadmin.settings.email.update');
         Route::post('/superadmin/settings/email/test', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'testEmail'])->name('superadmin.settings.email.test');
-        Route::get('/superadmin/settings/payment', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'payment'])->name('superadmin.settings.payment');
-        Route::post('/superadmin/settings/payment', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'updatePayment'])->name('superadmin.settings.payment.update');
+
         Route::get('/superadmin/settings/paystack', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'paystack'])->name('superadmin.settings.paystack');
         Route::post('/superadmin/settings/paystack', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'updatePaystack'])->name('superadmin.settings.paystack.update');
+        Route::post('/superadmin/settings/paystack/test', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'testPaystack'])->name('superadmin.settings.paystack.test');
         
         // SuperAdmin can manage all system users
         Route::resource('system-users', SystemUserController::class);

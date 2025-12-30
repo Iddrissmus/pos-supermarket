@@ -8,6 +8,7 @@ use App\Models\Branch;
 use App\Models\Product;
 use App\Models\BranchProduct;
 use App\Models\StockTransfer;
+use App\Models\User;
 use App\Services\StockReorderService;
 
 class StockReorderServiceTest extends TestCase
@@ -20,10 +21,15 @@ class StockReorderServiceTest extends TestCase
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => 'password',
-            'role' => 'business_admin',
+            'role' => 'superadmin', // Temporarily superadmin to bypass business_id check
         ]);
 
         $business = \App\Models\Business::create(['name' => 'Test Business', 'business_admin_id' => $user->id]);
+        
+        $user->update([
+            'role' => 'business_admin',
+            'business_id' => $business->id
+        ]);
 
         $branch = Branch::create([
             'business_id' => $business->id,
