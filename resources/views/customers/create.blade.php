@@ -113,9 +113,6 @@
                 </div>
 
                 <!-- Payment & Credit Information -->
-                <div class="mb-8">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Payment & Credit Information</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Payment Terms *</label>
                             <select name="payment_terms" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
@@ -124,14 +121,6 @@
                                 <option value="net_30" {{ old('payment_terms') === 'net_30' ? 'selected' : '' }}>Net 30 Days</option>
                                 <option value="net_60" {{ old('payment_terms') === 'net_60' ? 'selected' : '' }}>Net 60 Days</option>
                             </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Credit Limit (₵)</label>
-                            <input type="number" name="credit_limit" value="{{ old('credit_limit', 0) }}" min="0" step="0.01"
-                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-                                   placeholder="0.00">
-                            <p class="mt-1 text-sm text-gray-500">Set to 0 for no credit limit</p>
                         </div>
                     </div>
                 </div>

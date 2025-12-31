@@ -17,7 +17,7 @@ class UsersTableSeeder extends Seeder
         // Temporarily disable model events to allow creating cashiers without branch_id
         User::withoutEvents(function () {
             // Business Admin User - Will be assigned to first business
-            User::firstOrCreate(
+            User::updateOrCreate(
                 ['email' => 'businessadmin@pos.com'],
                 [
                     'name' => 'Business Administrator',

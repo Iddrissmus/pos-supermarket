@@ -7,11 +7,28 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+
 class Invoice extends Model
 {
+    use HasUuids;
+
+    /**
+     * Get the columns that should receive a unique identifier.
+     *
+     * @return array
+     */
+    public function uniqueIds()
+    {
+        return ['uuid'];
+    }
+
     protected $fillable = [
+        'uuid',
         'invoice_number',
         'customer_id',
+        'customer_email',
+        'customer_phone',
         'branch_id',
         'created_by',
         'invoice_date',
@@ -27,7 +44,8 @@ class Invoice extends Model
         'notes',
         'terms_conditions',
         'sent_at',
-        'paid_at'
+        'paid_at',
+        'payment_link_token'
     ];
 
     protected $casts = [

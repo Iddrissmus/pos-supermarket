@@ -9,20 +9,32 @@
     $currentRole = $roleColors[$user->role] ?? ['bg' => 'bg-gray-600', 'text' => 'text-gray-600', 'name' => 'User'];
 @endphp
 
-<div class="top-bar flex items-center justify-between px-6 {{ $currentRole['bg'] }}" x-data="{ quickActionsOpen: false, profileOpen: false }">
-    <div class="flex items-center space-x-4">
-        <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                <i class="fas fa-shopping-cart text-white text-lg"></i>
+<div class="top-bar flex items-center justify-between px-6 bg-white border-b border-gray-200 h-[60px] z-50 fixed w-full top-0 start-0" x-data="{ quickActionsOpen: false, profileOpen: false }">
+    <div class="flex items-center gap-x-8">
+        <!-- Logo Area -->
+        <div class="flex items-center space-x-3 w-[240px]">
+            <div class="w-8 h-8 rounded-lg {{ $currentRole['bg'] }} flex items-center justify-center shadow-sm">
+                <i class="fas fa-shopping-cart text-white text-sm"></i>
             </div>
             <div>
-                <h1 class="text-white font-bold text-lg">POS Supermarket</h1>
-                <p class="text-white/80 text-xs">{{ $currentRole['name'] }} Portal</p>
+                <h1 class="font-bold text-lg text-slate-800 leading-tight tracking-tight">POS Mafe</h1>
+                <p class="text-slate-500 text-[10px] uppercase font-bold tracking-wider">{{ $currentRole['name'] }}</p>
+            </div>
+        </div>
+
+        <!-- Search Bar (Visual) -->
+        <div class="hidden md:flex items-center relative w-96">
+            <i class="fas fa-search absolute left-3 text-gray-400 text-sm"></i>
+            <input type="text" placeholder="Search for products, orders, or customers..." 
+                   class="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm text-gray-600 placeholder-gray-400">
+            <div class="absolute right-2 flex items-center space-x-1">
+                <span class="text-xs text-gray-400 px-1.5 py-0.5 border border-gray-200 rounded bg-white">Ctrl</span>
+                <span class="text-xs text-gray-400 px-1.5 py-0.5 border border-gray-200 rounded bg-white">K</span>
             </div>
         </div>
     </div>
     
-    <div class="flex items-center space-x-6">
+    <div class="flex items-center space-x-4">
         <!-- Branch Requests Bell (for SuperAdmin only) -->
         @if($user->role === 'superadmin')
             @php
@@ -30,11 +42,11 @@
             @endphp
             <div class="relative">
                 <a href="{{ route('superadmin.branch-requests.index', ['status' => 'pending']) }}" 
-                   class="text-white hover:bg-white/10 p-2 rounded-lg transition-colors block relative"
+                   class="text-gray-500 hover:bg-gray-100 hover:text-purple-600 p-2 rounded-full transition-all block relative"
                    title="Pending Branch Requests">
                     <i class="fas fa-clipboard-list text-lg"></i>
                     @if($pendingRequestsCount > 0)
-                        <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold">
+                        <span class="absolute top-0 right-0 bg-red-500 text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center font-bold shadow-sm">
                             {{ $pendingRequestsCount }}
                         </span>
                     @endif
@@ -45,13 +57,13 @@
         <!-- Notification Bell (for SuperAdmin, Business Admin and Manager) -->
         @if(in_array($user->role, ['superadmin', 'business_admin', 'manager']))
             <div class="relative">
-                <x-notification-bell />
+                <x-notification-bell class="text-gray-500 hover:text-indigo-600 hover:bg-gray-100 p-2 rounded-full transition-all" />
             </div>
         @endif
         
         <!-- Quick Actions Dropdown -->
         <div class="relative" x-data="{ open: false }" @click.away="open = false">
-            <button @click="open = !open" class="text-white hover:bg-white/10 p-2 rounded-lg transition-colors">
+            <button @click="open = !open" class="text-gray-500 hover:bg-gray-100 hover:text-indigo-600 p-2 rounded-full transition-all">
                 <i class="fas fa-th text-lg"></i>
             </button>
             <div x-show="open" 
@@ -61,41 +73,55 @@
                  x-transition:leave="transition ease-in duration-75"
                  x-transition:leave-start="transform opacity-100 scale-100"
                  x-transition:leave-end="transform opacity-0 scale-95"
-                 class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-2 z-50"
+                 class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 overflow-hidden"
                  style="display: none;">
+                 <div class="px-4 py-2 bg-gray-50 border-b border-gray-100">
+                    <span class="text-xs font-semibold text-gray-500 uppercase">Quick Shortcuts</span>
+                 </div>
                 @if($user->role === 'superadmin')
-                    <a href="{{ route('businesses.index') }}" class="block px-4 py-2 text-gray-700 hover:bg-purple-50 transition-colors">
-                        <i class="fas fa-building text-purple-600 mr-2"></i> Businesses
+                    <a href="{{ route('businesses.index') }}" class="flex items-center px-4 py-3 text-slate-700 hover:bg-purple-50 hover:text-purple-700 transition-colors">
+                        <div class="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center mr-3 text-purple-600">
+                             <i class="fas fa-building"></i>
+                        </div>
+                        <span class="font-medium text-sm">All Businesses</span>
                     </a>
                 @elseif($user->role === 'business_admin')
-                    <a href="{{ route('dashboard.business-admin') }}" class="block px-4 py-2 text-gray-700 hover:bg-blue-50 transition-colors">
-                        <i class="fas fa-briefcase text-blue-600 mr-2"></i> My Business
+                    <a href="{{ route('dashboard.business-admin') }}" class="flex items-center px-4 py-3 text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors">
+                        <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mr-3 text-blue-600">
+                            <i class="fas fa-briefcase"></i>
+                        </div>
+                        <span class="font-medium text-sm">My Business</span>
                     </a>
                 @elseif($user->role === 'manager')
-                    <a href="{{ route('dashboard.manager') }}" class="block px-4 py-2 text-gray-700 hover:bg-green-50 transition-colors">
-                        <i class="fas fa-store text-green-600 mr-2"></i> My Branch
+                    <a href="{{ route('dashboard.manager') }}" class="flex items-center px-4 py-3 text-slate-700 hover:bg-green-50 hover:text-green-700 transition-colors">
+                        <div class="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center mr-3 text-green-600">
+                            <i class="fas fa-store"></i>
+                        </div>
+                        <span class="font-medium text-sm">My Branch</span>
                     </a>
                 @elseif($user->role === 'cashier')
-                    <a href="{{ route('sales.terminal') }}" class="block px-4 py-2 text-gray-700 hover:bg-orange-50 transition-colors">
-                        <i class="fas fa-cash-register text-orange-600 mr-2"></i> POS Terminal
+                    <a href="{{ route('sales.terminal') }}" class="flex items-center px-4 py-3 text-slate-700 hover:bg-orange-50 hover:text-orange-700 transition-colors">
+                        <div class="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center mr-3 text-orange-600">
+                            <i class="fas fa-cash-register"></i>
+                        </div>
+                        <span class="font-medium text-sm">POS Terminal</span>
                     </a>
                 @endif
             </div>
         </div>
         
+        <div class="h-8 w-px bg-gray-200 mx-2"></div>
+
         <!-- User Profile Dropdown -->
         <div class="relative" x-data="{ open: false }" @click.away="open = false">
-            <button @click="open = !open" class="flex items-center space-x-3 text-white hover:bg-white/10 px-3 py-2 rounded-lg transition-colors">
-                <div class="w-9 h-9 bg-white rounded-full flex items-center justify-center">
-                    <span class="{{ $currentRole['text'] }} text-sm font-bold">
-                        {{ strtoupper(substr($user->name, 0, 1)) }}
-                    </span>
+            <button @click="open = !open" class="flex items-center space-x-3 text-slate-700 hover:bg-gray-50 px-2 py-1.5 rounded-full border border-transparent hover:border-gray-200 transition-all">
+                <div class="w-8 h-8 {{ $currentRole['bg'] }} rounded-full flex items-center justify-center text-white shadow-sm ring-2 ring-white">
+                    <span class="text-xs font-bold">{{ strtoupper(substr($user->name, 0, 1)) }}</span>
                 </div>
-                <div class="hidden md:block text-left">
-                    <p class="text-sm font-semibold">{{ $user->name }}</p>
-                    <p class="text-xs text-white/80">{{ $currentRole['name'] }}</p>
+                <div class="hidden md:block text-left mr-1">
+                    <p class="text-xs font-bold leading-none">{{ $user->name }}</p>
                 </div>
-                <i class="fas fa-chevron-down text-xs"></i>
+                <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
             </button>
             
             <div x-show="open" 
@@ -105,42 +131,46 @@
                  x-transition:leave="transition ease-in duration-75"
                  x-transition:leave-start="transform opacity-100 scale-100"
                  x-transition:leave-end="transform opacity-0 scale-95"
-                 class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl py-2 z-50"
+                 class="absolute right-0 mt-2 w-60 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50"
                  style="display: none;">
-                <div class="px-4 py-3 border-b border-gray-100">
-                    <p class="text-sm font-semibold text-gray-800">{{ $user->name }}</p>
-                    <p class="text-xs text-gray-500">{{ $user->email }}</p>
-                    <span class="inline-block mt-1 px-2 py-1 {{ $currentRole['bg'] }} text-white text-xs rounded-full">
+                <div class="px-5 py-3 border-b border-gray-50 bg-gray-50/50">
+                    <p class="text-sm font-bold text-gray-800">{{ $user->name }}</p>
+                    <p class="text-xs text-gray-500 mb-2 truncate">{{ $user->email }}</p>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium {{ str_replace('bg-', 'bg-', $currentRole['bg']) }} bg-opacity-10 {{ $currentRole['text'] }}">
                         {{ $currentRole['name'] }}
                     </span>
                 </div>
                 
-                @if($user->role === 'business_admin' && $user->managedBusiness)
-                    <div class="px-4 py-2 border-b border-gray-100">
-                        <p class="text-xs text-gray-500">Business</p>
-                        <p class="text-sm font-medium text-gray-800">{{ $user->managedBusiness->name }}</p>
-                    </div>
-                @endif
+                <div class="py-1">
+                    @if($user->role === 'business_admin' && $user->managedBusiness)
+                        <div class="px-4 py-2">
+                            <p class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Business</p>
+                            <p class="text-xs font-medium text-gray-700">{{ $user->managedBusiness->name }}</p>
+                        </div>
+                    @endif
+                    
+                    @if(in_array($user->role, ['manager', 'cashier']) && $user->branch)
+                        <div class="px-4 py-2">
+                            <p class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Branch</p>
+                            <p class="text-xs font-medium text-gray-700">{{ $user->branch->name }}</p>
+                        </div>
+                    @endif
+                </div>
+
+                <div class="border-t border-gray-100 py-1">
+                    <a href="{{ route('profile.edit') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-user-circle w-5 text-gray-400"></i> Profile
+                    </a>
+                    <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-cog w-5 text-gray-400"></i> Settings
+                    </a>
+                </div>
                 
-                @if(in_array($user->role, ['manager', 'cashier']) && $user->branch)
-                    <div class="px-4 py-2 border-b border-gray-100">
-                        <p class="text-xs text-gray-500">Branch</p>
-                        <p class="text-sm font-medium text-gray-800">{{ $user->branch->name }}</p>
-                    </div>
-                @endif
-                
-                <a href="{{ route('profile.edit') }}" class="block px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors">
-                    <i class="fas fa-user mr-2 text-gray-400"></i> Profile
-                </a>
-                <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors">
-                    <i class="fas fa-cog mr-2 text-gray-400"></i> Settings
-                </a>
-                
-                <div class="border-t border-gray-100 mt-2 pt-2">
+                <div class="border-t border-gray-100 mt-1 py-1">
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button type="submit" class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 transition-colors">
-                            <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                        <button type="submit" class="w-full text-left flex items-center px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 transition-colors">
+                            <i class="fas fa-sign-out-alt w-5"></i> Logout
                         </button>
                     </form>
                 </div>

@@ -52,6 +52,11 @@ Route::middleware('web')->group(function () {
 Route::post('/business-signup', [GuestBusinessSignupController::class, 'store'])
     ->name('business-signup.store');
 
+// Public Invoice Routes
+Route::get('/pay/{uuid}', [\App\Http\Controllers\PublicInvoiceController::class, 'show'])->name('public.invoice.show');
+Route::post('/pay/{uuid}/process', [\App\Http\Controllers\PublicInvoiceController::class, 'pay'])->name('public.invoice.pay');
+Route::get('/pay/{uuid}/callback', [\App\Http\Controllers\PublicInvoiceController::class, 'callback'])->name('public.invoice.callback');
+
 // Authentication - Role-specific login pages
 Route::middleware('guest')->group(function () {
     // Default login route - redirects to role selection or landing
@@ -142,12 +147,6 @@ Route::middleware('auth')->group(function () {
             ->name('superadmin.business-signup-requests.reject');
     });
     
-    // Business Admin specific routes
-    Route::middleware('role:business_admin')->group(function () {
-        Route::get('/my-business', [BusinessController::class, 'myBusiness'])->name('my-business');
-        Route::get('/my-branches-map', [BusinessController::class, 'myMap'])->name('businesses.myMap');
-    });
-    
     // Only SuperAdmin can create, delete businesses and update business details
     Route::middleware('role:superadmin')->group(function () {
         Route::get('businesses/create', [BusinessController::class, 'create'])->name('businesses.create');
@@ -184,16 +183,36 @@ Route::middleware('auth')->group(function () {
 
     // Business Admin Dashboard
     Route::middleware('role:business_admin')->group(function () {
-        Route::get('/business-admin/dashboard', function () {
-            return view('dashboard.business-admin');
-        })->name('dashboard.business-admin');
+        Route::get('/business-admin/dashboard', [\App\Http\Controllers\Dashboard\BusinessAdminDashboardController::class, 'index'])->name('dashboard.business-admin');
         
-        // My Branch page
-        Route::get('/my-branch', function () {
-            $user = Auth::user();
-            $branch = $user->branch;
-            return view('branches.my-branch', compact('branch'));
-        })->name('my-branch');
+        // Settings management
+        Route::get('/business-admin/profile', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('business-admin.profile.edit');
+        Route::patch('/business-admin/profile', [\App\Http\Controllers\ProfileController::class, 'update'])->name('business-admin.profile.update');
+        
+        // Business Management
+        Route::get('/my-business', [BusinessController::class, 'myBusiness'])->name('my-business');
+        Route::put('/my-business', [BusinessController::class, 'updateMyBusiness'])->name('my-business.update');
+        
+        // Branch Management
+        Route::get('/my-branch', [BranchController::class, 'myBranch'])->name('my-branch');
+        Route::put('/my-branch/{branch}', [BranchController::class, 'update'])->name('branches.update');
+        Route::get('/my-branches/map', [BusinessController::class, 'myMap'])->name('businesses.myMap');
+        
+        // Cashier Management
+
+
+        // Stock Transfer Requests Approval
+        Route::get('/requests/approval', [RequestApprovalController::class, 'index'])->name('requests.approval.index');
+        Route::post('/requests/approval/{transfer}/approve', [RequestApprovalController::class, 'approve'])->name('requests.approval.approve');
+        Route::post('/requests/approval/{transfer}/reject', [RequestApprovalController::class, 'reject'])->name('requests.approval.reject');
+        
+        // Branch Assignment
+        Route::resource('admin/branch-assignments', BranchAssignmentController::class, ['as' => 'admin']);
+
+        // Invoicing System
+        Route::resource('invoices', \App\Http\Controllers\InvoiceController::class);
+        Route::post('invoices/{invoice}/send', [\App\Http\Controllers\InvoiceController::class, 'send'])->name('invoices.send');
+        Route::get('invoices/{invoice}/download-pdf', [\App\Http\Controllers\InvoiceController::class, 'downloadPdf'])->name('invoices.download-pdf');
     });
 
     // Super Admin ,  Business Admin & Manager shared features
@@ -283,34 +302,35 @@ Route::middleware('auth')->group(function () {
             ->name('admin.branch-assignments.store');
             
         // Business Admin creates and manages staff
-        Route::get('/admin/cashiers', [\App\Http\Controllers\Admin\StaffController::class, 'index'])
-            ->name('admin.cashiers.index');
-        Route::post('/admin/cashiers/create', [\App\Http\Controllers\Admin\StaffController::class, 'create'])
-            ->name('admin.cashiers.create');
-        Route::post('/admin/cashiers/assign', [\App\Http\Controllers\Admin\StaffController::class, 'assign'])
-            ->name('admin.cashiers.assign');
-        Route::post('/admin/cashiers/unassign', [\App\Http\Controllers\Admin\StaffController::class, 'unassign'])
-            ->name('admin.cashiers.unassign');
-        Route::post('/admin/cashiers/delete', [\App\Http\Controllers\Admin\StaffController::class, 'delete'])
-            ->name('admin.cashiers.delete');
+        // Staff Management (Managers & Cashiers)
+        Route::get('/admin/staff', [\App\Http\Controllers\Admin\StaffController::class, 'index'])
+            ->name('admin.staff.index');
+        Route::post('/admin/staff/create', [\App\Http\Controllers\Admin\StaffController::class, 'create'])
+            ->name('admin.staff.create');
+        Route::post('/admin/staff/assign', [\App\Http\Controllers\Admin\StaffController::class, 'assign'])
+            ->name('admin.staff.assign');
+        Route::post('/admin/staff/unassign', [\App\Http\Controllers\Admin\StaffController::class, 'unassign'])
+            ->name('admin.staff.unassign');
+        Route::post('/admin/staff/delete', [\App\Http\Controllers\Admin\StaffController::class, 'delete'])
+            ->name('admin.staff.delete');
         
         // Staff status management (Business Admin and SuperAdmin)
-        Route::post('/admin/cashiers/activate', [\App\Http\Controllers\Admin\StaffController::class, 'activate'])
-            ->name('admin.cashiers.activate');
-        Route::post('/admin/cashiers/deactivate', [\App\Http\Controllers\Admin\StaffController::class, 'deactivate'])
-            ->name('admin.cashiers.deactivate');
-        Route::post('/admin/cashiers/block', [\App\Http\Controllers\Admin\StaffController::class, 'block'])
-            ->name('admin.cashiers.block');
+        Route::post('/admin/staff/activate', [\App\Http\Controllers\Admin\StaffController::class, 'activate'])
+            ->name('admin.staff.activate');
+        Route::post('/admin/staff/deactivate', [\App\Http\Controllers\Admin\StaffController::class, 'deactivate'])
+            ->name('admin.staff.deactivate');
+        Route::post('/admin/staff/block', [\App\Http\Controllers\Admin\StaffController::class, 'block'])
+            ->name('admin.staff.block');
     });
     
     // SuperAdmin can also manage staff status
     Route::middleware('role:superadmin')->group(function () {
-        Route::post('/admin/cashiers/activate', [\App\Http\Controllers\Admin\StaffController::class, 'activate'])
-            ->name('admin.cashiers.activate');
-        Route::post('/admin/cashiers/deactivate', [\App\Http\Controllers\Admin\StaffController::class, 'deactivate'])
-            ->name('admin.cashiers.deactivate');
-        Route::post('/admin/cashiers/block', [\App\Http\Controllers\Admin\StaffController::class, 'block'])
-            ->name('admin.cashiers.block');
+        Route::post('/admin/staff/activate', [\App\Http\Controllers\Admin\StaffController::class, 'activate'])
+            ->name('admin.staff.activate');
+        Route::post('/admin/staff/deactivate', [\App\Http\Controllers\Admin\StaffController::class, 'deactivate'])
+            ->name('admin.staff.deactivate');
+        Route::post('/admin/staff/block', [\App\Http\Controllers\Admin\StaffController::class, 'block'])
+            ->name('admin.staff.block');
     });
     
     // Business Admin only

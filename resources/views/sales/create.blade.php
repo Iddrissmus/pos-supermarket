@@ -40,7 +40,6 @@
                                         data-name="{{ $customer->display_name }}"
                                         data-email="{{ $customer->email }}"
                                         data-phone="{{ $customer->phone }}"
-                                        data-credit-limit="{{ $customer->credit_limit }}"
                                         data-outstanding="{{ $customer->outstanding_balance }}"
                                         {{ old('customer_id', request('customer_id')) == $customer->id ? 'selected' : '' }}>
                                     {{ $customer->display_name }} (#{{ $customer->customer_number }})
@@ -132,9 +131,7 @@
                         </div>
                     </div>
 
-                    <!-- Credit Warning -->
-                    <div id="credit-warning" class="mt-4"></div>
-                </div>
+
 
                 <!-- Actions -->
                 <div class="flex justify-end space-x-4 mt-6 pt-6 border-t">
@@ -294,37 +291,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         document.getElementById('grand-total').textContent = '₵' + grandTotal.toFixed(2);
         
-        // Check customer credit limit if customer is selected
-        checkCustomerCredit(grandTotal);
+        document.getElementById('grand-total').textContent = '₵' + grandTotal.toFixed(2);
     }
 
-    function checkCustomerCredit(orderTotal) {
-        const customerSelect = document.getElementById('customer-select');
-        const selectedOption = customerSelect.options[customerSelect.selectedIndex];
-        
-        if (!selectedOption.value) return; // No customer selected
-        
-        const creditLimit = parseFloat(selectedOption.dataset.creditLimit) || 0;
-        const outstanding = parseFloat(selectedOption.dataset.outstanding) || 0;
-        const availableCredit = creditLimit - outstanding;
-        
-        if (creditLimit > 0 && orderTotal > availableCredit) {
-            const warningDiv = document.getElementById('credit-warning');
-            if (warningDiv) {
-                warningDiv.innerHTML = `
-                    <div class="bg-red-50 border border-red-200 rounded p-3 text-red-800">
-                        <i class="fas fa-exclamation-triangle mr-2"></i>
-                        Order total (₵${orderTotal.toFixed(2)}) exceeds available credit (₵${availableCredit.toFixed(2)})
-                    </div>
-                `;
-            }
-        } else {
-            const warningDiv = document.getElementById('credit-warning');
-            if (warningDiv) {
-                warningDiv.innerHTML = '';
-            }
-        }
-    }
+
 
     // Customer selection handler
     document.getElementById('customer-select').addEventListener('change', function() {
@@ -335,22 +305,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const name = selectedOption.dataset.name;
             const email = selectedOption.dataset.email;
             const phone = selectedOption.dataset.phone;
-            const creditLimit = parseFloat(selectedOption.dataset.creditLimit) || 0;
-            const outstanding = parseFloat(selectedOption.dataset.outstanding) || 0;
-            
-            let details = `${name}`;
-            if (email) details += ` • ${email}`;
-            if (phone) details += ` • ${phone}`;
-            
             let creditInfo = '';
-            if (creditLimit > 0) {
-                const available = creditLimit - outstanding;
-                creditInfo = `Credit: ₵${available.toFixed(2)} available (₵${creditLimit.toFixed(2)} limit)`;
-                if (outstanding > 0) {
-                    creditInfo += ` • Outstanding: ₵${outstanding.toFixed(2)}`;
-                }
+            if (outstanding > 0) {
+                creditInfo = `Outstanding: ₵${outstanding.toFixed(2)}`;
             } else {
-                creditInfo = 'No credit terms';
+                creditInfo = 'No outstanding balance';
             }
             
             customerInfo.querySelector('.customer-details').textContent = details;

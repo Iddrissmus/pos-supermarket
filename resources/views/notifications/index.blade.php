@@ -3,139 +3,171 @@
 @section('title', 'Notifications')
 
 @section('content')
-<div class="p-6">
-    <!-- Success/Info Messages -->
-    @if(session('success'))
-        <div class="mb-4 p-4 bg-green-100 border border-green-400 text-green-800 rounded-lg flex items-center">
-            <i class="fas fa-check-circle mr-3"></i>
-            <span>{{ session('success') }}</span>
-        </div>
-    @endif
+<div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-5xl mx-auto">
     
-    @if(session('info'))
-        <div class="mb-4 p-4 bg-blue-100 border border-blue-400 text-blue-800 rounded-lg flex items-center">
-            <i class="fas fa-info-circle mr-3"></i>
-            <span>{{ session('info') }}</span>
-        </div>
-    @endif
-
     <!-- Header -->
-    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div class="flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-gray-800">Notifications</h1>
-            @if($notifications->where('read_at', null)->count() > 0)
-                <form action="{{ route('notifications.mark-all-read') }}" method="POST">
-                    @csrf
-                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors">
-                        <i class="fas fa-check-double mr-2"></i>Mark All as Read
-                    </button>
-                </form>
-            @endif
+    <div class="mb-8 flex justify-between items-end">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-slate-800">Notifications</h1>
+            <p class="text-slate-500 mt-1">Stay updated with activity across your branches</p>
         </div>
+        
+        @if($notifications->where('read_at', null)->count() > 0)
+        <form action="{{ route('notifications.mark-all-read') }}" method="POST">
+            @csrf
+            <button type="submit" class="btn bg-white border-slate-200 hover:border-slate-300 text-indigo-600 hover:text-indigo-700">
+                <i class="fas fa-check-double mr-2"></i> Mark all as read
+            </button>
+        </form>
+        @endif
     </div>
 
-    <!-- Notifications List -->
-    <div class="bg-white rounded-lg shadow-md">
-        @forelse($notifications as $notification)
-            <div class="border-b border-gray-200 last:border-b-0 {{ $notification->read_at ? 'bg-white' : 'bg-blue-50' }}">
-                <div class="p-6">
-                    <div class="flex items-start space-x-4">
-                        <!-- Icon -->
-                        <div class="flex-shrink-0">
-                            <div class="w-12 h-12 rounded-full flex items-center justify-center bg-{{ $notification->data['color'] ?? 'blue' }}-100">
-                                <i class="fas {{ $notification->data['icon'] ?? 'fa-bell' }} text-{{ $notification->data['color'] ?? 'blue' }}-600 text-lg"></i>
-                            </div>
-                        </div>
+    @if(session('success'))
+        <div class="mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg flex items-center shadow-sm">
+            <i class="fas fa-check-circle mr-3"></i> {{ session('success') }}
+        </div>
+    @endif
 
-                        <!-- Content -->
-                        <div class="flex-1 min-w-0">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <h3 class="text-lg font-semibold text-gray-900">
+    <!-- Notifications Container -->
+    <div class="space-y-8">
+        @php
+            // Group notifications by date
+            $groupedNotifications = $notifications->groupBy(function($item) {
+                if ($item->created_at->isToday()) {
+                    return 'Today';
+                } elseif ($item->created_at->isYesterday()) {
+                    return 'Yesterday';
+                } elseif ($item->created_at->diffInDays(now()) <= 7) {
+                    return 'Last 7 Days';
+                } else {
+                    return 'Older';
+                }
+            });
+            
+            // Define order for custom sorting if needed, though groupBy usually preserves insertion order usually enough
+            $order = ['Today', 'Yesterday', 'Last 7 Days', 'Older'];
+        @endphp
+
+        @forelse($order as $group)
+            @if(isset($groupedNotifications[$group]))
+            <div>
+                <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">{{ $group }}</h3>
+                <div class="space-y-3">
+                    @foreach($groupedNotifications[$group] as $notification)
+                        <div class="group relative flex items-start bg-white p-4 rounded-xl shadow-sm border border-slate-200 transition-all hover:shadow-md {{ !$notification->read_at ? 'border-l-4 border-l-indigo-500 bg-indigo-50/10' : '' }}">
+                            
+                            <!-- Icon -->
+                            <div class="shrink-0 mr-4 mt-1">
+                                @php
+                                    $color = $notification->data['color'] ?? 'blue';
+                                    $bgClass = "bg-{$color}-100"; 
+                                    $textClass = "text-{$color}-600";
+                                    // Fallback
+                                    if(!in_array($color, ['red','green','blue','yellow','indigo','purple','pink','orange','teal','emerald','slate','gray'])) {
+                                        $bgClass = 'bg-slate-100';
+                                        $textClass = 'text-slate-600';
+                                    }
+                                @endphp
+                                <div class="w-10 h-10 rounded-full {{ $bgClass }} flex items-center justify-center">
+                                    <i class="fas {{ $notification->data['icon'] ?? 'fa-bell' }} {{ $textClass }}"></i>
+                                </div>
+                            </div>
+
+                            <!-- Content -->
+                            <div class="flex-1 min-w-0">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="text-base font-semibold text-slate-800 mb-1">
                                         {{ $notification->data['title'] ?? 'Notification' }}
-                                        @if($notification->data['urgency'] ?? '' === 'critical')
-                                            <span class="ml-2 inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
+                                        @if(($notification->data['urgency'] ?? '') === 'critical')
+                                            <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 uppercase tracking-wide">
                                                 Critical
                                             </span>
                                         @endif
-                                        @if(!$notification->read_at)
-                                            <span class="ml-2 inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                                New
-                                            </span>
+                                    </h4>
+                                    <span class="text-xs text-slate-400 whitespace-nowrap ml-2">
+                                        {{ $notification->created_at->format('H:i') }}
+                                    </span>
+                                </div>
+                                <p class="text-sm text-slate-600 mb-2 leading-relaxed">
+                                    {{ $notification->data['message'] ?? '' }}
+                                </p>
+
+                                <!-- Rich Content: Low Stock -->
+                                @if(($notification->data['type'] ?? '') === 'low_stock')
+                                    <div class="mt-2 bg-slate-50 rounded-lg p-3 border border-slate-100 text-xs grid grid-cols-2 gap-y-2 gap-x-4 max-w-md">
+                                        <div><span class="font-medium text-slate-500">Product:</span> <span class="text-slate-900 block">{{ $notification->data['product_name'] ?? 'N/A' }}</span></div>
+                                        <div><span class="font-medium text-slate-500">Branch:</span> <span class="text-slate-900 block">{{ $notification->data['branch_name'] ?? 'N/A' }}</span></div>
+                                        <div><span class="font-medium text-slate-500">Stock:</span> <span class="font-bold text-rose-600 block">{{ $notification->data['current_stock'] ?? 0 }}</span></div>
+                                        <div><span class="font-medium text-slate-500">Reorder:</span> <span class="text-slate-900 block">{{ $notification->data['reorder_level'] ?? 0 }}</span></div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <a href="{{ route('layouts.assign') }}" class="inline-flex items-center text-xs font-semibold text-indigo-600 hover:text-indigo-800">
+                                            Assign Stock <i class="fas fa-arrow-right ml-1"></i>
+                                        </a>
+                                    </div>
+                                @endif
+
+                                <!-- Rich Content: Register Closed -->
+                                @if(($notification->data['type'] ?? '') === 'register_closed')
+                                    <div class="mt-2 text-xs flex gap-4 text-slate-500">
+                                        <div>Expected: <span class="font-medium text-slate-900">GHS {{ $notification->data['expected_amount'] ?? '0.00' }}</span></div>
+                                        <div>Actual: <span class="font-medium text-slate-900">GHS {{ $notification->data['actual_amount'] ?? '0.00' }}</span></div>
+                                        @if(($notification->data['difference'] ?? 0) != 0)
+                                            <div>Diff: <span class="font-bold {{ ($notification->data['difference'] > 0) ? 'text-blue-600' : 'text-rose-600' }}">
+                                                {{ ($notification->data['difference'] > 0 ? '+' : '') . $notification->data['difference'] }}
+                                            </span></div>
                                         @endif
-                                    </h3>
-                                    <p class="mt-1 text-gray-600">{{ $notification->data['message'] ?? '' }}</p>
+                                    </div>
+                                @endif
+                                
+                                @if(isset($notification->data['action_url']) && ($notification->data['type'] ?? '') !== 'low_stock')
+                                    <div class="mt-2">
+                                        <a href="{{ $notification->data['action_url'] }}" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline">
+                                            View Details
+                                        </a>
+                                    </div>
+                                @endif
+                            </div>
 
-                                    <!-- Additional Details for Low Stock Notifications -->
-                                    @if($notification->data['type'] === 'low_stock')
-                                        <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
-                                            <div class="bg-gray-50 p-3 rounded">
-                                                <span class="font-medium text-gray-700">Product:</span>
-                                                <span class="text-gray-900">{{ $notification->data['product_name'] }}</span>
-                                            </div>
-                                            <div class="bg-gray-50 p-3 rounded">
-                                                <span class="font-medium text-gray-700">Branch:</span>
-                                                <span class="text-gray-900">{{ $notification->data['branch_name'] }}</span>
-                                            </div>
-                                            <div class="bg-gray-50 p-3 rounded">
-                                                <span class="font-medium text-gray-700">Current Stock:</span>
-                                                <span class="text-red-600 font-semibold">{{ $notification->data['current_stock'] }} units</span>
-                                            </div>
-                                            <div class="bg-gray-50 p-3 rounded">
-                                                <span class="font-medium text-gray-700">Reorder Level:</span>
-                                                <span class="text-gray-900">{{ $notification->data['reorder_level'] }} units</span>
-                                            </div>
-                                        </div>
-                                        <div class="mt-3">
-                                            <a href="{{ route('layouts.assign') }}" class="text-blue-600 hover:text-blue-800 font-medium text-sm">
-                                                <i class="fas fa-plus-circle mr-1"></i>Assign Stock Now
-                                            </a>
-                                        </div>
-                                    @endif
-
-                                    <p class="mt-2 text-sm text-gray-500">
-                                        <i class="fas fa-clock mr-1"></i>
-                                        {{ $notification->created_at->diffForHumans() }}
-                                    </p>
-                                </div>
-
-                                <!-- Actions -->
-                                <div class="flex space-x-2 ml-4">
-                                    @if(!$notification->read_at)
-                                        <form action="{{ route('notifications.mark-read', $notification->id) }}" method="POST">
-                                            @csrf
-                                            <button type="submit" class="text-blue-600 hover:text-blue-800" title="Mark as read">
-                                                <i class="fas fa-check"></i>
-                                            </button>
-                                        </form>
-                                    @endif
-                                    <form action="{{ route('notifications.destroy', $notification->id) }}" method="POST" onsubmit="return confirm('Delete this notification?')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="text-red-600 hover:text-red-800" title="Delete">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
-                                </div>
+                            <!-- Actions -->
+                            <div class="shrink-0 flex flex-col space-y-2 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                @if(!$notification->read_at)
+                                <form action="{{ route('notifications.mark-read', $notification->id) }}" method="POST">
+                                    @csrf
+                                    <button type="submit" class="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 flex items-center justify-center transition-colors" title="Mark as Read">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </form>
+                                @endif
+                                <form action="{{ route('notifications.destroy', $notification->id) }}" method="POST" onsubmit="return confirm('Delete this notification?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-colors" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
                             </div>
                         </div>
-                    </div>
+                    @endforeach
                 </div>
             </div>
+            @endif
         @empty
-            <div class="p-12 text-center">
-                <i class="fas fa-bell-slash text-gray-400 text-5xl mb-4"></i>
-                <h3 class="text-lg font-medium text-gray-900 mb-2">No notifications</h3>
-                <p class="text-gray-500">You're all caught up! We'll notify you when something important happens.</p>
+            <div class="p-16 text-center bg-white rounded-xl border border-slate-200 shadow-sm border-dashed">
+                <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fas fa-inbox text-slate-300 text-4xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-800">All caught up!</h3>
+                <p class="text-slate-500 mt-2">You have no new notifications at the moment.</p>
             </div>
         @endforelse
     </div>
 
-    <!-- Pagination -->
     @if($notifications->hasPages())
-        <div class="mt-6">
-            {{ $notifications->links() }}
-        </div>
+    <div class="mt-6">
+        {{ $notifications->links() }}
+    </div>
     @endif
+
 </div>
 @endsection

@@ -3,242 +3,253 @@
 @section('title', 'Manager Dashboard')
 
 @section('content')
-<div class="p-6">
-    @php
-        $branch = Auth::user()->branch;
-        $cashiers = $branch ? \App\Models\User::where('role', 'cashier')->where('branch_id', $branch->id)->count() : 0;
-    @endphp
+<div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+    
+    <!-- Dashboard Header -->
+    <div class="sm:flex sm:justify-between sm:items-center mb-8">
+        <div class="mb-4 sm:mb-0">
+            <h1 class="text-2xl md:text-3xl font-bold text-slate-800">Dashboard</h1>
+            <p class="text-slate-500 mt-1">
+                Welcome back, {{ Auth::user()->name }} 👋
+                @if(isset($branch))
+                    <span class="mx-2">•</span> <span class="font-medium text-indigo-600">{{ $branch->name }}</span>
+                @endif
+            </p>
+        </div>
+        <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
+            <a href="{{ route('manager.item-requests.index') }}" class="inline-flex items-center px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 ease-in-out transform hover:-translate-y-0.5">
+                <i class="fas fa-plus mr-2"></i> 
+                <span>Request Stock</span>
+            </a>
+        </div>
+    </div>
 
-    <!-- Welcome Header -->
-    <div class="bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg shadow-lg p-8 mb-8 text-white">
-        <div class="flex items-center justify-between">
+    @if(!isset($branch))
+        <div class="mb-8 bg-amber-50 border border-amber-200 rounded-lg p-6 flex items-start">
+            <i class="fas fa-exclamation-triangle text-amber-500 text-xl mt-1 mr-4"></i>
             <div>
-                <h1 class="text-3xl font-bold mb-2">Branch Manager Dashboard</h1>
-                <p class="text-green-100">Branch: <span class="font-semibold">{{ $branch->name ?? 'No Branch Assigned' }}</span></p>
-                <p class="text-green-100 text-sm mt-1">Welcome back, {{ Auth::user()->name }}!</p>
+                <h3 class="text-lg font-bold text-amber-800">No Branch Assigned</h3>
+                <p class="text-amber-700 mt-1">You are not currently assigned to any branch. Please contact the Business Administrator to get set up.</p>
             </div>
-            <div class="text-6xl opacity-50">
-                <i class="fas fa-users-cog"></i>
+        </div>
+    @else
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+        <!-- Sales Card -->
+        <div class="flex flex-col col-span-1 bg-white shadow-sm rounded-xl border border-slate-200">
+            <div class="px-5 pt-5 pb-5">
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Today's Sales</h2>
+                    <div class="p-2 rounded-full bg-emerald-50">
+                        <i class="fas fa-chart-line text-emerald-500"></i>
+                    </div>
+                </div>
+                <div class="text-3xl font-bold text-slate-800 mb-1">{{ $stats['today_sales'] ?? 0 }}</div>
+                <div class="text-xs font-medium text-emerald-600 flex items-center">
+                    <i class="fas fa-arrow-up mr-1"></i> <span>12%</span> <span class="text-slate-400 ml-2">vs yesterday</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cashiers Card -->
+        <div class="flex flex-col col-span-1 bg-white shadow-sm rounded-xl border border-slate-200">
+            <div class="px-5 pt-5 pb-5">
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Cashiers</h2>
+                    <div class="p-2 rounded-full bg-blue-50">
+                        <i class="fas fa-user-friends text-blue-500"></i>
+                    </div>
+                </div>
+                <div class="text-3xl font-bold text-slate-800 mb-1">
+                    @php
+                        $cashiersCount = \App\Models\User::where('role', 'cashier')->where('branch_id', $branch->id)->count();
+                    @endphp
+                    {{ $cashiersCount }}
+                </div>
+                <div class="text-xs font-medium text-blue-600 flex items-center">
+                    <span>Manage Staff</span> <i class="fas fa-chevron-right ml-1 text-[10px]"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Products Card -->
+        <div class="flex flex-col col-span-1 bg-white shadow-sm rounded-xl border border-slate-200">
+            <div class="px-5 pt-5 pb-5">
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Products</h2>
+                    <div class="p-2 rounded-full bg-indigo-50">
+                        <i class="fas fa-box text-indigo-500"></i>
+                    </div>
+                </div>
+                <div class="text-3xl font-bold text-slate-800 mb-1">{{ $stats['total_products'] ?? 0 }}</div>
+                <div class="text-xs font-medium text-slate-400">
+                   In Stock
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Requests Card -->
+        <div class="flex flex-col col-span-1 bg-white shadow-sm rounded-xl border border-slate-200">
+            <div class="px-5 pt-5 pb-5">
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Pending Requests</h2>
+                    <div class="p-2 rounded-full bg-amber-50">
+                        <i class="fas fa-clock text-amber-500"></i>
+                    </div>
+                </div>
+                <div class="text-3xl font-bold text-slate-800 mb-1">
+                    {{ \App\Models\StockTransfer::where('to_branch_id', $branch->id)->where('status', 'pending')->count() }}
+                </div>
+                <div class="text-xs font-medium text-amber-600">
+                    Needs Attention
+                </div>
             </div>
         </div>
     </div>
 
-    @if(!$branch)
-        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg mb-8">
-            <div class="flex">
-                <div class="flex-shrink-0">
-                    <i class="fas fa-exclamation-triangle text-yellow-400 text-xl"></i>
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-12 gap-6">
+        
+        <!-- Quick Actions & Info -->
+        <div class="col-span-12 xl:col-span-8 space-y-6">
+            
+            <!-- Quick Actions -->
+            <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+                <h3 class="text-lg font-bold text-slate-800 mb-4">Quick Actions</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <a href="{{ route('manager.cashiers.index') }}" class="group flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-blue-200 hover:shadow-md transition-all cursor-pointer">
+                        <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-users-cog text-xl"></i>
+                        </div>
+                        <span class="text-sm font-semibold text-slate-700">Cashiers</span>
+                    </a>
+
+                    <a href="{{ route('manager.item-requests.index') }}" class="group flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-amber-200 hover:shadow-md transition-all cursor-pointer">
+                        <div class="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-truck-loading text-xl"></i>
+                        </div>
+                        <span class="text-sm font-semibold text-slate-700">Item Requests</span>
+                    </a>
+
+                    <a href="{{ route('suppliers.index') }}" class="group flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-emerald-200 hover:shadow-md transition-all cursor-pointer">
+                        <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-people-carry text-xl"></i>
+                        </div>
+                        <span class="text-sm font-semibold text-slate-700">Suppliers</span>
+                    </a>
+
+                    <a href="{{ route('sales.report') }}" class="group flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-purple-200 hover:shadow-md transition-all cursor-pointer">
+                        <div class="w-12 h-12 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-chart-pie text-xl"></i>
+                        </div>
+                        <span class="text-sm font-semibold text-slate-700">Reports</span>
+                    </a>
                 </div>
-                <div class="ml-3">
-                    <h3 class="text-sm font-medium text-yellow-800">No Branch Assigned</h3>
-                    <p class="text-sm text-yellow-700 mt-1">
-                        You are not currently assigned to any branch. Please contact the Business Administrator.
-                    </p>
+            </div>
+
+            <!-- Recent Activity / Items -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                    <h3 class="font-bold text-slate-800">Recent Sales</h3>
+                    <a href="{{ route('sales.index') }}" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">View All</a>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-slate-50 border-b border-slate-100">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Order ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Cashier</th>
+                                <th class="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            @forelse($stats['recent_sales'] as $sale)
+                            <tr class="hover:bg-slate-50">
+                                <td class="px-6 py-4 text-sm font-medium text-indigo-600">
+                                    <a href="#">#{{ $sale->order_id ?? $sale->id }}</a>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-slate-600">{{ $sale->created_at->format('M d, H:i') }}</td>
+                                <td class="px-6 py-4 text-sm text-slate-600">{{ $sale->cashier->name ?? 'Unknown' }}</td>
+                                <td class="px-6 py-4 text-sm font-bold text-slate-800 text-right">₵{{ number_format($sale->total_amount, 2) }}</td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="4" class="px-6 py-8 text-center text-slate-500 text-sm">No recent sales found.</td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-    @else
-        <!-- Quick Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex items-center justify-between">
+
+        <!-- Sidebar Info -->
+        <div class="col-span-12 xl:col-span-4 space-y-6">
+            
+            <!-- Branch Details Card -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-4 opacity-10">
+                    <i class="fas fa-store text-9xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800 mb-4 relative z-10">Branch Details</h3>
+                
+                <div class="space-y-4 relative z-10">
                     <div>
-                        <p class="text-gray-500 text-sm font-medium">Branch</p>
-                        <p class="text-3xl font-bold text-green-600 mt-2">{{ $branch->name }}</p>
+                        <p class="text-xs font-semibold text-slate-400 uppercase">Branch Name</p>
+                        <p class="text-base font-medium text-slate-800">{{ $branch->name }}</p>
                     </div>
-                    <div class="bg-green-100 rounded-full p-4">
-                        <i class="fas fa-store text-green-600 text-2xl"></i>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase">Location</p>
+                        <p class="text-base font-medium text-slate-800">{{ $branch->location ?? 'Headquarters' }}</p>
+                    </div>
+                    <div>
+                         <p class="text-xs font-semibold text-slate-400 uppercase">Manager</p>
+                        <div class="flex items-center mt-1">
+                            <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 mr-2">
+                                {{ substr(Auth::user()->name, 0, 2) }}
+                            </div>
+                            <span class="text-sm font-medium text-slate-700">{{ Auth::user()->name }}</span>
+                        </div>
+                    </div>
+                    <div class="pt-4 mt-2 border-t border-slate-100 flex items-center justify-between">
+                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                            <span class="w-2 h-2 mr-1.5 bg-emerald-400 rounded-full"></span>
+                            Operational
+                        </span>
+                        <a href="#" class="text-sm text-indigo-600 font-medium hover:underline">Edit Info</a>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm font-medium">Cashiers</p>
-                        <p class="text-3xl font-bold text-blue-600 mt-2">{{ $cashiers }}</p>
-                    </div>
-                    <div class="bg-blue-100 rounded-full p-4">
-                        <i class="fas fa-user-friends text-blue-600 text-2xl"></i>
-                    </div>
-                </div>
+            <!-- Quick Links -->
+             <div class="bg-slate-900 rounded-xl shadow-lg p-6 text-white">
+                <h3 class="text-lg font-bold mb-4">Support & Help</h3>
+                <ul class="space-y-3">
+                    <li>
+                        <a href="#" class="flex items-center text-slate-300 hover:text-white transition-colors">
+                            <i class="fas fa-book-reader w-6"></i>
+                            <span class="text-sm">Manager's Handbook</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center text-slate-300 hover:text-white transition-colors">
+                            <i class="fas fa-headset w-6"></i>
+                            <span class="text-sm">Contact Super Admin</span>
+                        </a>
+                    </li>
+                     <li>
+                        <a href="#" class="flex items-center text-slate-300 hover:text-white transition-colors">
+                            <i class="fas fa-video w-6"></i>
+                            <span class="text-sm">Video Tutorials</span>
+                        </a>
+                    </li>
+                </ul>
             </div>
 
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm font-medium">Today's Sales</p>
-                        <p class="text-3xl font-bold text-purple-600 mt-2">{{ $stats['today_sales'] ?? 0 }}</p>
-                    </div>
-                    <div class="bg-purple-100 rounded-full p-4">
-                        <i class="fas fa-chart-line text-purple-600 text-2xl"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm font-medium">Products</p>
-                        <p class="text-3xl font-bold text-orange-600 mt-2">{{ $stats['total_products'] ?? 0 }}</p>
-                    </div>
-                    <div class="bg-orange-100 rounded-full p-4">
-                        <i class="fas fa-box text-orange-600 text-2xl"></i>
-                    </div>
-                </div>
-            </div>
         </div>
-
-        <!-- Quick Actions -->
-        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 class="text-xl font-semibold text-gray-800 mb-6">
-                <i class="fas fa-bolt text-yellow-500 mr-2"></i>Quick Actions
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <a href="{{ route('manager.cashiers.index') }}" class="flex items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors border-2 border-green-200">
-                    <div class="bg-green-600 rounded-full p-3 mr-4">
-                        <i class="fas fa-user-friends text-white"></i>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800">Manage Cashiers</p>
-                        <p class="text-sm text-gray-600">Assign and manage staff</p>
-                    </div>
-                </a>
-
-                <a href="{{ route('layouts.product') }}" class="flex items-center p-4 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border-2 border-indigo-200">
-                    <div class="bg-indigo-600 rounded-full p-3 mr-4">
-                        <i class="fas fa-boxes text-white"></i>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800">Products</p>
-                        <p class="text-sm text-gray-600">View branch inventory</p>
-                    </div>
-                </a>
-
-                <a href="{{ route('sales.report') }}" class="flex items-center p-4 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border-2 border-emerald-200">
-                    <div class="bg-emerald-600 rounded-full p-3 mr-4">
-                        <i class="fas fa-chart-line text-white"></i>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800">Sales Reports</p>
-                        <p class="text-sm text-gray-600">Analytics & insights</p>
-                    </div>
-                </a>
-
-                <a href="{{ route('product-reports.index') }}" class="flex items-center p-4 bg-violet-50 hover:bg-violet-100 rounded-lg transition-colors border-2 border-violet-200">
-                    <div class="bg-violet-600 rounded-full p-3 mr-4">
-                        <i class="fas fa-chart-pie text-white"></i>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800">Product Analytics</p>
-                        <p class="text-sm text-gray-600">Product performance data</p>
-                    </div>
-                </a>
-
-                <a href="{{ route('manager.item-requests.index') }}" class="flex items-center p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors border-2 border-orange-200">
-                    <div class="bg-orange-600 rounded-full p-3 mr-4">
-                        <i class="fas fa-box text-white"></i>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800">Item Requests</p>
-                        <p class="text-sm text-gray-600">Request stock items</p>
-                    </div>
-                </a>
-
-                <a href="{{ route('stock-receipts.index') }}" class="flex items-center p-4 bg-teal-50 hover:bg-teal-100 rounded-lg transition-colors border-2 border-teal-200">
-                    <div class="bg-sky-600 rounded-full p-3 mr-4">
-                        <i class="fas fa-truck-loading text-white"></i>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800">Receive Stock</p>
-                        <p class="text-sm text-gray-600">Add inventory from suppliers</p>
-                    </div>
-                </a>
-
-                <a href="{{ route('suppliers.index') }}" class="flex items-center p-4 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors border-2 border-amber-200">
-                    <div class="bg-amber-600 rounded-full p-3 mr-4">
-                        <i class="fas fa-people-carry text-white"></i>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800">Local Suppliers</p>
-                        <p class="text-sm text-gray-600">Manage local vendors</p>
-                    </div>
-                </a>
-
-                <a href="{{ route('customers.index') }}" class="flex items-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors border-2 border-purple-200">
-                    <div class="bg-purple-600 rounded-full p-3 mr-4">
-                        <i class="fas fa-address-book text-white"></i>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800">Customers</p>
-                        <p class="text-sm text-gray-600">View customer list</p>
-                    </div>
-                </a>
-
-                <a href="{{ route('sales.index') }}" class="flex items-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border-2 border-blue-200">
-                    <div class="bg-blue-600 rounded-full p-3 mr-4">
-                        <i class="fas fa-receipt text-white"></i>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800">Branch Sales</p>
-                        <p class="text-sm text-gray-600">View all transactions</p>
-                    </div>
-                </a>
-            </div>
-        </div>
-
-        <!-- Branch Info -->
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-semibold text-gray-800 mb-6">
-                <i class="fas fa-info-circle text-green-600 mr-2"></i>Branch Information
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-6">
-                    <div class="flex items-center mb-4">
-                        <div class="bg-green-600 rounded-full p-3 mr-3">
-                            <i class="fas fa-store text-white text-xl"></i>
-                        </div>
-                        <h3 class="font-semibold text-gray-800 text-lg">Branch Details</h3>
-                    </div>
-                    <div class="space-y-3 text-sm">
-                        <div class="flex justify-between items-center py-2 border-b border-green-200">
-                            <span class="text-gray-600 font-medium">Branch Name:</span>
-                            <span class="font-semibold text-gray-800">{{ $branch->name }}</span>
-                        </div>
-                        <div class="flex justify-between items-center py-2 border-b border-green-200">
-                            <span class="text-gray-600 font-medium">Location:</span>
-                            <span class="font-semibold text-gray-800">{{ $branch->location ?? 'N/A' }}</span>
-                        </div>
-                        <div class="flex justify-between items-center py-2">
-                            <span class="text-gray-600 font-medium">Status:</span>
-                            <span class="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-green-600 text-white">
-                                <i class="fas fa-check-circle mr-1"></i>
-                                Active
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-6">
-                    <div class="flex items-center mb-4">
-                        <div class="bg-blue-600 rounded-full p-3 mr-3">
-                            <i class="fas fa-users text-white text-xl"></i>
-                        </div>
-                        <h3 class="font-semibold text-gray-800 text-lg">Staff Summary</h3>
-                    </div>
-                    <div class="space-y-3 text-sm">
-                        <div class="flex justify-between items-center py-2 border-b border-blue-200">
-                            <span class="text-gray-600 font-medium">Total Cashiers:</span>
-                            <span class="font-semibold text-blue-600 text-lg">{{ $cashiers }}</span>
-                        </div>
-                        <div class="flex justify-between items-center py-2">
-                            <span class="text-gray-600 font-medium">Branch Manager:</span>
-                            <span class="font-semibold text-gray-800">{{ Auth::user()->name }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    </div>
     @endif
 </div>
 @endsection

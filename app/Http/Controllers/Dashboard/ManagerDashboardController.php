@@ -27,6 +27,13 @@ class ManagerDashboardController extends Controller
         $branchIds = $branchesQuery->pluck('id');
         $productCount = \App\Models\BranchProduct::where('branch_id', $user->branch_id)->count();
 
+        $branch = $branches->first();
+
+        // If no branch found but user has ID, fetch it directly (safety fallback)
+        if (!$branch && $user->branch_id) {
+            $branch = Branch::find($user->branch_id);
+        }
+
         $stats = [
             'total_businesses' => $businessCount,
             'total_branches' => $branchCount,
@@ -36,9 +43,13 @@ class ManagerDashboardController extends Controller
             'recent_sales' => Sale::with([
                 'branch' => fn ($query) => $query->with('business:id,name'),
                 'cashier',
-            ])->latest()->take(5)->get(),
+            ])
+            ->where('branch_id', $user->branch_id) // Filter by manager's branch
+            ->latest()
+            ->take(5)
+            ->get(),
         ];
 
-        return view('dashboard.manager', compact('stats', 'branches'));
+        return view('dashboard.manager', compact('stats', 'branches', 'branch'));
     }
 }

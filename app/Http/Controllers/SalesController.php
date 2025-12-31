@@ -9,6 +9,9 @@ use App\Models\Category;
 use App\Models\SaleItem;
 use App\Models\User;
 use App\Notifications\HighValueSaleNotification;
+use App\Notifications\SaleCompletedNotification;
+use App\Notifications\RegisterClosedNotification;
+use Illuminate\Support\Facades\Notification;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use App\Models\BranchProduct;
@@ -321,6 +324,23 @@ class SalesController extends Controller
                 ]);
             });
 
+            // Notify Manager(s) of the branch about the closure
+            $managers = User::where('branch_id', $user->branch_id)
+                ->where('role', 'manager')
+                ->get();
+            
+            // Also notify Business Admin if needed, or just managers
+            // For now, let's notify managers
+            if ($managers->count() > 0) {
+                Notification::send($managers, new RegisterClosedNotification($session, [
+                    'opening_amount' => $session->opening_amount,
+                    'cash_sales' => $cashSales,
+                    'expected_amount' => $expectedAmount,
+                    'actual_amount' => $actualAmount,
+                    'difference' => $difference,
+                ]));
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Cash drawer closed successfully.',
@@ -477,6 +497,15 @@ class SalesController extends Controller
                 // Send notification for high-value sales (> GHS 500)
                 if ($sale->total > 500) {
                     $this->notifyHighValueSale($sale);
+                }
+
+                // Notify Managers about every sale (General Notification)
+                $managers = User::where('branch_id', $sale->branch_id)
+                    ->where('role', 'manager')
+                    ->get();
+                
+                if ($managers->count() > 0) {
+                    Notification::send($managers, new SaleCompletedNotification($sale));
                 }
 
                 // Log sale creation activity

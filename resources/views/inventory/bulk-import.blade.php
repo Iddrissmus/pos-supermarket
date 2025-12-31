@@ -3,169 +3,214 @@
 @section('title', 'Bulk Import Products')
 
 @section('content')
-<div class="p-6 max-w-4xl mx-auto">
-    <!-- Success/Error Messages -->
-    @if (session('success'))
-        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-            <span class="block sm:inline">{{ session('success') }}</span>
-        </div>
-    @endif
-    
-    @if (session('warning'))
-        <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative mb-4" role="alert">
-            <span class="block sm:inline">{{ session('warning') }}</span>
-        </div>
-    @endif
-    
-    @if (session('error'))
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-            <span class="block sm:inline">{{ session('error') }}</span>
-        </div>
-    @endif
-
-    @if (session('import_errors'))
-        <div class="bg-yellow-50 border border-yellow-400 text-yellow-800 px-4 py-3 rounded relative mb-4" role="alert">
-            <p class="font-medium mb-2">Import Errors:</p>
-            <ul class="list-disc list-inside text-sm">
-                @foreach (session('import_errors') as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
-    @if ($errors->any())
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-            <ul class="list-disc list-inside">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
-    <div class="bg-white rounded-lg shadow-md p-6">
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-800">Bulk Import Products</h1>
-                <p class="text-sm text-gray-600 mt-1">Import multiple products from an Excel file</p>
-            </div>
-            <a href="{{ route('layouts.product') }}" class="text-gray-600 hover:text-gray-800">
-                <i class="fas fa-times text-xl"></i>
-            </a>
+<div class="min-h-screen py-10 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto space-y-6">
+        
+        <!-- Header -->
+        <div class="text-center">
+            <h1 class="text-3xl font-extrabold text-gray-900">Bulk Product Import</h1>
+            <p class="mt-2 text-lg text-gray-600">Add multiple products to your warehouse inventory from a spreadsheet.</p>
         </div>
 
-        <!-- Instructions -->
-        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
-            <div class="flex items-start">
-                <i class="fas fa-info-circle text-blue-500 mr-3 mt-1"></i>
-                <div>
-                    <h3 class="font-medium text-blue-900 mb-2">How to use bulk import:</h3>
-                    <ol class="list-decimal list-inside text-sm text-blue-800 space-y-1">
-                        <li>Download the Excel template below</li>
-                        <li>Fill in your product data (Product Name, Category, Total Boxes, Units per Box)</li>
-                        <li>Upload the completed Excel file</li>
-                        <li>Products will be created in your warehouse inventory</li>
-                        <li>Assign them to branches using the Bulk Assignment or Manual Assignment pages</li>
-                    </ol>
-                    <p class="text-sm text-blue-700 mt-3">
-                        <strong>Note:</strong> This creates products ONLY. They won't appear in branches until you assign them.
-                    </p>
+        <!-- Alerts -->
+        @if (session('success'))
+            <div class="bg-green-50 border-l-4 border-green-400 p-4 rounded-md shadow-sm">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-check-circle text-green-400"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-green-700 font-medium">{{ session('success') }}</p>
+                    </div>
                 </div>
             </div>
-        </div>
+        @endif
+        @if (session('error'))
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-md shadow-sm">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-times-circle text-red-400"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-red-700 font-medium">{{ session('error') }}</p>
+                    </div>
+                </div>
+            </div>
+        @endif
+        @if(session('import_errors'))
+             <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-md shadow-sm">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-red-400"></i>
+                    </div>
+                    <div class="ml-3 w-full">
+                         <p class="text-sm text-red-700 font-bold mb-2">Import Errors:</p>
+                         <ul class="list-disc list-inside text-sm text-red-600 space-y-1">
+                            @foreach (session('import_errors') as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        @endif
 
-        <!-- Download Template Button -->
-        <div class="mb-6">
-            <a href="{{ route('inventory.template') }}" class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors">
-                <i class="fas fa-download mr-2"></i>
-                Download Excel Template
-            </a>
-            <p class="text-xs text-gray-500 mt-2">The template includes sample data and proper column headers</p>
-        </div>
-
-        <!-- Upload Form -->
-        <form action="{{ route('inventory.import') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
-            @csrf
-
-            <!-- File Upload -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                    Upload Excel File *
-                </label>
-                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <input 
-                        type="file" 
-                        name="file" 
-                        accept=".xlsx,.xls,.csv" 
-                        required
-                        class="hidden"
-                        id="fileInput"
-                    >
-                    <label for="fileInput" class="cursor-pointer">
-                        <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
-                        <p class="text-sm text-gray-600">Click to browse or drag and drop</p>
-                        <p class="text-xs text-gray-500 mt-1">Excel files only (.xlsx, .xls, .csv) - Max 5MB</p>
-                    </label>
-                    <p id="fileName" class="text-sm text-blue-600 mt-2 hidden"></p>
+        <!-- Main Card -->
+        <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+            <!-- Step Guide -->
+            <div class="bg-blue-50/50 p-6 border-b border-gray-100">
+                <h3 class="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4">Quick Guide</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                     <div class="flex items-start">
+                        <div class="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">1</div>
+                        <div class="ml-3">
+                            <h4 class="text-sm font-medium text-gray-900">Download Template</h4>
+                            <p class="text-xs text-gray-500 mt-1">Get the properly formatted Excel file.</p>
+                        </div>
+                    </div>
+                     <div class="flex items-start">
+                        <div class="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">2</div>
+                        <div class="ml-3">
+                            <h4 class="text-sm font-medium text-gray-900">Fill Data</h4>
+                            <p class="text-xs text-gray-500 mt-1">Add product names, categories, and stock.</p>
+                        </div>
+                    </div>
+                     <div class="flex items-start">
+                        <div class="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">3</div>
+                        <div class="ml-3">
+                            <h4 class="text-sm font-medium text-gray-900">Upload</h4>
+                            <p class="text-xs text-gray-500 mt-1">Drag and drop your file below.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Expected Format Info -->
-            <div class="bg-gray-50 rounded-lg p-4">
-                <h4 class="font-medium text-gray-800 mb-2">Expected Excel Columns:</h4>
-                <div class="grid grid-cols-2 gap-2 text-sm">
+            <div class="p-8">
+                 <!-- Template Download -->
+                <div class="mb-8 flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-200">
                     <div>
-                        <span class="font-medium text-gray-700">Product Name *</span>
-                        <p class="text-xs text-gray-500">Required - Unique product name</p>
+                        <h3 class="text-sm font-semibold text-gray-900">Need the template?</h3>
+                        <p class="text-xs text-gray-500">Includes sample data and required columns.</p>
+                    </div>
+                     <a href="{{ route('inventory.template') }}" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-download mr-2 text-green-600"></i>
+                        Download .XLSX
+                    </a>
+                </div>
+
+                 <!-- Upload Form -->
+                <form action="{{ route('inventory.import') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+                    @csrf
+                    
+                    <div class="w-full">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Upload Excel File</label>
+                        <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer group relative" id="drop-zone">
+                            <div class="space-y-1 text-center">
+                                <div class="mx-auto h-12 w-12 text-gray-400 group-hover:text-blue-500 transition-colors">
+                                    <i class="fas fa-cloud-upload-alt text-4xl"></i>
+                                </div>
+                                <div class="flex text-sm text-gray-600 justify-center">
+                                    <label for="file-upload" class="relative cursor-pointer bg-transparent rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
+                                        <span>Upload a file</span>
+                                        <input id="file-upload" name="file" type="file" class="sr-only" accept=".xlsx,.xls,.csv" required>
+                                    </label>
+                                    <p class="pl-1">or drag and drop</p>
+                                </div>
+                                <p class="text-xs text-gray-500">
+                                    XLSX, XLS, CSV up to 5MB
+                                </p>
+                                <p id="file-name" class="text-sm font-bold text-green-600 mt-2 hidden"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex items-center justify-end space-x-4 pt-4 border-t border-gray-100">
+                         <a href="{{ route('layouts.product') }}" class="text-sm font-medium text-gray-500 hover:text-gray-700">Cancel</a>
+                        <button type="submit" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                            <i class="fas fa-upload mr-2"></i> Import Products
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Format Reference -->
+             <div class="bg-gray-50 px-8 py-6 border-t border-gray-200">
+                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Column Reference</h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                        <span class="block font-medium text-gray-900">Product Name*</span>
+                        <span class="text-xs text-gray-500">Unique identifier</span>
                     </div>
                     <div>
-                        <span class="font-medium text-gray-700">Category *</span>
-                        <p class="text-xs text-gray-500">Required - Must exist in system</p>
+                        <span class="block font-medium text-gray-900">Category*</span>
+                        <span class="text-xs text-gray-500">Must exist in system</span>
                     </div>
                     <div>
-                        <span class="font-medium text-gray-700">Description</span>
-                        <p class="text-xs text-gray-500">Optional</p>
+                        <span class="block font-medium text-gray-900">Units per Box*</span>
+                        <span class="text-xs text-gray-500">Number of items</span>
                     </div>
-                    <div>
-                        <span class="font-medium text-gray-700">Total Boxes</span>
-                        <p class="text-xs text-gray-500">Warehouse inventory</p>
-                    </div>
-                    <div>
-                        <span class="font-medium text-gray-700">Units per Box *</span>
-                        <p class="text-xs text-gray-500">Required - Default: 1</p>
+                     <div>
+                        <span class="block font-medium text-gray-900">Total Boxes</span>
+                        <span class="text-xs text-gray-500">Initial stock</span>
                     </div>
                 </div>
-                <p class="text-xs text-gray-500 mt-3 italic">
-                    <i class="fas fa-lightbulb text-yellow-500 mr-1"></i>
-                    Total Units = Total Boxes × Units per Box (calculated automatically)
-                </p>
             </div>
-
-            <!-- Submit Buttons -->
-            <div class="flex justify-end space-x-3 mt-6">
-                <a href="{{ route('layouts.product') }}" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
-                    Cancel
-                </a>
-                <button type="submit" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
-                    <i class="fas fa-upload mr-2"></i>
-                    Import Products
-                </button>
-            </div>
-        </form>
+        </div>
     </div>
 </div>
 
 <script>
-    // Show selected file name
-    document.getElementById('fileInput').addEventListener('change', function(e) {
-        const fileName = document.getElementById('fileName');
-        if (this.files.length > 0) {
-            fileName.textContent = 'Selected: ' + this.files[0].name;
-            fileName.classList.remove('hidden');
-        } else {
-            fileName.classList.add('hidden');
+    const fileInput = document.getElementById('file-upload');
+    const fileNameDisplay = document.getElementById('file-name');
+    const dropZone = document.getElementById('drop-zone');
+
+    fileInput.addEventListener('change', function() {
+        if(this.files && this.files.length > 0) {
+            fileNameDisplay.textContent = 'Selected: ' + this.files[0].name;
+            fileNameDisplay.classList.remove('hidden');
+            dropZone.classList.add('border-green-500', 'bg-green-50');
         }
     });
+
+    // Drag and Drop Logic
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight(e) {
+        dropZone.classList.add('border-blue-500', 'bg-blue-50');
+    }
+
+    function unhighlight(e) {
+        dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+    }
+
+    dropZone.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        fileInput.files = files;
+        
+        if(files.length > 0) {
+            fileNameDisplay.textContent = 'Selected: ' + files[0].name;
+            fileNameDisplay.classList.remove('hidden');
+            dropZone.classList.add('border-green-500', 'bg-green-50');
+        }
+    }
 </script>
 @endsection

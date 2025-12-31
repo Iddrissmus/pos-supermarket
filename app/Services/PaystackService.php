@@ -25,7 +25,7 @@ class PaystackService
         
         $fields = [
             'email' => $email,
-            'amount' => $amount * 100, // Amount in kobo
+            'amount' => $amount, // Amount in subunit (e.g., pesewas for GHS)
             'metadata' => json_encode($metadata),
         ];
 
@@ -55,7 +55,7 @@ class PaystackService
 
         $fields = [
             'email' => $email,
-            'amount' => $amount * 100,
+            'amount' => $amount,
             'mobile_money' => [
                 'phone' => $phone,
                 'provider' => $provider

@@ -18,30 +18,21 @@ class LogViewerController extends Controller
         $error = null;
         $level = (string) ($request->input('level', 'all') ?? 'all');
         $search = (string) ($request->input('search', '') ?? '');
-        $linesToShow = (int) ($request->input('lines', 500) ?? 500);
-        $linesToShow = max(100, min(10000, $linesToShow)); // bound between 100 and 10k
+        $linesToShow = (int) ($request->input('lines', 1000) ?? 1000); // Increased default
+        $linesToShow = max(100, min(10000, $linesToShow));
         $fileSize = $hasLogs ? File::size($path) : 0;
 
         if ($hasLogs) {
             try {
-                Log::info('Log viewer accessed', [
-                    'level' => $level,
-                    'search' => $search,
-                    'lines' => $linesToShow,
-                    'file_size' => $fileSize,
-                ]);
-
                 $contents = File::get($path);
                 $lines = collect(preg_split('/\r\n|\n|\r/', $contents));
 
-                // take last N lines
                 if ($lines->count() > $linesToShow) {
                     $lines = $lines->slice(-1 * $linesToShow)->values();
                 }
 
                 $parsed = $this->parseEntries($lines);
 
-                // filter by level/search
                 $filtered = array_filter($parsed, function ($entry) use ($level, $search) {
                     if ($level !== 'all' && ($entry['level'] ?? '') !== $level) {
                         return false;
@@ -55,7 +46,6 @@ class LogViewerController extends Controller
                     return true;
                 });
 
-                // newest first
                 $entries = array_reverse(array_values($filtered));
             } catch (\Throwable $e) {
                 $error = 'Failed to read log file: ' . $e->getMessage();
@@ -63,8 +53,21 @@ class LogViewerController extends Controller
             }
         }
 
+        // Pagination Logic
+        $page = $request->input('page', 1);
+        $perPage = 20; // Items per page
+        $offset = ($page * $perPage) - $perPage;
+        
+        $entriesCollection = new \Illuminate\Pagination\LengthAwarePaginator(
+            array_slice($entries, $offset, $perPage),
+            count($entries),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
         return view('superadmin.logs', [
-            'entries' => $entries,
+            'entries' => $entriesCollection,
             'hasLogs' => $hasLogs,
             'path' => $path,
             'error' => $error,

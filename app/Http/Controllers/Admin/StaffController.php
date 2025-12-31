@@ -47,7 +47,7 @@ class StaffController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('admin.cashiers', compact('managers', 'cashiers', 'branches'));
+        return view('admin.staff', compact('managers', 'cashiers', 'branches'));
     }
 
     /**

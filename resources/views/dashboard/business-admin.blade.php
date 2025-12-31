@@ -1,318 +1,263 @@
 @extends('layouts.app')
 
-@section('title', 'Business Admin Dashboard')
+@section('title', 'Business Dashboard')
 
 @section('content')
-<div class="p-6">
-    @php
-        $user = Auth::user();
-        $business = $user->managedBusiness;
-        $branch = $user->branch; // Business admin's assigned branch
-        $totalManagers = \App\Models\User::where('role', 'manager')->where('branch_id', $user->branch_id)->count();
-        $totalCashiers = \App\Models\User::where('role', 'cashier')->where('branch_id', $user->branch_id)->count();
-        $branchIds = \App\Models\Branch::where('business_id', $user->business_id)->pluck('id');
-        $lowStockCount = \App\Models\BranchProduct::whereIn('branch_id', $branchIds)
-            ->whereRaw('stock_quantity <= reorder_level')
-            ->count();
-        $outOfStockCount = \App\Models\BranchProduct::whereIn('branch_id', $branchIds)
-            ->where('stock_quantity', '<=', 0)
-            ->count();
-        $topProducts = \App\Models\SaleItem::join('sales', 'sale_items.sale_id', '=', 'sales.id')
-            ->join('products', 'sale_items.product_id', '=', 'products.id')
-            ->whereIn('sales.branch_id', $branchIds)
-            ->groupBy('products.id', 'products.name', 'products.barcode')
-            ->select(
-                'products.name as product_name',
-                'products.barcode',
-                \DB::raw('SUM(sale_items.quantity) as total_qty'),
-                \DB::raw('SUM(sale_items.total) as total_revenue')
-            )
-            ->orderByDesc('total_revenue')
-            ->limit(5)
-            ->get();
-    @endphp
+<div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+    
+    <!-- Welcome Banner -->
+    <div class="relative bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg overflow-hidden mb-8">
+        <div class="absolute inset-0 bg-white/10" style="background-image: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 20%), radial-gradient(circle at 80% 80%, rgba(255,255,255,0.1) 0%, transparent 20%);"></div>
+        <div class="relative p-8 sm:p-10">
+            <div class="sm:flex sm:items-center sm:justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-white tracking-tight">Dashboard Overview</h1>
+                    <p class="mt-2 text-blue-100 text-lg">
+                        {{ $user->managedBusiness->name ?? 'My Business' }}
+                    </p>
+                </div>
+                <div class="mt-4 sm:mt-0 flex items-center space-x-3">
+                    <span class="inline-flex items-center px-4 py-2 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 text-white font-medium">
+                        <i class="fas fa-calendar-alt mr-2"></i> {{ now()->format('M d, Y') }}
+                    </span>
 
-    <!-- Welcome Header -->
-    <div class="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg shadow-lg p-8 mb-8 text-white">
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-3xl font-bold mb-2">Business Administrator Dashboard</h1>
-                <p class="text-blue-100">Business: <span class="font-semibold">{{ $business->name ?? 'No Business Assigned' }}</span></p>
-                <p class="text-blue-100">Branch: <span class="font-semibold">{{ $branch->name ?? 'No Branch Assigned' }}</span></p>
-                <p class="text-blue-100 text-sm mt-1">Welcome back, {{ Auth::user()->name }}!</p>
-            </div>
-            <div class="text-6xl opacity-50">
-                <i class="fas fa-briefcase"></i>
+                </div>
             </div>
         </div>
     </div>
 
-    @if(!$business || !$branch)
-        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg mb-8">
+    @if(isset($error))
+        <div class="mb-8 bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
             <div class="flex">
                 <div class="flex-shrink-0">
-                    <i class="fas fa-exclamation-triangle text-yellow-400 text-xl"></i>
+                    <i class="fas fa-exclamation-circle text-red-500"></i>
                 </div>
                 <div class="ml-3">
-                    <h3 class="text-sm font-medium text-yellow-800">Account Not Fully Configured</h3>
-                    <p class="text-sm text-yellow-700 mt-1">
-                        @if(!$business)
-                            You are not currently assigned to any business.
-                        @elseif(!$branch)
-                            You are not currently assigned to any branch.
-                        @endif
-                        Please contact the System Administrator.
-                    </p>
+                    <p class="text-sm text-red-700">{{ $error }}</p>
                 </div>
             </div>
         </div>
     @else
-        <!-- Quick Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm font-medium">My Branch</p>
-                        <p class="text-xl font-bold text-blue-600 mt-2">{{ $branch->name }}</p>
-                        <p class="text-xs text-gray-500 mt-1">{{ $branch->address }}</p>
+
+        <!-- Key Metrics Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Revenue -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-indigo-50 p-3 rounded-lg">
+                        <i class="fas fa-wallet text-indigo-600 text-xl"></i>
                     </div>
-                    <div class="bg-blue-100 rounded-full p-4">
-                        <i class="fas fa-store text-blue-600 text-2xl"></i>
-                    </div>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Total Revenue</p>
+                    <h3 class="text-2xl font-bold text-gray-900 mt-1">GH₵ {{ number_format($totalRevenue, 2) }}</h3>
                 </div>
             </div>
 
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm font-medium">Managers</p>
-                        <p class="text-3xl font-bold text-green-600 mt-2">{{ $totalManagers }}</p>
-                        <p class="text-xs text-gray-500 mt-1">In my branch</p>
+            <!-- Total Orders -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-blue-50 p-3 rounded-lg">
+                        <i class="fas fa-shopping-cart text-blue-600 text-xl"></i>
                     </div>
-                    <div class="bg-green-100 rounded-full p-4">
-                        <i class="fas fa-user-tie text-green-600 text-2xl"></i>
-                    </div>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Total Orders</p>
+                    <h3 class="text-2xl font-bold text-gray-900 mt-1">{{ number_format($totalOrders) }}</h3>
                 </div>
             </div>
 
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm font-medium">Cashiers</p>
-                        <p class="text-3xl font-bold text-purple-600 mt-2">{{ $totalCashiers }}</p>
-                        <p class="text-xs text-gray-500 mt-1">In my branch</p>
+            <!-- Total Products -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-green-50 p-3 rounded-lg">
+                        <i class="fas fa-box text-green-600 text-xl"></i>
                     </div>
-                    <div class="bg-purple-100 rounded-full p-4">
-                        <i class="fas fa-cash-register text-purple-600 text-2xl"></i>
-                    </div>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Total Products</p>
+                    <h3 class="text-2xl font-bold text-gray-900 mt-1">{{ number_format($totalProducts) }}</h3>
+                    <p class="text-xs text-gray-400 mt-1">Across all branches</p>
                 </div>
             </div>
 
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm font-medium">Products</p>
-                        <p class="text-3xl font-bold text-orange-600 mt-2">{{ $branch->branchProducts->count() }}</p>
-
-                        <p class="text-xs text-gray-500 mt-1">In business</p>
+            <!-- Low Stock Alert -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-red-50 p-3 rounded-lg">
+                        <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
                     </div>
-                    <div class="bg-orange-100 rounded-full p-4">
-                        <i class="fas fa-box text-orange-600 text-2xl"></i>
-                    </div>
+                    @if($lowStockCount > 0)
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            Attention Needed
+                        </span>
+                    @endif
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Low Stock Items</p>
+                    <h3 class="text-2xl font-bold text-gray-900 mt-1">{{ number_format($lowStockCount) }}</h3>
+                    <p class="text-xs text-gray-400 mt-1">{{ number_format($outOfStockCount) }} out of stock</p>
                 </div>
             </div>
         </div>
 
-        <!-- Product Highlights -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            <!-- Stock Health -->
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <div>
-                        <p class="text-sm text-gray-500">Low Stock Items</p>
-                        <p class="text-3xl font-bold text-red-600">{{ number_format($lowStockCount) }}</p>
-                    </div>
-                    <div class="bg-red-100 p-3 rounded-full">
-                        <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
-                    </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            
+            <!-- Recent Sales Feed -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 lg:col-span-2">
+                <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+                    <h2 class="text-lg font-bold text-gray-900">Recent Transactions</h2>
+                    <a href="{{ route('sales.report') }}" class="text-sm text-blue-600 hover:text-blue-800 font-medium">View All</a>
                 </div>
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500">Out of Stock</p>
-                        <p class="text-2xl font-bold text-gray-700">{{ number_format($outOfStockCount) }}</p>
-                    </div>
-                    <div class="bg-gray-100 p-3 rounded-full">
-                        <i class="fas fa-box-open text-gray-600 text-xl"></i>
-                    </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-gray-50/50">
+                                <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Reference</th>
+                                <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Branch</th>
+                                <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Cashier</th>
+                                <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-right">Amount</th>
+                                <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-right">Time</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @forelse($recentSales as $sale)
+                                <tr class="hover:bg-gray-50/50 transition-colors">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        #{{ $sale->receipt_number }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                        {{ $sale->branch->name ?? 'N/A' }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                        {{ $sale->cashier->name ?? 'Unknown' }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600 text-right">
+                                        GH₵ {{ number_format($sale->total, 2) }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400 text-right">
+                                        {{ $sale->created_at->diffForHumans() }}
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                                        <div class="flex flex-col items-center justify-center">
+                                            <i class="fas fa-receipt text-gray-300 text-4xl mb-3"></i>
+                                            <p>No recent transactions found.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
             <!-- Top Products -->
-            <div class="bg-white rounded-lg shadow-md p-6 lg:col-span-2">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                        <i class="fas fa-star text-amber-500"></i> Product Highlights
-                    </h3>
-                    <a href="{{ route('product-reports.performance') }}" class="text-sm text-blue-600 hover:text-blue-800">
-                        View Performance →
-                    </a>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+                <div class="p-6 border-b border-gray-100">
+                    <h2 class="text-lg font-bold text-gray-900">Top Selling Products</h2>
                 </div>
-                @if($topProducts->count() > 0)
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
-                                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Qty Sold</th>
-                                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Revenue</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                @foreach($topProducts as $product)
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-4 py-3">
-                                            <div class="font-medium text-gray-900">{{ $product->product_name }}</div>
-                                            <div class="text-xs text-gray-500">{{ $product->barcode }}</div>
-                                        </td>
-                                        <td class="px-4 py-3 text-right text-sm font-semibold text-gray-900">
-                                            {{ number_format($product->total_qty) }}
-                                        </td>
-                                        <td class="px-4 py-3 text-right text-sm font-semibold text-green-600">
-                                            GH₵ {{ number_format($product->total_revenue, 2) }}
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                @else
-                    <p class="text-sm text-gray-500">No product sales yet for this business.</p>
-                @endif
-            </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">
-                <i class="fas fa-bolt text-yellow-500 mr-2"></i>Quick Actions
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <a href="{{ route('admin.branch-assignments.index') }}" class="flex items-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border-2 border-blue-200">
-                    <div class="bg-blue-600 rounded-full p-3 mr-4">
-                        <i class="fas fa-sitemap text-white"></i>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800">Manage Branches</p>
-                        <p class="text-sm text-gray-600">Create and assign branches</p>
-                    </div>
-                </a>
-
-                <a href="{{ route('admin.cashiers.index') }}" class="flex items-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors border-2 border-purple-200">
-                    <div class="bg-purple-600 rounded-full p-3 mr-4">
-                        <i class="fas fa-users text-white"></i>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800">Manage Staff</p>
-                        <p class="text-sm text-gray-600">Assign managers and cashiers</p>
-                    </div>
-                </a>
-
-                <a href="{{ route('layouts.product') }}" class="flex items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors border-2 border-green-200">
-                    <div class="bg-green-600 rounded-full p-3 mr-4">
-                        <i class="fas fa-boxes text-white"></i>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800">Products & Inventory</p>
-                        <p class="text-sm text-gray-600">Manage product catalog</p>
-                    </div>
-                </a>
-
-                <a href="{{ route('suppliers.index') }}" class="flex items-center p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors border-2 border-orange-200">
-                    <div class="bg-orange-600 rounded-full p-3 mr-4">
-                        <i class="fas fa-truck text-white"></i>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800">Suppliers</p>
-                        <p class="text-sm text-gray-600">Manage supplier relationships</p>
-                    </div>
-                </a>
-
-                <a href="{{ route('customers.index') }}" class="flex items-center p-4 bg-cyan-50 hover:bg-cyan-100 rounded-lg transition-colors border-2 border-cyan-200">
-                    <div class="bg-cyan-600 rounded-full p-3 mr-4">
-                        <i class="fas fa-user-friends text-white"></i>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800">Customers</p>
-                        <p class="text-sm text-gray-600">Manage customer database</p>
-                    </div>
-                </a>
-
-                <a href="{{ route('requests.approval.index') }}" class="flex items-center p-4 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border-2 border-red-200">
-                    <div class="bg-red-600 rounded-full p-3 mr-4">
-                        <i class="fas fa-clipboard-check text-white"></i>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800">Approve Requests</p>
-                        <p class="text-sm text-gray-600">Review stock transfer requests</p>
-                    </div>
-                </a>
-            </div>
-        </div>
-
-        <!-- Branch Overview -->
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">
-                <i class="fas fa-store text-blue-600 mr-2"></i>My Branch Details
-            </h2>
-            <div class="grid grid-cols-1 gap-4">
-                <div class="border-2 border-blue-400 rounded-lg p-6 bg-blue-50">
-                    <div class="flex items-start justify-between mb-4">
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-800">{{ $branch->name }}</h3>
-                            <p class="text-sm text-gray-600 mt-1">
-                                <i class="fas fa-map-marker-alt mr-1"></i>{{ $branch->address ?? 'No address set' }}
-                            </p>
-                            @if($branch->contact)
-                                <p class="text-sm text-gray-600 mt-1">
-                                    <i class="fas fa-phone mr-1"></i>{{ $branch->contact }}
-                                </p>
-                            @endif
-                        </div>
-                        {{-- <span class="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                            <i class="fas fa-check-circle mr-1"></i>Active
-                        </span> --}}
-                    </div>
-                    <div class="grid grid-cols-2 gap-4 text-sm">
-                        <div class="bg-white rounded-lg p-3">
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-600">Managers:</span>
-                                <span class="font-semibold text-lg text-blue-600">{{ \App\Models\User::where('branch_id', $branch->id)->where('role', 'manager')->count() }}</span>
+                <div class="p-6">
+                    @forelse($topProducts as $index => $product)
+                        <div class="flex items-center justify-between mb-6 last:mb-0">
+                            <div class="flex items-center min-w-0">
+                                <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm mr-3 flex-shrink-0">
+                                    {{ $index + 1 }}
+                                </div>
+                                <div class="truncate">
+                                    <p class="text-sm font-medium text-gray-900 truncate">{{ $product->product_name }}</p>
+                                    <p class="text-xs text-gray-500">{{ $product->barcode }}</p>
+                                </div>
+                            </div>
+                            <div class="text-right ml-4 flex-shrink-0">
+                                <p class="text-sm font-bold text-gray-900">GH₵ {{ number_format($product->total_revenue, 2) }}</p>
+                                <p class="text-xs text-gray-500">{{ number_format($product->total_qty) }} sold</p>
                             </div>
                         </div>
-                        <div class="bg-white rounded-lg p-3">
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-600">Cashiers:</span>
-                                <span class="font-semibold text-lg text-blue-600">{{ \App\Models\User::where('branch_id', $branch->id)->where('role', 'cashier')->count() }}</span>
-                            </div>
-                        </div>
-                        <div class="bg-white rounded-lg p-3">
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-600">Products:</span>
-                                <span class="font-semibold text-lg text-blue-600">{{ $branch->branchProducts->count() }}</span>
-                            </div>
-                        </div>
-                        <div class="bg-white rounded-lg p-3">
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-600">Total Sales:</span>
-                                <span class="font-semibold text-lg text-green-600">
-                                    GH₵ {{ number_format(\App\Models\Sale::where('branch_id', $branch->id)->sum('total'), 2) }}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
+                    @empty
+                         <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-box-open text-gray-300 text-3xl mb-3"></i>
+                            <p>No data available yet.</p>
+                         </div>
+                    @endforelse
                 </div>
             </div>
         </div>
+
+        <!-- Branch Performance -->
+         <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
+            <div class="p-6 border-b border-gray-100">
+                <h2 class="text-lg font-bold text-gray-900">Branch Performance</h2>
+            </div>
+             <div class="p-6">
+                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                     @forelse($branchPerformance as $bp)
+                        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <h3 class="font-bold text-gray-900">{{ $bp->branch->name }}</h3>
+                                    <p class="text-xs text-gray-500 mt-1">{{ $bp->branch->address }}</p>
+                                </div>
+                                <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">Active</span>
+                            </div>
+                            <div class="mt-4 pt-4 border-t border-gray-200 grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-xs text-gray-500">Revenue</p>
+                                    <p class="text-sm font-bold text-gray-900">GH₵ {{ number_format($bp->revenue, 2) }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500">Orders</p>
+                                    <p class="text-sm font-bold text-gray-900">{{ number_format($bp->orders) }}</p>
+                                </div>
+                            </div>
+                        </div>
+                     @empty
+                        <div class="col-span-full text-center py-8 text-gray-500">
+                            No branch performance data available.
+                        </div>
+                     @endforelse
+                 </div>
+             </div>
+         </div>
+
+        <!-- Quick Actions Grid -->
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Quick Management</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <a href="{{ route('admin.branch-assignments.index') }}" class="group bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:border-blue-500 hover:shadow-md transition-all">
+                <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 mb-4 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    <i class="fas fa-network-wired text-xl"></i>
+                </div>
+                <h3 class="font-bold text-gray-900">Manage Branches</h3>
+                <p class="text-sm text-gray-500 mt-1">Add or configure branch locations</p>
+            </a>
+
+            <a href="{{ route('admin.staff.index') }}" class="group bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:border-purple-500 hover:shadow-md transition-all">
+                <div class="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center text-purple-600 mb-4 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                    <i class="fas fa-users text-xl"></i>
+                </div>
+                <h3 class="font-bold text-gray-900">Staff Management</h3>
+                <p class="text-sm text-gray-500 mt-1">Oversee managers and cashiers</p>
+            </a>
+
+            <a href="{{ route('layouts.product') }}" class="group bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:border-green-500 hover:shadow-md transition-all">
+                <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center text-green-600 mb-4 group-hover:bg-green-600 group-hover:text-white transition-colors">
+                    <i class="fas fa-boxes text-xl"></i>
+                </div>
+                <h3 class="font-bold text-gray-900">Inventory</h3>
+                <p class="text-sm text-gray-500 mt-1">Manage global product catalog</p>
+            </a>
+
+            <a href="{{ route('requests.approval.index') }}" class="group bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:border-orange-500 hover:shadow-md transition-all">
+                <div class="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center text-orange-600 mb-4 group-hover:bg-orange-600 group-hover:text-white transition-colors">
+                    <i class="fas fa-clipboard-check text-xl"></i>
+                </div>
+                <h3 class="font-bold text-gray-900">Requests</h3>
+                <p class="text-sm text-gray-500 mt-1">Approve stock and item requests</p>
+            </a>
+        </div>
+
     @endif
 </div>
 @endsection

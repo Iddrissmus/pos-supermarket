@@ -8,6 +8,8 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <style>
         .gradient-text {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -15,8 +17,76 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        .hero-gradient {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        
+        /* Swiper Custom Styles */
+        .swiper {
+            width: 100%;
+            height: 600px;
+        }
+        
+        .swiper-slide {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .slide-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            z-index: 1;
+        }
+        
+        .slide-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5); /* Dark overlay */
+            z-index: 2;
+        }
+        
+        .slide-content {
+            position: relative;
+            z-index: 3;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: white;
+            padding: 0 20px;
+        }
+        
+        /* Text Animations */
+        .swiper-slide-active .animate-title {
+            animation: fadeInUp 0.8s ease-out forwards;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        
+        .swiper-slide-active .animate-subtitle {
+            animation: fadeInUp 0.8s ease-out 0.3s forwards;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        
+        .swiper-slide-active .animate-btn {
+            animation: fadeInUp 0.8s ease-out 0.6s forwards;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
     </style>
 </head>
@@ -98,33 +168,73 @@
         </div>
     </nav>
 
-    <!-- Hero Section -->
-    <section class="hero-gradient text-white py-20 px-4">
-        <div class="max-w-5xl mx-auto text-center">
-            <h1 class="text-4xl md:text-6xl font-bold mb-6">
-                Modern Point of Sale System
-            </h1>
-            <p class="text-xl text-purple-100 mb-8 max-w-3xl mx-auto">
-                Manage your retail business efficiently with multi-branch support, real-time inventory tracking, and comprehensive sales analytics.
-            </p>
-            <div class="flex justify-center gap-4">
-                <a href="{{ route('login.superadmin') }}" class="inline-block bg-white text-purple-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-all shadow-lg">
-                    <i class="fas fa-crown mr-2"></i>SuperAdmin Login
-                </a>
-                <a href="{{ route('login.business-admin') }}" class="inline-block bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-all shadow-lg">
-                    <i class="fas fa-briefcase mr-2"></i>Business Admin Login
-                </a>
-            </div>
-            @guest
-                <div class="mt-8">
-                    <a href="#business-signup" class="inline-flex items-center text-sm text-purple-100 hover:text-white underline underline-offset-4">
-                        <i class="fas fa-building mr-2"></i>
-                        Create a new business account (request approval)
-                    </a>
+    <!-- Hero Slider -->
+    <div class="swiper mySwiper">
+        <div class="swiper-wrapper">
+            <!-- Slide 1 -->
+            <div class="swiper-slide">
+                <div class="slide-bg" style="background-image: url('https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80');"></div>
+                <div class="slide-overlay bg-gradient-to-r from-black/70 to-transparent"></div>
+                <div class="slide-content max-w-7xl mx-auto px-4 !items-start !text-left">
+                    <h1 class="text-4xl md:text-6xl font-bold mb-4 animate-title leading-tight">
+                        Revolutionize Your<br>Retail Business
+                    </h1>
+                    <p class="text-xl md:text-2xl text-gray-200 mb-8 max-w-2xl animate-subtitle">
+                        Experience the future of Point of Sale systems. Multi-branch management, real-time analytics, and seamless inventory control.
+                    </p>
+                    <div class="flex gap-4 animate-btn">
+                        <a href="#business-signup" onclick="toggleSignupForm()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-full font-bold transition-all transform hover:scale-105 shadow-lg">
+                            Get Started
+                        </a>
+                        <a href="#features" class="bg-transparent border-2 border-white text-white px-8 py-3 rounded-full font-bold hover:bg-white hover:text-indigo-900 transition-all">
+                            Learn More
+                        </a>
+                    </div>
                 </div>
-            @endguest
+            </div>
+
+            <!-- Slide 2 -->
+            <div class="swiper-slide">
+                <div class="slide-bg" style="background-image: url('https://images.unsplash.com/photo-1556740758-90de374c12ad?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80');"></div>
+                <div class="slide-overlay bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+                <div class="slide-content">
+                    <h1 class="text-4xl md:text-6xl font-bold mb-4 animate-title text-center">
+                        Powerful Analytics
+                    </h1>
+                    <p class="text-xl md:text-2xl text-gray-200 mb-8 max-w-2xl text-center animate-subtitle">
+                        Turn data into decisions with our comprehensive dashboard and reporting tools.
+                    </p>
+                     <div class="flex gap-4 animate-btn justify-center">
+                        <a href="{{ route('login.business-admin') }}" class="bg-white text-indigo-900 px-8 py-3 rounded-full font-bold transition-all transform hover:scale-105 shadow-lg">
+                            Business Login
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+             <!-- Slide 3 -->
+            <div class="swiper-slide">
+                <div class="slide-bg" style="background-image: url('https://images.unsplash.com/photo-1542838132-92c53300491e?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80');"></div>
+                <div class="slide-overlay bg-indigo-900/60"></div>
+                <div class="slide-content max-w-7xl mx-auto px-4 !items-end !text-right">
+                    <h1 class="text-4xl md:text-6xl font-bold mb-4 animate-title">
+                        Seamless & Secure
+                    </h1>
+                    <p class="text-xl md:text-2xl text-gray-200 mb-8 max-w-2xl animate-subtitle ml-auto">
+                         Built with enterprise-grade security to protect your transactions and customer data.
+                    </p>
+                    <div class="animate-btn ml-auto">
+                         <a href="{{ route('login.cashier') }}" class="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-full font-bold transition-all shadow-lg">
+                            <i class="fas fa-cash-register"></i> Cashier Terminal
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
-    </section>
+        <div class="swiper-button-next text-white"></div>
+        <div class="swiper-button-prev text-white"></div>
+        <div class="swiper-pagination"></div>
+    </div>
 
     @if (session('success'))
         <div class="max-w-3xl mx-auto mt-6 px-4">
@@ -686,6 +796,25 @@
                     }
                 });
             }
+        });
+        // Initialize Swiper
+        var swiper = new Swiper(".mySwiper", {
+            spaceBetween: 0,
+            centeredSlides: true,
+            effect: "fade", // Fade effect for cleaner transitions
+            loop: true,
+            autoplay: {
+                delay: 5000,
+                disableOnInteraction: false,
+            },
+            pagination: {
+                el: ".swiper-pagination",
+                clickable: true,
+            },
+            navigation: {
+                nextEl: ".swiper-button-next",
+                prevEl: ".swiper-button-prev",
+            },
         });
     </script>
 

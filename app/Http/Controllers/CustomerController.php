@@ -64,12 +64,9 @@ class CustomerController extends Controller
             'country' => 'nullable|string|max:100',
             'postal_code' => 'nullable|string|max:20',
             'customer_type' => 'required|in:individual,business',
-            'credit_limit' => 'nullable|numeric|min:0|max:999999.99',
             'payment_terms' => 'required|in:immediate,net_15,net_30,net_60',
             'notes' => 'nullable|string|max:1000',
         ]);
-
-        $validated['credit_limit'] = $validated['credit_limit'] ?? 0;
 
         $customer = Customer::create($validated);
 
@@ -124,13 +121,11 @@ class CustomerController extends Controller
             'country' => 'nullable|string|max:100',
             'postal_code' => 'nullable|string|max:20',
             'customer_type' => 'required|in:individual,business',
-            'credit_limit' => 'nullable|numeric|min:0|max:999999.99',
             'payment_terms' => 'required|in:immediate,net_15,net_30,net_60',
             'notes' => 'nullable|string|max:1000',
             'is_active' => 'boolean',
         ]);
 
-        $validated['credit_limit'] = $validated['credit_limit'] ?? 0;
         $validated['is_active'] = $request->has('is_active');
 
         $customer->update($validated);
@@ -187,8 +182,7 @@ class CustomerController extends Controller
             'phone' => $customer->phone,
             'full_address' => $customer->full_address,
             'payment_terms' => $customer->payment_terms,
-            'credit_limit' => $customer->credit_limit,
-            'available_credit' => $customer->available_credit,
+            'available_credit' => 0, // Removed feature
         ]);
     }
 }

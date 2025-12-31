@@ -19,7 +19,6 @@ class Customer extends Model
         'country',
         'postal_code',
         'customer_type',
-        'credit_limit',
         'outstanding_balance',
         'payment_terms',
         'notes',
@@ -27,7 +26,6 @@ class Customer extends Model
     ];
 
     protected $casts = [
-        'credit_limit' => 'decimal:2',
         'outstanding_balance' => 'decimal:2',
         'is_active' => 'boolean',
     ];
@@ -82,7 +80,7 @@ class Customer extends Model
 
     public function getAvailableCreditAttribute(): float
     {
-        return $this->credit_limit - $this->outstanding_balance;
+        return 0; // Credit feature removed
     }
 
     public function scopeActive($query)

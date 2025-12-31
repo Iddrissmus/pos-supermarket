@@ -3,67 +3,78 @@
 @section('content')
 <div class="min-h-screen bg-gray-50 p-6">
     <div class="max-w-7xl mx-auto">
-        <!-- Header -->
-        <div class="bg-white rounded-lg shadow-md mb-6">
-            <div class="p-6 border-b border-gray-200">
-                <div class="flex items-center justify-between">
-                    <h1 class="text-2xl font-bold text-gray-800">
-                        <i class="fas fa-chart-line mr-3 text-blue-600"></i>Sales Dashboard
-                    </h1>
-                    <div class="flex space-x-4">
+        <!-- Modern Header -->
+        <div class="relative bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl shadow-lg overflow-hidden mb-8">
+            <div class="absolute inset-0 bg-white/10" style="background-image: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 20%), radial-gradient(circle at 80% 80%, rgba(255,255,255,0.1) 0%, transparent 20%);"></div>
+            <div class="relative p-8">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div>
+                        <h1 class="text-3xl font-bold text-white tracking-tight flex items-center">
+                            <i class="fas fa-chart-pie mr-4 text-blue-200"></i>Sales Analytics
+                        </h1>
+                        <p class="mt-2 text-blue-100 text-lg opacity-90">
+                            Comprehensive performance insights and financial reporting
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <!-- Export Options -->
+                        <div class="flex items-center gap-2 mr-2 border-r border-white/20 pr-4">
+                            <a href="{{ route('sales.export.csv', request()->only(['start_date', 'end_date'])) }}" class="inline-flex items-center px-3 py-2 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 text-white text-sm font-medium hover:bg-white/20 transition-all" title="Export CSV">
+                                <i class="fas fa-file-csv mr-2"></i> CSV
+                            </a>
+                            <a href="{{ route('sales.export.pdf', request()->only(['start_date', 'end_date'])) }}" class="inline-flex items-center px-3 py-2 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 text-white text-sm font-medium hover:bg-white/20 transition-all" title="Export PDF">
+                                <i class="fas fa-file-pdf mr-2"></i> PDF
+                            </a>
+                        </div>
+
+                        <a href="{{ route('sales.index') }}" class="inline-flex items-center px-4 py-2 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 text-white font-medium hover:bg-white/20 transition-all">
+                            <i class="fas fa-list-ul mr-2"></i> Transaction Log
+                        </a>
                         @if(auth()->user()->role === 'cashier')
-                            <a href="{{ route('sales.terminal') }}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
-                                <i class="fas fa-cash-register mr-2"></i>POS Terminal
+                            <a href="{{ route('sales.terminal') }}" class="inline-flex items-center px-4 py-2 rounded-lg bg-green-500 text-white font-bold hover:bg-green-600 shadow-md transition-colors">
+                            <i class="fas fa-cash-register mr-2"></i> POS
                             </a>
                         @endif
-                        <a href="{{ route('sales.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg">
-                            <i class="fas fa-list mr-2"></i>All Sales
-                        </a>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Date Filter Form with Quick Filters -->
-            <div class="p-6">
-                <form method="GET" id="dateFilterForm" class="space-y-4">
-                    <!-- Quick Date Filters -->
-                    <div class="flex flex-wrap gap-2 mb-4">
-                        <button type="button" onclick="setQuickDate('today')" class="px-4 py-2 text-sm font-medium bg-white border border-gray-300 hover:bg-blue-50 hover:border-blue-400 rounded-lg transition-colors duration-200">
-                            <i class="fas fa-calendar-day mr-1"></i>Today
-                        </button>
-                        <button type="button" onclick="setQuickDate('week')" class="px-4 py-2 text-sm font-medium bg-white border border-gray-300 hover:bg-blue-50 hover:border-blue-400 rounded-lg transition-colors duration-200">
-                            <i class="fas fa-calendar-week mr-1"></i>This Week
-                        </button>
-                        <button type="button" onclick="setQuickDate('month')" class="px-4 py-2 text-sm font-medium bg-white border border-gray-300 hover:bg-blue-50 hover:border-blue-400 rounded-lg transition-colors duration-200">
-                            <i class="fas fa-calendar-alt mr-1"></i>This Month
-                        </button>
-                        <button type="button" onclick="setQuickDate('last_month')" class="px-4 py-2 text-sm font-medium bg-white border border-gray-300 hover:bg-blue-50 hover:border-blue-400 rounded-lg transition-colors duration-200">
-                            <i class="fas fa-history mr-1"></i>Last Month
-                        </button>
-                        <button type="button" onclick="setQuickDate('year')" class="px-4 py-2 text-sm font-medium bg-white border border-gray-300 hover:bg-blue-50 hover:border-blue-400 rounded-lg transition-colors duration-200">
-                            <i class="fas fa-calendar mr-1"></i>This Year
-                        </button>
-                    </div>
-
-                    <div class="flex flex-wrap items-end gap-4">
-                        <div class="flex-1 min-w-40">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
-                            <input type="date" id="start_date" name="start_date" value="{{ request('start_date', $startDate->format('Y-m-d')) }}" 
-                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+        <!-- Refined Date Filter Section -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
+            <form method="GET" id="dateFilterForm">
+                <div class="flex flex-col lg:flex-row lg:items-end gap-6">
+                    <!-- Date Presets -->
+                    <div class="flex-1">
+                        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Quick Select</label>
+                        <div class="flex flex-wrap gap-2">
+                             @foreach(['today' => 'Today', 'week' => 'This Week', 'month' => 'This Month', 'last_month' => 'Last Month', 'year' => 'This Year'] as $val => $label)
+                                <button type="button" onclick="setQuickDate('{{ $val }}')" 
+                                    class="px-4 py-2 text-sm font-medium bg-gray-50 text-gray-600 border border-gray-200 rounded-lg hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all duration-200 shadow-sm">
+                                    {{ $label }}
+                                </button>
+                            @endforeach
                         </div>
-                        <div class="flex-1 min-w-40">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
-                            <input type="date" id="end_date" name="end_date" value="{{ request('end_date', $endDate->format('Y-m-d')) }}" 
-                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <!-- Custom Range -->
+                    <div class="flex items-end gap-4">
+                        <div>
+                            <label for="start_date" class="block text-sm font-medium text-gray-700 mb-2">From</label>
+                            <input type="date" id="start_date" name="start_date" value="{{ request('start_date', $startDate->format('Y-m-d')) }}" 
+                                   class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                         </div>
                         <div>
-                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors duration-200">
-                                <i class="fas fa-search mr-2"></i>Apply Filter
-                            </button>
+                            <label for="end_date" class="block text-sm font-medium text-gray-700 mb-2">To</label>
+                            <input type="date" id="end_date" name="end_date" value="{{ request('end_date', $endDate->format('Y-m-d')) }}" 
+                                   class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                         </div>
+                        <button type="submit" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition-colors flex items-center h-[42px]">
+                            <i class="fas fa-filter mr-2"></i> Filter
+                        </button>
                     </div>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
 
         <!-- Period Comparison Banner -->
@@ -156,56 +167,72 @@
         </div>
         @endif
 
-        <!-- Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex items-center">
-                    <div class="p-3 rounded-full bg-blue-100 mr-4">
-                        <i class="fas fa-shopping-cart text-blue-600 text-xl"></i>
+        <!-- Summary Metrics Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Sales -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-blue-50 p-3 rounded-lg text-blue-600">
+                        <i class="fas fa-shopping-bag text-xl"></i>
                     </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">Total Sales</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ $summary['total_sales'] }}</p>
-                        <p class="text-xs text-gray-500">{{ number_format($summary['total_quantity_sold']) }} items</p>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-bold text-gray-900">{{ number_format($summary['total_sales']) }}</h3>
+                    <p class="text-sm font-medium text-gray-500 mt-1">Total Transactions</p>
+                    <div class="mt-2 flex items-center text-xs text-gray-500">
+                        <i class="fas fa-boxes mr-1"></i> {{ number_format($summary['total_quantity_sold']) }} items sold
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex items-center">
-                    <div class="p-3 rounded-full bg-green-100 mr-4">
-                        <i class="fas fa-dollar-sign text-green-600 text-xl"></i>
+            <!-- Total Revenue -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-green-50 p-3 rounded-lg text-green-600">
+                        <i class="fas fa-sack-dollar text-xl"></i>
                     </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">Total Revenue</p>
-                        <p class="text-2xl font-bold text-gray-900">₵{{ number_format($summary['total_revenue'], 2) }}</p>
-                        <p class="text-xs text-gray-500">Avg: ₵{{ number_format($summary['average_transaction'], 2) }}</p>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-bold text-gray-900">₵{{ number_format($summary['total_revenue'], 2) }}</h3>
+                    <p class="text-sm font-medium text-gray-500 mt-1">Total Revenue</p>
+                    <div class="mt-2 flex items-center text-xs text-green-600 bg-green-50 px-2 py-1 rounded w-fit">
+                        <i class="fas fa-receipt mr-1"></i> Avg: ₵{{ number_format($summary['average_transaction'], 2) }}
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex items-center">
-                    <div class="p-3 rounded-full bg-red-100 mr-4">
-                        <i class="fas fa-box text-red-600 text-xl"></i>
+            <!-- Cost of Goods -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-red-50 p-3 rounded-lg text-red-600">
+                        <i class="fas fa-file-invoice-dollar text-xl"></i>
                     </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">Total COGS</p>
-                        <p class="text-2xl font-bold text-gray-900">₵{{ number_format($summary['total_cogs'], 2) }}</p>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-bold text-gray-900">₵{{ number_format($summary['total_cogs'], 2) }}</h3>
+                    <p class="text-sm font-medium text-gray-500 mt-1">Cost of Goods Sold</p>
+                    <div class="mt-2 text-xs text-gray-400">
+                        Direct product costs
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex items-center">
-                    <div class="p-3 rounded-full bg-yellow-100 mr-4">
-                        <i class="fas fa-chart-line text-yellow-600 text-xl"></i>
+            <!-- Gross Profit -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-2 opacity-10">
+                    <i class="fas fa-chart-line text-6xl text-purple-600"></i>
+                </div>
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-purple-50 p-3 rounded-lg text-purple-600">
+                        <i class="fas fa-wallet text-xl"></i>
                     </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">Gross Profit</p>
-                        <p class="text-2xl font-bold text-gray-900">₵{{ number_format($summary['total_profit'], 2) }}</p>
-                        <p class="text-xs text-gray-500">{{ number_format($summary['average_margin'], 1) }}% margin</p>
-                    </div>
+                    <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded-full">
+                        {{ number_format($summary['average_margin'], 1) }}% Margin
+                    </span>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-bold text-gray-900">₵{{ number_format($summary['total_profit'], 2) }}</h3>
+                    <p class="text-sm font-medium text-gray-500 mt-1">Gross Profit</p>
                 </div>
             </div>
         </div>

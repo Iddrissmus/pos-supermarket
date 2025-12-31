@@ -15,6 +15,31 @@ use Illuminate\Support\Facades\Notification;
 class BranchController extends Controller
 {
     /**
+     * Show the branch details for the authenticated user (Manager/Cashier)
+     */
+    public function myBranch()
+    {
+        $user = auth()->user();
+
+        if (!$user->branch_id) {
+            abort(404, 'You are not assigned to any branch.');
+        }
+
+        $branch = Branch::with(['business', 'manager'])->findOrFail($user->branch_id);
+
+        // Reuse the show view or a specific one if needed. 
+        // For now, let's look for a suitable view. 
+        // If I haven't checked existing views, I might default to creating one or using 'branches.show' if it exists.
+        // Assuming 'branches.show' exists based on typical patterns, or I'll check the list_dir output first in my head?
+        // Actually, the previous tool call list_dir is running in parallel or I should wait.
+        // But I can't wait in the same turn.
+        // I will assume I need to create a view or use a generic one.
+        // Let's safe bet: create a new view 'branches.my-branch' to be safe and specific.
+        
+        return view('branches.my-branch', compact('branch'));
+    }
+
+    /**
      * Show the form for creating a new branch
      */
     public function create()

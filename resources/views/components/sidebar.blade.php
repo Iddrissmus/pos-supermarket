@@ -113,6 +113,11 @@
                     <div class="mt-4 mb-2 px-3">
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider sidebar-text">Business Management</p>
                     </div>
+
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('invoices.*') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-file-invoice-dollar sidebar-icon {{ request()->routeIs('invoices.*') ? 'text-blue-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('invoices.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('invoices.*') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">Invoices</a>
+                    </div>
                     
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('my-business') || request()->routeIs('businesses.show') || request()->routeIs('businesses.edit') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
                         <i class="fas fa-building sidebar-icon {{ request()->routeIs('my-business') || request()->routeIs('businesses.show') || request()->routeIs('businesses.edit') ? 'text-blue-600' : 'text-gray-500' }}"></i>
@@ -129,9 +134,9 @@
                         <a href="{{ route('my-branch') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('my-branch') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">My Branch</a>
                     </div>
                     
-                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('admin.cashiers.*') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
-                        <i class="fas fa-users sidebar-icon {{ request()->routeIs('admin.cashiers.*') ? 'text-blue-600' : 'text-gray-500' }}"></i>
-                        <a href="{{ route('admin.cashiers.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('admin.cashiers.*') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">Manage Staff</a>
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('admin.staff.*') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-users sidebar-icon {{ request()->routeIs('admin.staff.*') ? 'text-blue-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('admin.staff.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('admin.staff.*') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">Staff Management</a>
                     </div>
                     
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('categories.*') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
@@ -313,10 +318,7 @@
 
                 <!-- Common Items for All Roles -->
                 <div class="mt-6 pt-4 border-t border-gray-200">
-                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer hover:bg-gray-50">
-                        <i class="fas fa-cog sidebar-icon text-gray-500"></i>
-                        <span class="sidebar-text text-sm text-gray-700 ml-3">Settings</span>
-                    </div>
+
 
                     <form method="POST" action="{{ route('logout') }}" class="inline w-full">
                         @csrf

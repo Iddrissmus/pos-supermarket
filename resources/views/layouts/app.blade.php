@@ -93,15 +93,8 @@
             font-weight: bold;
         }
         
-        .top-bar {
-            height: 60px;
-            background-color: #374151;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 50;
-        }
+        /* Top bar styles moved to component */
+
         
         .main-content {
             margin-top: 60px;
@@ -114,8 +107,9 @@
             margin-left: 64px;
         }
         
-        body.auth .main-content.sidebar-expanded {
-            padding-left: 216px; /* 280px sidebar - 64px base = 216px extra */
+        /* Robust CSS-only sidebar expansion */
+        body.auth .sidebar:hover ~ .main-content {
+            padding-left: 216px;
         }
     </style>
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -144,24 +138,6 @@
         <x-notifications position="top-right"/>
         @yield('content')
     </div>
-    
-    <script>
-        // Handle sidebar hover to push content
-        document.addEventListener('DOMContentLoaded', function() {
-            const sidebar = document.querySelector('.sidebar');
-            const mainContent = document.querySelector('.main-content');
-            
-            if (sidebar && mainContent) {
-                sidebar.addEventListener('mouseenter', function() {
-                    mainContent.classList.add('sidebar-expanded');
-                });
-                
-                sidebar.addEventListener('mouseleave', function() {
-                    mainContent.classList.remove('sidebar-expanded');
-                });
-            }
-        });
-    </script>
     
     @livewireScripts
     @stack('scripts')

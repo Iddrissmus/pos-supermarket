@@ -139,13 +139,7 @@
                             </select>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Credit Limit (₵)</label>
-                            <input type="number" name="credit_limit" value="{{ old('credit_limit', $customer->credit_limit) }}" min="0" step="0.01"
-                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-                                   placeholder="0.00">
-                            <p class="mt-1 text-sm text-gray-500">Set to 0 for no credit limit</p>
-                        </div>
+                        <!-- Credit Limit Removed -->
 
                         @if($customer->outstanding_balance > 0)
                         <div class="md:col-span-2">
