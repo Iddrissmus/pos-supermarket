@@ -6,35 +6,29 @@
     <title>Cashier Login - POS Supermarket</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        .gradient-bg {
-            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-        }
-    </style>
 </head>
-<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
     <div class="w-full max-w-md">
         <!-- Back to Home -->
-        <div class="mb-4">
-            <a href="/" class="text-white hover:text-orange-200 transition-colors inline-flex items-center space-x-2">
+        <div class="mb-6">
+            <a href="/" class="text-gray-500 hover:text-gray-800 transition-colors inline-flex items-center space-x-2 text-sm font-medium">
                 <i class="fas fa-arrow-left"></i>
                 <span>Back to Home</span>
             </a>
         </div>
 
         <!-- Login Card -->
-        <div class="bg-white rounded-2xl shadow-2xl p-8">
+        <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
             <!-- Header -->
             <div class="text-center mb-8">
-                <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-orange-500 to-orange-700 rounded-full mb-4">
-                    <i class="fas fa-cash-register text-white text-2xl"></i>
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full mb-4">
+                    <i class="fas fa-cash-register text-orange-600 text-2xl"></i>
                 </div>
-                <h2 class="text-3xl font-bold text-gray-800 mb-2">Cashier Login</h2>
-                <p class="text-gray-600">POS Terminal Access</p>
+                <h2 class="text-2xl font-bold text-gray-900">Cashier Login</h2>
             </div>
 
             @if(session('error'))
-                <div class="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded">
+                <div class="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r">
                     <div class="flex items-center">
                         <i class="fas fa-exclamation-circle text-red-500 mr-3"></i>
                         <p class="text-red-700 text-sm">{{ session('error') }}</p>
@@ -42,24 +36,27 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('login.cashier.post') }}" class="space-y-6">
+            <form method="POST" action="{{ route('login.cashier.post') }}" class="space-y-5">
                 @csrf
                 
                 <!-- Email Field -->
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        <i class="fas fa-envelope mr-2 text-gray-400"></i>Email Address
-                    </label>
-                    <input type="email" 
-                           name="email" 
-                           id="email"
-                           value="{{ old('email') }}"
-                           class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-orange-500 transition-colors @error('email') border-red-500 @enderror" 
-                           placeholder="cashier@pos.com"
-                           required 
-                           autofocus>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-envelope text-gray-400"></i>
+                        </div>
+                        <input type="email" 
+                               name="email" 
+                               id="email"
+                               value="{{ old('email') }}"
+                               class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors text-sm @error('email') border-red-500 focus:ring-red-500 focus:border-red-500 @enderror" 
+                               placeholder="cashier@pos.com"
+                               required 
+                               autofocus>
+                    </div>
                     @error('email') 
-                        <p class="mt-2 text-sm text-red-600 flex items-center">
+                        <p class="mt-1.5 text-sm text-red-600 flex items-center">
                             <i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}
                         </p>
                     @enderror
@@ -67,60 +64,53 @@
 
                 <!-- Password Field -->
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        <i class="fas fa-lock mr-2 text-gray-400"></i>Password
-                    </label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
                     <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-lock text-gray-400"></i>
+                        </div>
                         <input type="password" 
                                name="password"
                                id="password"
-                               class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-orange-500 transition-colors @error('password') border-red-500 @enderror" 
-                               placeholder="Enter your password"
+                               class="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors text-sm @error('password') border-red-500 focus:ring-red-500 focus:border-red-500 @enderror" 
+                               placeholder="••••••••"
                                required>
                         <button type="button" 
                                 onclick="togglePassword()"
-                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                class="absolute right-0 inset-y-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none">
                             <i class="fas fa-eye" id="toggleIcon"></i>
                         </button>
                     </div>
                     @error('password') 
-                        <p class="mt-2 text-sm text-red-600 flex items-center">
+                        <p class="mt-1.5 text-sm text-red-600 flex items-center">
                             <i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}
                         </p>
                     @enderror
                 </div>
 
-                <!-- Remember Me -->
-                <div class="flex items-center justify-between">
-                    <label class="flex items-center cursor-pointer">
-                        <input type="checkbox" 
-                               name="remember" 
-                               id="remember" 
-                               class="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500">
-                        <span class="ml-2 text-sm text-gray-700">Remember me</span>
-                    </label>
-                </div>
-
                 <!-- Submit Button -->
                 <button type="submit" 
-                        class="w-full bg-gradient-to-r from-orange-600 to-orange-700 text-white py-3 rounded-lg font-semibold hover:from-orange-700 hover:to-orange-800 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2">
+                        class="w-full bg-orange-600 text-white py-2.5 rounded-lg font-medium hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all shadow-sm hover:shadow flex items-center justify-center space-x-2">
                     <span>Sign In</span>
-                    <i class="fas fa-arrow-right"></i>
+                    <i class="fas fa-arrow-right text-sm"></i>
                 </button>
             </form>
 
             <!-- Other Logins -->
-            <div class="mt-6 pt-6 border-t border-gray-200">
-                <p class="text-xs text-gray-500 text-center mb-3">Different Role?</p>
-                <div class="grid grid-cols-3 gap-2 text-xs">
-                    <a href="{{ route('login.superadmin') }}" class="text-center py-2 px-3 bg-purple-50 text-purple-700 rounded hover:bg-purple-100 transition-colors">
-                        SuperAdmin
+            <div class="mt-8 pt-6 border-t border-gray-100">
+                <p class="text-xs font-medium text-gray-400 text-center uppercase tracking-wider mb-4">Or sign in as</p>
+                <div class="grid grid-cols-3 gap-3">
+                    <a href="{{ route('login.superadmin') }}" class="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all group">
+                        <i class="fas fa-crown text-purple-500 mb-1.5 text-lg group-hover:scale-110 transition-transform"></i>
+                        <span class="text-[10px] font-medium text-gray-600 group-hover:text-purple-700 text-center leading-tight">Super<br>Admin</span>
                     </a>
-                    <a href="{{ route('login.business-admin') }}" class="text-center py-2 px-3 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors">
-                        Business Admin
+                    <a href="{{ route('login.business-admin') }}" class="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all group">
+                        <i class="fas fa-briefcase text-blue-500 mb-1.5 text-lg group-hover:scale-110 transition-transform"></i>
+                        <span class="text-[10px] font-medium text-gray-600 group-hover:text-blue-700 text-center leading-tight">Business<br>Admin</span>
                     </a>
-                    <a href="{{ route('login.manager') }}" class="text-center py-2 px-3 bg-green-50 text-green-700 rounded hover:bg-green-100 transition-colors">
-                        Manager
+                    <a href="{{ route('login.manager') }}" class="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-200 hover:border-green-500 hover:bg-green-50 transition-all group">
+                        <i class="fas fa-users-cog text-green-500 mb-1.5 text-lg group-hover:scale-110 transition-transform"></i>
+                        <span class="text-[10px] font-medium text-gray-600 group-hover:text-green-700">Manager</span>
                     </a>
                 </div>
             </div>

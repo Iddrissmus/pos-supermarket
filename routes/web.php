@@ -12,7 +12,7 @@ use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\StockReceiptController;
-use App\Http\Controllers\Auth\RegisterController;
+
 use App\Http\Controllers\GuestBusinessSignupController;
 use App\Http\Controllers\RequestApprovalController;
 use App\Http\Controllers\ProductDashboardController;
@@ -61,6 +61,9 @@ Route::get('/pay/{uuid}/callback', [\App\Http\Controllers\PublicInvoiceControlle
 
 // Authentication - Role-specific login pages
 Route::middleware('guest')->group(function () {
+    // New Business Registration Page
+    Route::view('/start', 'auth.register-business')->name('business.register');
+
     // Default login route - redirects to role selection or landing
     Route::get('/login', function () {
         return redirect('/');
@@ -85,8 +88,7 @@ Route::middleware('guest')->group(function () {
 
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
 
-Route::get('/register', [RegisterController::class, 'showRegistrationForm'])->name('register')->middleware('guest');
-Route::post('/register', [RegisterController::class, 'register'])->name('register.post')->middleware('guest');
+
 
 Route::middleware('auth')->group(function () {
     // User Profile

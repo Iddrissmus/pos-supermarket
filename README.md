@@ -22,7 +22,7 @@ A Laravel-based Point Of Sale (POS) application for managing businesses, branche
 
 ## Requirements
 
-- **PHP 8.1+** (tested with PHP 8.3+)
+- **PHP 8.2+** (tested with PHP 8.3+)
 - **Composer**
 - **MySQL** (or SQLite for development)
 - **Node.js + npm** (for frontend assets)
@@ -262,9 +262,14 @@ php artisan route:list
 ### Permission Errors (Nginx)
 ```bash
 # Fix project permissions
-sudo chown -R $USER:www-data /path/to/project
-sudo chmod -R 755 /path/to/project
+sudo chown -R $USER:www-data .
+sudo chmod -R 755 .
 sudo chmod -R 775 storage bootstrap/cache
+
+# If you encounter "file_put_contents(...): Permission denied":
+php artisan view:clear
+php artisan config:clear
+sudo chmod -R 775 storage/framework/views
 
 # Fix parent directory execute permissions
 chmod +x ~
