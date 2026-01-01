@@ -123,8 +123,62 @@
             </div>
 
             <!-- Settings Card -->
+            <!-- Delivery Options -->
             <div class="bg-white border border-slate-200 rounded-sm shadow-sm p-5">
-                <h3 class="text-slate-800 font-bold mb-4">Settings</h3>
+                <h3 class="text-slate-800 font-bold mb-4">Delivery Options</h3>
+                
+                <div class="space-y-4" x-data="{ deliveryType: 'instant' }">
+                    
+                    <!-- Delivery Type Selection -->
+                    <div class="grid grid-cols-3 gap-2">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="delivery_type" value="instant" class="peer sr-only" x-model="deliveryType">
+                            <div class="text-center p-2 border rounded hover:bg-slate-50 peer-checked:bg-indigo-50 peer-checked:border-indigo-500 peer-checked:text-indigo-600 transition">
+                                <span class="block text-sm font-semibold">Instant</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="delivery_type" value="scheduled" class="peer sr-only" x-model="deliveryType">
+                            <div class="text-center p-2 border rounded hover:bg-slate-50 peer-checked:bg-indigo-50 peer-checked:border-indigo-500 peer-checked:text-indigo-600 transition">
+                                <span class="block text-sm font-semibold">Scheduled</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="delivery_type" value="recurring" class="peer sr-only" x-model="deliveryType">
+                            <div class="text-center p-2 border rounded hover:bg-slate-50 peer-checked:bg-indigo-50 peer-checked:border-indigo-500 peer-checked:text-indigo-600 transition">
+                                <span class="block text-sm font-semibold">Recurring</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Scheduled Date Field -->
+                    <div x-show="deliveryType === 'scheduled'" class="pt-2 animate-fade-in-down" style="display: none;">
+                         <label class="block text-sm font-medium mb-1" for="scheduled_send_date">Schedule Send Date</label>
+                         <input id="scheduled_send_date" class="form-input w-full" type="datetime-local" />
+                         <p class="text-xs text-slate-500 mt-1">Invoice will be created now but sent on this date.</p>
+                    </div>
+
+                    <!-- Recurring Options -->
+                    <div x-show="deliveryType === 'recurring'" class="pt-2 animate-fade-in-down" style="display: none;">
+                         <label class="block text-sm font-medium mb-1" for="recurring_frequency">Frequency</label>
+                         <select id="recurring_frequency" class="form-select w-full">
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly" selected>Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                            <option value="yearly">Yearly</option>
+                        </select>
+                        <p class="text-xs text-slate-500 mt-1">First invoice sent now. Next one generated automatically.</p>
+                    </div>
+
+                    <!-- Hidden Inputs for JS Logic Compatibility -->
+                    <input type="hidden" id="is_recurring" :value="deliveryType === 'recurring'">
+
+                </div>
+            </div>
+
+            <!-- Other Settings -->
+            <div class="bg-white border border-slate-200 rounded-sm shadow-sm p-5">
+                <h3 class="text-slate-800 font-bold mb-4">Invoice Details</h3>
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium mb-1" for="branch">Issuing Branch</label>
@@ -139,6 +193,18 @@
                      <div>
                         <label class="block text-sm font-medium mb-1" for="due_date">Due Date</label>
                         <input id="due_date" class="form-input w-full" type="date" value="{{ now()->addDays(7)->format('Y-m-d') }}" />
+                    </div>
+                    
+                    <!-- Partial Payment Toggle -->
+                    <div class="flex items-center justify-between border-t border-slate-100 pt-3">
+                        <label class="text-sm font-medium text-slate-700" for="allow_partial_payment">Allow Partial Payment?</label>
+                        <div class="form-switch">
+                            <input type="checkbox" id="allow_partial_payment" class="sr-only" />
+                            <label class="bg-slate-400" for="allow_partial_payment">
+                                <span class="bg-white shadow-sm" aria-hidden="true"></span>
+                                <span class="sr-only">Allow Partial Payment</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -366,6 +432,14 @@
             return;
         }
 
+        const deliveryType = document.querySelector('input[name="delivery_type"]:checked').value;
+        const scheduledDate = document.getElementById('scheduled_send_date').value;
+
+        if (deliveryType === 'scheduled' && !scheduledDate) {
+             showModal('Missing Information', 'Please select a date and time for scheduled delivery.', 'error');
+             return;
+        }
+
         const data = {
             customer_id: customerId || null,
             customer_email: customerEmail,
@@ -374,7 +448,13 @@
             due_date: dueDate,
             notes: notes,
             items: invoiceItems,
-            send_now: sendImmediately
+            send_now: sendImmediately, // This might need to be refined: send_now=true is for "Instant", logic in controller
+            delivery_type: deliveryType,
+            scheduled_send_date: scheduledDate,
+            allow_partial_payment: document.getElementById('allow_partial_payment').checked,
+            // Compatibility with controller existing update (or we update controller to use delivery_type)
+            is_recurring: deliveryType === 'recurring',
+            recurring_frequency: document.getElementById('recurring_frequency').value,
         };
 
         const saveBtn = document.getElementById('save-invoice-btn');
@@ -386,10 +466,11 @@
         
         // Update button state (more robust with full HTML replacement)
         if(sendImmediately) {
-            const originalText = sendBtn.innerHTML;
-            sendBtn.innerHTML = '<span class="flex items-center justify-center"><svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Sending...</span>';
+            let actionText = "Sending...";
+            if (deliveryType === 'scheduled') actionText = "Scheduling...";
+            
+            sendBtn.innerHTML = `<span class="flex items-center justify-center"><svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>${actionText}</span>`;
         } else {
-             const originalText = saveBtn.innerHTML;
              saveBtn.innerHTML = '<span class="flex items-center justify-center"><svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-slate-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Saving...</span>';
         }
 

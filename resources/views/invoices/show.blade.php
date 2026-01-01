@@ -44,7 +44,12 @@
 
         <!-- Invoice Preview -->
         <div class="col-span-12 lg:col-span-8">
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 relative overflow-hidden">
+                @if($invoice->status === 'paid')
+                    <div class="absolute top-12 right-12 transform rotate-45 pointer-events-none z-0 opacity-10">
+                        <span class="text-8xl font-bold text-emerald-600 uppercase border-8 border-emerald-600 px-6 py-2 rounded-xl">PAID</span>
+                    </div>
+                @endif
                 <!-- Invoice Header -->
                 <div class="flex justify-between items-start mb-8 border-b border-gray-100 pb-8">
                     <div>

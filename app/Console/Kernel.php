@@ -21,6 +21,9 @@ class Kernel extends ConsoleKernel
         BackupDatabase::class,
         SendDailySalesSummary::class,
         CheckExpiringProducts::class,
+        \App\Console\Commands\ProcessRecurringInvoices::class,
+        \App\Console\Commands\SendInvoiceReminders::class,
+        \App\Console\Commands\SendScheduledInvoices::class,
     ];
 
     /**
@@ -36,6 +39,11 @@ class Kernel extends ConsoleKernel
         
         // Check for expiring products daily at 8 AM
         $schedule->command('products:check-expiring')->dailyAt('08:00');
+
+        // Invoice Automation
+        $schedule->command('invoices:process-recurring')->dailyAt('01:00');
+        $schedule->command('invoices:send-reminders')->dailyAt('09:00');
+        $schedule->command('invoices:send-scheduled')->everyFiveMinutes(); // Check frequently
     }
 
     /**

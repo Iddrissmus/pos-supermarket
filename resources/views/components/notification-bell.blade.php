@@ -1,11 +1,12 @@
 <div x-data="notificationBell()" x-init="init()" class="relative">
     <!-- Notification Bell Icon -->
-    <button @click="toggleDropdown" class="relative text-white hover:bg-white/10 p-2 rounded-lg transition-colors focus:outline-none">
+    <!-- Notification Bell Icon -->
+    <button @click="toggleDropdown" {{ $attributes->merge(['class' => 'relative text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-colors focus:outline-none']) }}>
         <i class="fas fa-bell text-lg"></i>
         <!-- Unread Count Badge -->
         <span x-show="unreadCount > 0" 
               x-text="unreadCount > 9 ? '9+' : unreadCount"
-              class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+              class="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center border-2 border-white">
         </span>
     </button>
 

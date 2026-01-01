@@ -26,6 +26,9 @@ return Application::configure(basePath: dirname(__DIR__))
                 'superadmin/*', // Allow all SuperAdmin routes (protected by role middleware)
             ]
         );
+
+        // Trust all proxies (for Ngrok/Load Balancers)
+        $middleware->trustProxies(at: ['*']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

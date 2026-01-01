@@ -33,26 +33,30 @@ class InvoiceController extends Controller
     {
         $user = Auth::user();
         
-        $query = Invoice::with(['customer', 'branch'])
-            ->orderBy('created_at', 'desc');
+        $baseQuery = Invoice::query();
 
+        // Scope by Role
         if ($user->role === 'business_admin') {
-            $query->whereHas('branch', function($q) use ($user) {
+            $baseQuery->whereHas('branch', function($q) use ($user) {
                 $q->where('business_id', $user->business_id);
             });
         } elseif ($user->role === 'manager') {
-            $query->where('branch_id', $user->branch_id);
+            $baseQuery->where('branch_id', $user->branch_id);
         }
 
-        $invoices = $query->paginate(20);
-
-        // Calculate Stats
+        // Clone base query for stats to ensure they match the filtered list context
+        // (Use clones to avoid polluting the original builder for subsequent queries)
         $stats = [
-            'total_revenue' => Invoice::where('status', 'paid')->sum('total_amount'),
-            'pending_amount' => Invoice::whereIn('status', ['sent', 'draft'])->sum('total_amount'),
-            'overdue_amount' => Invoice::where('status', 'overdue')->sum('total_amount'),
-            'total_invoices' => Invoice::count(),
+            'total_revenue' => (clone $baseQuery)->where('status', 'paid')->sum('total_amount'),
+            'pending_amount' => (clone $baseQuery)->whereIn('status', ['sent', 'draft'])->sum('total_amount'),
+            'overdue_amount' => (clone $baseQuery)->where('status', 'overdue')->sum('total_amount'),
+            'total_invoices' => (clone $baseQuery)->count(),
         ];
+
+        // Get paginated results
+        $invoices = $baseQuery->with(['customer', 'branch'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
 
         return view('invoices.index', compact('invoices', 'stats'));
     }
@@ -108,11 +112,33 @@ class InvoiceController extends Controller
             'items.*.quantity' => 'required|numeric|min:1',
             'items.*.price' => 'required|numeric|min:0',
             'notes' => 'nullable|string',
-            'send_now' => 'boolean', // Added for send_now functionality
+            'send_now' => 'boolean',
+            'delivery_type' => 'required|in:instant,scheduled,recurring',
+            'scheduled_send_date' => 'nullable|required_if:delivery_type,scheduled|date|after:now',
+            'is_recurring' => 'boolean',
+            'recurring_frequency' => 'nullable|required_if:is_recurring,true|in:weekly,monthly,quarterly,yearly',
+            'allow_partial_payment' => 'boolean',
         ]);
 
         try {
             DB::beginTransaction();
+            
+            // Logic for Recurring Date Calculation
+            $nextRecurringDate = null;
+            if (!empty($validated['is_recurring']) && $validated['is_recurring']) {
+                 $start = \Carbon\Carbon::now();
+                 // If scheduled, maybe start recurring after that? 
+                 // For now simplicity: recurring starts from "now" or creation date.
+                 $nextRecurringDate = \Carbon\Carbon::parse($validated['due_date']);
+                 $start = \Carbon\Carbon::now();
+                 
+                 switch ($validated['recurring_frequency']) {
+                    case 'weekly': $nextRecurringDate = $start->addWeek(); break;
+                    case 'monthly': $nextRecurringDate = $start->addMonth(); break;
+                    case 'quarterly': $nextRecurringDate = $start->addQuarter(); break;
+                    case 'yearly': $nextRecurringDate = $start->addYear(); break;
+                }
+            }
 
             // Create Invoice Header
             $invoice = Invoice::create([
@@ -125,16 +151,20 @@ class InvoiceController extends Controller
                 'due_date' => $validated['due_date'],
                 'status' => 'draft',
                 'notes' => $validated['notes'],
-                'subtotal' => 0,
+                'subtotal' => 0, // Calculated below
                 'total_amount' => 0,
                 'balance_due' => 0,
+                'is_recurring' => $validated['is_recurring'] ?? false,
+                'recurring_frequency' => $validated['recurring_frequency'] ?? null,
+                'recurring_next_date' => $nextRecurringDate,
+                'allow_partial_payment' => $validated['allow_partial_payment'] ?? false,
+                'scheduled_send_date' => ($validated['delivery_type'] === 'scheduled') ? $validated['scheduled_send_date'] : null,
             ]);
 
+            // ... Items processing (unchanged) ...
             $subtotal = 0;
-
-            // Create Invoice Items
-            // Create Invoice Items
             foreach ($validated['items'] as $item) {
+                // ... (logic same as before, see context)
                 $product = Product::findOrFail($item['product_id']);
                 $lineTotal = $item['quantity'] * $item['price'];
                 $subtotal += $lineTotal;
@@ -152,27 +182,40 @@ class InvoiceController extends Controller
 
             // Calculate Totals
             $invoice->subtotal = $subtotal;
-            $invoice->tax_amount = 0; // TODO: Implement tax logic same as POS
-            $invoice->total_amount = $subtotal; // + tax
+            $invoice->tax_amount = 0; 
+            $invoice->total_amount = $subtotal;
             $invoice->balance_due = $invoice->total_amount;
             $invoice->save();
 
             DB::commit();
 
-            // Send immediately if requested
-            if ($request->send_now) {
-                // Call the updated send method
+            // Handle Delivery
+            if ($validated['delivery_type'] === 'instant' && $request->send_now) {
                 $this->send($invoice->id);
-                return response()->json([
-                    'success' => true, 
-                    'redirect_url' => route('invoices.index'),
-                    'message' => 'Invoice created and sent successfully!'
-                ]);
+                $message = 'Invoice created and sent successfully!';
+            } elseif ($validated['delivery_type'] === 'scheduled') {
+                // NEW LOGIC: Send immediately, set reminder for later
+                $this->send($invoice->id);
+                $date = \Carbon\Carbon::parse($validated['scheduled_send_date'])->format('M d, Y h:i A');
+                $message = "Invoice sent! A reminder is scheduled for {$date} if unpaid.";
+            } elseif ($validated['delivery_type'] === 'recurring') {
+                // Recurring usually implies sending the first one now?
+                // Requirements often say "Setup recurring". Usually first one is sent, then next one logic.
+                // Or if just "Recurring", maybe first one is sent too.
+                // Let's assume Recurring also sends the first one immediately if "send_now" equivalent is implied or strictly set.
+                // But the UI sends delivery_type='recurring'.
+                // If "send_now" was checked in previous UI, it meant "instant".
+                // Here "Instant" is a type.
+                // Let's send the first recurring one immediately as well to be standard.
+                $this->send($invoice->id);
+                $message = 'Invoice created, sent, and recurrence set up!';
+            } else {
+                $message = 'Invoice saved as draft.';
             }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Invoice created successfully',
+                'message' => $message,
                 'redirect_url' => route('invoices.show', $invoice)
             ]);
 

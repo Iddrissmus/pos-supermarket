@@ -9,7 +9,7 @@
     $currentRole = $roleColors[$user->role] ?? ['bg' => 'bg-gray-600', 'text' => 'text-gray-600', 'name' => 'User'];
 @endphp
 
-<div class="top-bar flex items-center justify-between px-6 bg-white border-b border-gray-200 h-[60px] z-50 fixed w-full top-0 start-0" x-data="{ quickActionsOpen: false, profileOpen: false }">
+<div class="top-bar flex items-center justify-between px-6 bg-white border-b border-gray-200 h-[60px] z-[1001] fixed w-full top-0 start-0" x-data="{ quickActionsOpen: false, profileOpen: false }">
     <div class="flex items-center gap-x-8">
         <!-- Logo Area -->
         <div class="flex items-center space-x-3 w-[240px]">
@@ -57,7 +57,7 @@
         <!-- Notification Bell (for SuperAdmin, Business Admin and Manager) -->
         @if(in_array($user->role, ['superadmin', 'business_admin', 'manager']))
             <div class="relative">
-                <x-notification-bell class="text-gray-500 hover:text-indigo-600 hover:bg-gray-100 p-2 rounded-full transition-all" />
+                <x-notification-bell class="text-gray-700 hover:text-indigo-600 hover:bg-gray-100 p-2 rounded-full transition-all" />
             </div>
         @endif
         

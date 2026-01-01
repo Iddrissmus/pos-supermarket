@@ -286,6 +286,91 @@
         </div>
     </section>
 
+    <!-- Pricing Section -->
+    <section id="pricing" class="py-16 px-4 bg-gray-50 border-t border-gray-200">
+        <div class="max-w-7xl mx-auto">
+            <h2 class="text-3xl font-bold text-center text-gray-800 mb-4">Simple, Transparent Pricing</h2>
+            <p class="text-center text-gray-600 mb-12 max-w-2xl mx-auto">Choose the perfect plan for your business size. Scale up as you grow.</p>
+            
+            <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                <!-- Starter Plan -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 flex flex-col hover:shadow-md transition-shadow">
+                    <h3 class="text-xl font-bold text-gray-800">Starter</h3>
+                    <p class="text-gray-500 text-sm mt-1">Perfect for single shops</p>
+                    <div class="my-6">
+                        <span class="text-4xl font-bold text-gray-900">GHS {{ config('plans.starter.price') }}</span>
+                        <span class="text-gray-500">/mo</span>
+                    </div>
+                    <ul class="space-y-3 mb-8 flex-1">
+                        <li class="flex items-center text-sm text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i> {{ config('plans.starter.max_branches') }} Branch Limit
+                        </li>
+                        <li class="flex items-center text-sm text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i> Basic Reporting
+                        </li>
+                        <li class="flex items-center text-sm text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i> Standard Support
+                        </li>
+                    </ul>
+                    <button onclick="selectPlan('starter')" class="w-full py-3 bg-gray-50 hover:bg-gray-100 text-gray-800 font-semibold rounded-xl transition-colors border border-gray-200">
+                        Choose Starter
+                    </button>
+                </div>
+
+                <!-- Growth Plan -->
+                <div class="bg-white rounded-2xl shadow-xl border border-purple-100 p-8 flex flex-col relative transform md:-translate-y-2">
+                    <div class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-purple-600 text-white px-4 py-1 rounded-full text-xs font-bold uppercase">
+                        Most Popular
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800">Growth</h3>
+                    <p class="text-gray-500 text-sm mt-1">For expanding businesses</p>
+                    <div class="my-6">
+                        <span class="text-4xl font-bold text-gray-900">GHS {{ config('plans.growth.price') }}</span>
+                        <span class="text-gray-500">/mo</span>
+                    </div>
+                    <ul class="space-y-3 mb-8 flex-1">
+                        <li class="flex items-center text-sm text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i> Up to {{ config('plans.growth.max_branches') }} Branches
+                        </li>
+                        <li class="flex items-center text-sm text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i> Advanced Analytics
+                        </li>
+                        <li class="flex items-center text-sm text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i> Stock Transfers
+                        </li>
+                    </ul>
+                    <button onclick="selectPlan('growth')" class="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-colors shadow-lg">
+                        Choose Growth
+                    </button>
+                </div>
+
+                <!-- Enterprise Plan -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 flex flex-col hover:shadow-md transition-shadow">
+                    <h3 class="text-xl font-bold text-gray-800">Enterprise</h3>
+                    <p class="text-gray-500 text-sm mt-1">For large chains</p>
+                    <div class="my-6">
+                        <span class="text-4xl font-bold text-gray-900">GHS {{ config('plans.enterprise.price') }}</span>
+                        <span class="text-gray-500">/mo</span>
+                    </div>
+                    <ul class="space-y-3 mb-8 flex-1">
+                        <li class="flex items-center text-sm text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i> Unlimited Branches
+                        </li>
+                        <li class="flex items-center text-sm text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i> Dedicated Account Manager
+                        </li>
+                        <li class="flex items-center text-sm text-gray-600">
+                            <i class="fas fa-check text-green-500 mr-2"></i> API Access
+                        </li>
+                    </ul>
+                    <button onclick="selectPlan('enterprise')" class="w-full py-3 bg-gray-50 hover:bg-gray-100 text-gray-800 font-semibold rounded-xl transition-colors border border-gray-200">
+                        Choose Enterprise
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Business Signup Section -->
     @guest
     <section id="business-signup" class="py-16 px-4 bg-white border-t border-gray-100">
@@ -315,6 +400,13 @@
                 @csrf
 
                 <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Hidden Plan Input -->
+                    <input type="hidden" id="plan_type" name="plan_type" value="starter">
+                    <div class="md:col-span-2 mb-4 bg-purple-50 p-4 rounded-lg border border-purple-100">
+                        <p class="text-sm text-purple-800 font-semibold">Selected Plan: <span id="selected-plan-display" class="uppercase">Starter</span></p>
+                        <p class="text-xs text-purple-600 mt-1">You will be redirected to Paystack to complete your subscription payment.</p>
+                    </div>
+
                     <!-- Business Name -->
                     <div class="md:col-span-2">
                         <label for="business_name" class="block text-sm font-medium text-gray-700 mb-1">
@@ -594,6 +686,19 @@
     </footer>
 
     <script>
+        // Select Plan
+        function selectPlan(plan) {
+            document.getElementById('plan_type').value = plan;
+            document.getElementById('selected-plan-display').textContent = plan;
+            
+            // Open form if not open
+            if (document.getElementById('business-signup-form').classList.contains('hidden')) {
+                toggleSignupForm();
+            }
+            // Scroll to form
+            document.getElementById('business-signup-form').scrollIntoView({ behavior: 'smooth' });
+        }
+
         // Toggle signup form
         function toggleSignupForm() {
             const form = document.getElementById('business-signup-form');
@@ -619,7 +724,16 @@
         
         // Initialize map centered on Ghana
         function initMap() {
-            map = L.map('map').setView([6.6885, -1.6244], 7); // Ghana center
+            // Define Ghana bounds
+            const southWest = L.latLng(4.5, -3.5);
+            const northEast = L.latLng(11.5, 1.5);
+            const bounds = L.latLngBounds(southWest, northEast);
+
+            map = L.map('map', {
+                maxBounds: bounds,
+                maxBoundsViscosity: 1.0,
+                minZoom: 6
+            }).setView([6.6885, -1.6244], 7); // Ghana center
             
             // Add OpenStreetMap tiles
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

@@ -21,6 +21,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Force HTTPS if behind a proxy (like ngrok) or in production
+        if (request()->header('x-forwarded-proto') === 'https') {
+             \Illuminate\Support\Facades\URL::forceScheme('https');
+        }
+
         //
         Route::aliasMiddleware('role', CheckRole::class);
     }

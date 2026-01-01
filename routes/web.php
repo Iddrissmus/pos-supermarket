@@ -51,6 +51,8 @@ Route::middleware('web')->group(function () {
 // Public route: guest business signup from landing page
 Route::post('/business-signup', [GuestBusinessSignupController::class, 'store'])
     ->name('business-signup.store');
+Route::get('/business-signup/callback', [GuestBusinessSignupController::class, 'callback'])
+    ->name('business-signup.callback');
 
 // Public Invoice Routes
 Route::get('/pay/{uuid}', [\App\Http\Controllers\PublicInvoiceController::class, 'show'])->name('public.invoice.show');
@@ -173,6 +175,7 @@ Route::middleware('auth')->group(function () {
         Route::get('branches', [BranchController::class, 'index'])->name('branches.index');
         Route::get('branches/create', [BranchController::class, 'create'])->name('branches.create');
         Route::post('branches', [BranchController::class, 'store'])->name('branches.store');
+        Route::get('branches/{branch}', [BranchController::class, 'show'])->name('branches.show');
         Route::get('branches/{branch}/edit', [BranchController::class, 'edit'])->name('branches.edit');
         Route::put('branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
         Route::delete('branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');

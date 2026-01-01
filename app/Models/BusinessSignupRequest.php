@@ -21,6 +21,9 @@ class BusinessSignupRequest extends Model
         'status',
         'approval_note',
         'approved_by',
+        'plan_type',
+        'amount_paid',
+        'transaction_reference',
     ];
 
     public function approver()

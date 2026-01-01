@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Business extends Model
 {
-    protected $fillable = ['name', 'logo', 'status', 'business_admin_id'];
+    protected $fillable = ['name', 'logo', 'status', 'business_admin_id', 'plan_type', 'subscription_status', 'subscription_expires_at', 'max_branches'];
 
     
     public function businessAdmin()

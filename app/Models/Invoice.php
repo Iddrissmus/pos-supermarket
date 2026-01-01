@@ -45,7 +45,14 @@ class Invoice extends Model
         'terms_conditions',
         'sent_at',
         'paid_at',
-        'payment_link_token'
+        'payment_link_token',
+        'is_recurring',
+        'recurring_frequency',
+        'recurring_end_date',
+        'recurring_next_date',
+        'allow_partial_payment',
+        'parent_invoice_id',
+        'scheduled_send_date'
     ];
 
     protected $casts = [
@@ -53,6 +60,11 @@ class Invoice extends Model
         'due_date' => 'date',
         'sent_at' => 'datetime',
         'paid_at' => 'datetime',
+        'scheduled_send_date' => 'datetime',
+        'recurring_end_date' => 'date',
+        'recurring_next_date' => 'date',
+        'is_recurring' => 'boolean',
+        'allow_partial_payment' => 'boolean',
         'subtotal' => 'decimal:2',
         'tax_amount' => 'decimal:2',
         'discount_amount' => 'decimal:2',
@@ -103,8 +115,24 @@ class Invoice extends Model
         return $this->due_date->diffInDays(now());
     }
 
+    public function parentInvoice(): BelongsTo
+    {
+        return $this->belongsTo(Invoice::class, 'parent_invoice_id');
+    }
+
+    public function childInvoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class, 'parent_invoice_id');
+    }
+    
+
+
     public function getStatusColorAttribute(): string
     {
+        if ($this->status !== 'paid' && $this->paid_amount > 0 && $this->balance_due > 0) {
+            return 'orange'; // Partial Payment
+        }
+
         return match($this->status) {
             'draft' => 'gray',
             'sent' => 'blue',
@@ -113,6 +141,14 @@ class Invoice extends Model
             'cancelled' => 'red',
             default => 'gray'
         };
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        if ($this->status !== 'paid' && $this->paid_amount > 0 && $this->balance_due > 0) {
+            return 'Partial';
+        }
+        return ucfirst($this->status);
     }
 
     public function scopeDraft($query)
@@ -158,16 +194,50 @@ class Invoice extends Model
         ]);
     }
 
+    public function scopeRecurring($query)
+    {
+        return $query->where('is_recurring', true);
+    }
+    
+    public function scopeActiveRecurring($query)
+    {
+        return $query->where('is_recurring', true)
+                     ->where(function($q) {
+                         $q->whereNull('recurring_end_date')
+                           ->orWhere('recurring_end_date', '>=', now()->toDateString());
+                     });
+    }
+
+    // ...
+
     public function markAsPaid(float $amount = null): void
     {
-        $paymentAmount = $amount ?? $this->balance_due;
+        $currentPaid = $this->paid_amount;
+        $toPay = $amount ?? $this->balance_due;
         
-        $this->update([
-            'paid_amount' => $this->paid_amount + $paymentAmount,
-            'balance_due' => $this->total_amount - ($this->paid_amount + $paymentAmount),
-            'status' => 'paid',
+        $newPaidTotal = $currentPaid + $toPay;
+        $newBalance = $this->total_amount - $newPaidTotal;
+        
+        // Ensure strictly non-negative balance (handle overpayment if needed, for now clamp)
+        if ($newBalance < 0) $newBalance = 0;
+
+        $updateData = [
+            'paid_amount' => $newPaidTotal,
+            'balance_due' => $newBalance,
             'paid_at' => now()
-        ]);
+        ];
+        
+        if ($newBalance <= 0) {
+            $updateData['status'] = 'paid';
+        } else {
+            // Partial payment - status remains 'sent' or 'overdue' basically
+            // But we can ensure it's not 'draft'
+            if ($this->status === 'draft') {
+                $updateData['status'] = 'sent';
+            }
+        }
+
+        $this->update($updateData);
     }
 
     public static function generateInvoiceNumber(): string

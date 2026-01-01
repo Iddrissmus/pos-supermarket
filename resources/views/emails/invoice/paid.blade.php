@@ -8,6 +8,14 @@
     <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #4f46e5;">Payment Received</h2>
         
+        @if($invoice->status === 'paid')
+        <div style="text-align: center; margin: 20px 0;">
+            <span style="display: inline-block; padding: 10px 40px; border: 4px solid #10b981; color: #10b981; font-size: 32px; font-weight: bold; text-transform: uppercase; border-radius: 8px;">
+                PAID
+            </span>
+        </div>
+        @endif
+        
         <p>Hello {{ $invoice->customer->name ?? $invoice->customer_email }},</p>
         
         <p>Thank you for your payment. We have received <strong>GH₵ {{ number_format($invoice->paid_amount, 2) }}</strong> for Invoice <strong>#{{ $invoice->invoice_number }}</strong>.</p>

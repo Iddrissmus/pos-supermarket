@@ -6,6 +6,8 @@ use App\Models\Invoice;
 use App\Services\PaystackService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\InvoicePaid;
 
 class PublicInvoiceController extends Controller
 {
@@ -37,7 +39,19 @@ class PublicInvoiceController extends Controller
              return redirect()->route('public.invoice.show', $uuid)->with('info', 'This invoice is already paid.');
         }
 
-        $amountInKobo = round($invoice->balance_due * 100);
+        $amount = $invoice->balance_due; // Default to full balance
+
+        if ($request->has('amount') && $invoice->allow_partial_payment) {
+            $minAmount = $invoice->balance_due / 2;
+            $request->validate([
+                'amount' => 'required|numeric|min:' . $minAmount . '|max:' . $invoice->balance_due
+            ], [
+                'amount.min' => 'Partial payment must be at least half of the amount due (GH₵ ' . number_format($minAmount, 2) . ').'
+            ]);
+            $amount = $request->input('amount');
+        }
+
+        $amountInKobo = round($amount * 100);
         $email = $invoice->customer_email;
         $callbackUrl = route('public.invoice.callback', ['uuid' => $uuid]);
 
@@ -85,6 +99,16 @@ class PublicInvoiceController extends Controller
             // Check if fully paid or partial? 
             // Model method defaults to full balance if amount not passed, but here we pass explicitly.
             // Adjust logic if partial payments allowed. For now assume full.
+
+            // Send Paid Invoice Email
+            if ($invoice->customer_email) {
+                try {
+                    Mail::to($invoice->customer_email)->send(new InvoicePaid($invoice));
+                } catch (\Exception $e) {
+                    Log::error("Failed to send invoice paid email: " . $e->getMessage());
+                    // Don't fail the request just because email failed
+                }
+            }
 
             return redirect()->route('public.invoice.show', $uuid)->with('success', 'Payment successful! Thank you.');
         }

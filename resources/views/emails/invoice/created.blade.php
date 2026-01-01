@@ -9,6 +9,9 @@ Please find attached the invoice **#{{ $invoice->invoice_number }}** for **{{ $i
 - **Invoice Number:** {{ $invoice->invoice_number }}
 - **Due Date:** {{ $invoice->due_date->format('M d, Y') }}
 - **Total Amount:** ₵{{ number_format($invoice->total_amount, 2) }}
+@if($invoice->allow_partial_payment)
+- **Partial Payment:** Allowed (Enter amount at checkout)
+@endif
 
 You can securely pay this invoice online by clicking the button below:
 

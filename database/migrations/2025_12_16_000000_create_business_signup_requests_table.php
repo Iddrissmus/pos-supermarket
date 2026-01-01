@@ -32,7 +32,7 @@ return new class extends Migration
             $table->decimal('longitude', 10, 7)->nullable();
 
             // Approval workflow
-            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->string('status')->default('pending'); // pending, pending_payment, approved, rejected
             $table->text('approval_note')->nullable();
             $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
 

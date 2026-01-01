@@ -53,7 +53,15 @@
         </div>
 
         <!-- Invoice Body -->
-        <div class="p-6 md:p-8">
+        <div class="p-6 md:p-8 relative overflow-hidden">
+            @if($invoice->status === 'paid')
+                <div class="hidden md:block absolute top-10 right-10 transform rotate-[-30deg] pointer-events-none z-0 opacity-10">
+                    <span class="text-9xl font-black text-emerald-600 uppercase border-[12px] border-emerald-600 px-10 py-4 rounded-xl tracking-widest leading-none">PAID</span>
+                </div>
+                <div class="md:hidden absolute top-4 right-4 transform rotate-[-15deg] pointer-events-none z-10 opacity-80">
+                    <span class="text-4xl font-black text-emerald-600 uppercase border-4 border-emerald-600 px-4 py-1 rounded-lg bg-emerald-50/90 backdrop-blur-sm tracking-widest">PAID</span>
+                </div>
+            @endif
             <!-- Customer Info -->
             <div class="mb-8 p-5 md:p-6 bg-slate-50 rounded-xl border border-slate-100">
                 <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Bill To</h3>
@@ -155,10 +163,36 @@
             <!-- Payment Action -->
             @if($invoice->status !== 'paid' && $invoice->balance_due > 0)
                 <div class="mt-8 border-t border-slate-100 pt-8 text-center">
-                    <form action="{{ route('public.invoice.pay', $invoice->uuid) }}" method="POST">
+                    <form action="{{ route('public.invoice.pay', $invoice->uuid) }}" method="POST" x-data="{ amount: {{ $invoice->balance_due }} }">
                         @csrf
+                        
+                        @if($invoice->allow_partial_payment)
+                            <div class="mb-6 max-w-xs mx-auto text-left">
+                                <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Amount to Pay (GH₵)</label>
+                                <div class="relative rounded-md shadow-sm">
+                                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                        <span class="text-gray-500 sm:text-sm">GH₵</span>
+                                    </div>
+                                    <input type="number" name="amount" id="amount" 
+                                        class="block w-full rounded-md border-gray-300 pl-12 pr-12 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-3 font-semibold text-lg" 
+                                        placeholder="0.00" 
+                                        x-model="amount"
+                                        min="{{ $invoice->balance_due / 2 }}" 
+                                        max="{{ $invoice->balance_due }}"
+                                        step="0.01">
+                                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                                        <span class="text-gray-500 sm:text-sm">GHS</span>
+                                    </div>
+                                </div>
+                                <p class="mt-2 text-xs text-gray-500">
+                                    Total Due: GH₵ {{ number_format($invoice->balance_due, 2) }}
+                                </p>
+                            </div>
+                        @endif
+
                         <button type="submit" class="inline-flex items-center justify-center px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition transform hover:-translate-y-0.5 w-full sm:w-auto text-lg">
-                            <i class="fas fa-lock mr-3"></i> Pay Securely Now
+                            <i class="fas fa-lock mr-3"></i> 
+                            Pay <span x-text="amount ? 'GH₵ ' + parseFloat(amount).toFixed(2) : 'Now'">Now</span>
                         </button>
                     </form>
                     <p class="text-xs text-slate-400 mt-4 flex items-center justify-center">

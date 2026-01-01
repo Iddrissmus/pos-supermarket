@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Branch extends Model
 {
-    protected $fillable = ['business_id', 'manager_id', 'name', 'contact', 'latitude', 'longitude', 'address', 'region'];
+    protected $fillable = ['business_id', 'manager_id', 'name', 'contact', 'latitude', 'longitude', 'address', 'region', 'is_main'];
 
     public static $ghanaRegions = [
         'Greater Accra',

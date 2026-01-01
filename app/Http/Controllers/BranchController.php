@@ -21,22 +21,36 @@ class BranchController extends Controller
     {
         $user = auth()->user();
 
-        if (!$user->branch_id) {
+        $branchId = $user->branch_id;
+
+        // If Business Admin has no specific branch assigned, try to find their main branch
+        if (!$branchId && $user->role === 'business_admin') {
+            $mainBranch = Branch::where('business_id', $user->business_id)
+                ->where('is_main', true)
+                ->first();
+                
+            $branchId = $mainBranch ? $mainBranch->id : null;
+            
+            // Fallback: any branch
+            if (!$branchId) {
+                $anyBranch = Branch::where('business_id', $user->business_id)->first();
+                $branchId = $anyBranch ? $anyBranch->id : null;
+            }
+        }
+
+        if (!$branchId) {
+            // detailed error for business admin
+             if ($user->role === 'business_admin') {
+                 return redirect()->route('branches.create')->with('error', 'You have no branches yet. Please create one.');
+             }
             abort(404, 'You are not assigned to any branch.');
         }
 
-        $branch = Branch::with(['business', 'manager'])->findOrFail($user->branch_id);
+        $branch = Branch::with(['business', 'manager'])->findOrFail($branchId);
 
         // Reuse the show view or a specific one if needed. 
-        // For now, let's look for a suitable view. 
-        // If I haven't checked existing views, I might default to creating one or using 'branches.show' if it exists.
-        // Assuming 'branches.show' exists based on typical patterns, or I'll check the list_dir output first in my head?
-        // Actually, the previous tool call list_dir is running in parallel or I should wait.
-        // But I can't wait in the same turn.
-        // I will assume I need to create a view or use a generic one.
-        // Let's safe bet: create a new view 'branches.my-branch' to be safe and specific.
-        
-        return view('branches.my-branch', compact('branch'));
+        // We can just use the 'show' view now that we have it!
+        return view('branches.show', compact('branch'));
     }
 
     /**
@@ -84,6 +98,16 @@ class BranchController extends Controller
         // Check permission
         if ($user->role === 'business_admin' && $business->business_admin_id !== $user->id) {
             abort(403, 'You can only add branches to your own business.');
+        }
+
+        // Check Branch Limit for Business Admin
+        if ($user->role === 'business_admin') {
+            $currentBranches = $business->branches()->count();
+            $pendingRequests = BranchRequest::where('business_id', $business->id)->where('status', 'pending')->count();
+            
+            if (($currentBranches + $pendingRequests) >= $business->max_branches) {
+                return back()->withInput()->with('error', "You have reached your plan limit of {$business->max_branches} branch(es). Please upgrade your subscription to add more.");
+            }
         }
 
         // Business admins create requests, superadmins create directly
@@ -140,6 +164,32 @@ class BranchController extends Controller
         }
     }
 
+    public function show(string $id)
+    {
+        $branch = Branch::with(['business', 'manager'])->findOrFail($id);
+        $user = auth()->user();
+
+        // Check permission
+        if ($user->role === 'business_admin' && $branch->business->business_admin_id !== $user->id) {
+            abort(403, 'You can only view branches in your own business.');
+        }
+
+        return view('branches.show', compact('branch'));
+    }
+
+    public function edit(string $id)
+    {
+        $branch = Branch::findOrFail($id);
+        $user = auth()->user();
+
+        // Check permission
+        if ($user->role === 'business_admin' && $branch->business->business_admin_id !== $user->id) {
+            abort(403, 'You can only edit branches in your own business.');
+        }
+
+        return view('branches.edit', compact('branch'));
+    }
+
     public function update(Request $request, string $id)
     {
         $branch = Branch::findOrFail($id);
@@ -160,7 +210,7 @@ class BranchController extends Controller
 
         $branch->update($validated);
 
-        return redirect()->back()->with('success', 'Branch updated successfully!');
+        return redirect()->route('branches.show', $branch->id)->with('success', 'Branch updated successfully!');
     }
 
     public function destroy(string $id)
