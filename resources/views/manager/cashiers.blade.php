@@ -187,15 +187,11 @@
                                         <div class="text-sm text-slate-600">{{ $cashier->created_at->format('M d, Y') }}</div>
                                     </td>
                                     <td class="px-6 py-4 text-right">
-                                        <form method="POST" action="{{ route('manager.cashiers.unassign') }}" class="inline">
-                                            @csrf
-                                            <input type="hidden" name="cashier_id" value="{{ $cashier->id }}">
-                                            <button type="submit" 
+                                        <button type="button" 
                                                     class="btn-sm bg-white border-slate-200 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 text-slate-600 transition-colors"
-                                                    onclick="return confirm('Are you sure? This will remove the cashier from this branch.')">
+                                                    onclick="confirmRemove('{{ $cashier->id }}', '{{ addslashes($cashier->name) }}')">
                                                 <i class="fas fa-user-minus mr-2"></i> Remove
                                             </button>
-                                        </form>
                                     </td>
                                 </tr>
                             @endforeach
@@ -219,7 +215,60 @@
 </div>
 
 <!-- Password JS (Kept original logic) -->
+@endsection
+
+@section('scripts')
+<!-- Removal Confirmation Modal -->
+<div id="removeCashierModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeRemoveModal()"></div>
+
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10">
+                        <i class="fas fa-exclamation-triangle text-rose-600"></i>
+                    </div>
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                        <h3 class="text-lg leading-6 font-medium text-slate-900" id="modal-title">Remove Cashier</h3>
+                        <div class="mt-2 text-sm text-slate-500">
+                            <p>Are you sure you want to remove <span id="remove-cashier-name" class="font-bold text-slate-700"></span> from this branch?</p>
+                            <p class="mt-1">This action cannot be undone.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-slate-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <form method="POST" action="{{ route('manager.cashiers.unassign') }}" id="removeCashierForm">
+                    @csrf
+                    <input type="hidden" name="cashier_id" id="modal_cashier_id">
+                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-rose-600 text-base font-medium text-white hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Confirm Removal
+                    </button>
+                </form>
+                <button type="button" onclick="closeRemoveModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-slate-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+function confirmRemove(id, name) {
+    document.getElementById('modal_cashier_id').value = id;
+    document.getElementById('remove-cashier-name').textContent = name;
+    document.getElementById('removeCashierModal').classList.remove('hidden');
+}
+
+function closeRemoveModal() {
+    document.getElementById('removeCashierModal').classList.add('hidden');
+}
+
+// Password Generator Functions
 function generateManagerPassword() {
     const length = 12;
     const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
@@ -253,7 +302,7 @@ function toggleManagerPassword(fieldId, eyeId) {
 function copyManagerPassword() {
     const password = document.getElementById('manager-password-display').textContent;
     navigator.clipboard.writeText(password).then(() => {
-        alert('Password copied!');
+        // Optional: show a small toast or tooltip
     });
 }
 </script>

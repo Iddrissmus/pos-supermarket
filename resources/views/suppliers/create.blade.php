@@ -50,7 +50,7 @@
                     <div>
                         <label for="type" class="block text-sm font-medium text-gray-700 mb-2">Supplier Type *</label>
                         <select id="type" name="type" 
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent @error('type') border-red-500 @enderror" required>
+                                class="tom-select w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent @error('type') border-red-500 @enderror" required>
                             <option value="">Select supplier type</option>
                             <option value="warehouse" {{ old('type') === 'warehouse' ? 'selected' : '' }}>Warehouse</option>
                             <option value="external" {{ old('type') === 'external' ? 'selected' : '' }}>External Supplier</option>

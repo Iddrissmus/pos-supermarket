@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="p-6">
-    <div class="bg-white rounded-lg shadow-md p-6 max-w-2xl mx-auto">
+    <div class="bg-white rounded-lg shadow-md p-6 max-w-2xl mx-auto min-h-[500px]">
         <div class="flex items-center justify-between mb-6">
             <div>
                 <h1 class="text-2xl font-bold text-gray-800">Create New Category</h1>
@@ -44,7 +44,7 @@
 
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Parent Category</label>
-                <select name="parent_id" class="w-full border rounded-md p-2 focus:ring-2 focus:ring-blue-500">
+                <select name="parent_id" class="tom-select w-full border rounded-md p-2 focus:ring-2 focus:ring-blue-500">
                     <option value="">-- None (Main Category) --</option>
                     @foreach($parentCategories as $parent)
                         <option value="{{ $parent->id }}" {{ old('parent_id') == $parent->id ? 'selected' : '' }}>

@@ -33,7 +33,7 @@
                     <!-- Branch Selection -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Branch *</label>
-                        <select name="branch_id" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                        <select name="branch_id" required class="tom-select w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
                             <option value="">Select Branch</option>
                             @foreach($branches as $branch)
                                 <option value="{{ $branch->id }}" {{ old('branch_id') == $branch->id ? 'selected' : '' }}>
@@ -51,7 +51,7 @@
                                 <span class="text-xs text-gray-500">(Local suppliers only)</span>
                             @endif
                         </label>
-                        <select name="supplier_id" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                        <select name="supplier_id" required class="tom-select w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
                             <option value="">Select Supplier</option>
                             @foreach($suppliers as $supplier)
                                 <option value="{{ $supplier->id }}" 
@@ -105,7 +105,7 @@
                         <div class="item-row grid grid-cols-12 gap-3 mb-3 p-3 bg-gray-50 rounded-lg">
                             <div class="col-span-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Product *</label>
-                                <select name="items[0][product_id]" required class="product-select w-full border border-gray-300 rounded px-2 py-1 text-sm">
+                                <select name="items[0][product_id]" required class="product-select tom-select w-full border border-gray-300 rounded px-2 py-1 text-sm">
                                     <option value="">Select Product</option>
                                     @foreach($products as $product)
                                         <option value="{{ $product->id }}" data-name="{{ $product->name }}" data-barcode="{{ $product->barcode }}">
@@ -153,6 +153,52 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Template for new rows -->
+                <template id="row-template">
+                    <div class="item-row grid grid-cols-12 gap-3 mb-3 p-3 bg-gray-50 rounded-lg">
+                        <div class="col-span-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Product *</label>
+                            <select name="items[0][product_id]" required class="product-select w-full border border-gray-300 rounded px-2 py-1 text-sm">
+                                <option value="">Select Product</option>
+                                @foreach($products as $product)
+                                    <option value="{{ $product->id }}" data-name="{{ $product->name }}" data-barcode="{{ $product->barcode }}">
+                                        {{ $product->name }} ({{ $product->barcode }})
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Boxes *</label>
+                            <input type="number" name="items[0][quantity_of_boxes]" min="0" required
+                                   class="boxes-input w-full border border-gray-300 rounded px-2 py-1 text-sm" placeholder="0">
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Units/Box *</label>
+                            <input type="number" name="items[0][quantity_per_box]" min="1" required
+                                   class="units-per-box-input w-full border border-gray-300 rounded px-2 py-1 text-sm" placeholder="1">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Total Units</label>
+                            <input type="number" name="items[0][quantity]" min="1" required
+                                   class="quantity-input w-full border border-gray-300 rounded px-2 py-1 text-sm bg-blue-50" readonly>
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Unit Cost *</label>
+                            <input type="number" name="items[0][unit_cost]" step="0.01" min="0" required
+                                   class="unit-cost-input w-full border border-gray-300 rounded px-2 py-1 text-sm">
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Total Cost</label>
+                            <input type="text" class="total-cost-display w-full border border-gray-200 rounded px-2 py-1 text-sm bg-gray-100" readonly>
+                        </div>
+                        <div class="col-span-1 flex items-end">
+                            <button type="button" class="remove-item bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-sm">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </template>
 
                 <!-- Actions -->
                 <div class="flex justify-end space-x-4 mt-6 pt-6 border-t">
@@ -217,24 +263,30 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function createItemRow(index) {
-        const template = document.querySelector('.item-row').cloneNode(true);
+        const template = document.getElementById('row-template').content.cloneNode(true);
+        const row = template.querySelector('.item-row');
         
         // Update name attributes
-        template.querySelector('select').setAttribute('name', `items[${index}][product_id]`);
-        template.querySelector('.boxes-input').setAttribute('name', `items[${index}][quantity_of_boxes]`);
-        template.querySelector('.units-per-box-input').setAttribute('name', `items[${index}][quantity_per_box]`);
-        template.querySelector('.quantity-input').setAttribute('name', `items[${index}][quantity]`);
-        template.querySelector('.unit-cost-input').setAttribute('name', `items[${index}][unit_cost]`);
+        row.querySelector('select').setAttribute('name', `items[${index}][product_id]`);
+        row.querySelector('.boxes-input').setAttribute('name', `items[${index}][quantity_of_boxes]`);
+        row.querySelector('.units-per-box-input').setAttribute('name', `items[${index}][quantity_per_box]`);
+        row.querySelector('.quantity-input').setAttribute('name', `items[${index}][quantity]`);
+        row.querySelector('.unit-cost-input').setAttribute('name', `items[${index}][unit_cost]`);
         
-        // Clear values
-        template.querySelector('select').value = '';
-        template.querySelector('.boxes-input').value = '';
-        template.querySelector('.units-per-box-input').value = '';
-        template.querySelector('.quantity-input').value = '';
-        template.querySelector('.unit-cost-input').value = '';
-        template.querySelector('.total-cost-display').value = '';
+        // Initialize TomSelect for the new row
+        const select = row.querySelector('select');
+        select.classList.add('tom-select'); // Ensure class identifies it
         
-        return template;
+        // Helper to init TomSelect (using settings similar to global)
+        const settings = {
+            create: false,
+            sortField: { field: "text", direction: "asc" },
+            placeholder: 'Select a product...',
+            plugins: ['clear_button'],
+        };
+        new TomSelect(select, settings);
+        
+        return row;
     }
 
     function updateRemoveButtons() {

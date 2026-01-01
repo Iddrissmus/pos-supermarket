@@ -43,9 +43,9 @@
         <!-- Refined Date Filter Section -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
             <form method="GET" id="dateFilterForm">
-                <div class="flex flex-col lg:flex-row lg:items-end gap-6">
+                <div class="space-y-4">
                     <!-- Date Presets -->
-                    <div class="flex-1">
+                    <div>
                         <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Quick Select</label>
                         <div class="flex flex-wrap gap-2">
                              @foreach(['today' => 'Today', 'week' => 'This Week', 'month' => 'This Month', 'last_month' => 'Last Month', 'year' => 'This Year'] as $val => $label)
@@ -56,9 +56,9 @@
                             @endforeach
                         </div>
                     </div>
-                    
-                    <!-- Custom Range -->
-                    <div class="flex items-end gap-4">
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                        <!-- Date Range -->
                         <div>
                             <label for="start_date" class="block text-sm font-medium text-gray-700 mb-2">From</label>
                             <input type="date" id="start_date" name="start_date" value="{{ request('start_date', $startDate->format('Y-m-d')) }}" 
@@ -69,9 +69,58 @@
                             <input type="date" id="end_date" name="end_date" value="{{ request('end_date', $endDate->format('Y-m-d')) }}" 
                                    class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                         </div>
-                        <button type="submit" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition-colors flex items-center h-[42px]">
-                            <i class="fas fa-filter mr-2"></i> Filter
+
+                        <!-- Branch Filter -->
+                        @if(isset($branches) && $branches->count() > 0)
+                        <div>
+                            <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-2">Branch</label>
+                            <select name="branch_id" id="branch_id" class="tom-select block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <option value="">All Branches</option>
+                                @foreach($branches as $branch)
+                                    <option value="{{ $branch->id }}" {{ request('branch_id') == $branch->id ? 'selected' : '' }}>
+                                        {{ $branch->display_label }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        @else
+                        <div class="hidden lg:block"></div>
+                        @endif
+
+                        <!-- Filter Button -->
+                        <button type="submit" class="w-full px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition-colors flex items-center justify-center h-[42px]">
+                            <i class="fas fa-filter mr-2"></i> Filter Report
                         </button>
+                    </div>
+
+                    <!-- Additional Filters Row -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <!-- Category Filter -->
+                        <div>
+                            <label for="category_id" class="block text-sm font-medium text-gray-700 mb-2">Product Category</label>
+                            <select name="category_id" id="category_id" class="tom-select block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <option value="">All Categories</option>
+                                @foreach($categories as $category)
+                                    <option value="{{ $category->id }}" {{ request('category_id') == $category->id ? 'selected' : '' }}>
+                                        {{ $category->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        
+                        <!-- Payment Method Filter -->
+                        <div>
+                            <label for="payment_method" class="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+                            <select name="payment_method" id="payment_method" class="tom-select block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <option value="">All Payment Methods</option>
+                                <option value="cash" {{ request('payment_method') === 'cash' ? 'selected' : '' }}>Cash</option>
+                                <option value="card" {{ request('payment_method') === 'card' ? 'selected' : '' }}>Card</option>
+                                <option value="mobile_money" {{ request('payment_method') === 'mobile_money' ? 'selected' : '' }}>Mobile Money</option>
+                                <option value="bank_transfer" {{ request('payment_method') === 'bank_transfer' ? 'selected' : '' }}>Bank Transfer</option>
+                                <option value="check" {{ request('payment_method') === 'check' ? 'selected' : '' }}>Check</option>
+                                <option value="credit" {{ request('payment_method') === 'credit' ? 'selected' : '' }}>Store Credit</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </form>
@@ -488,112 +537,111 @@
             </div>
         </div>
 
-        <!-- P&L Statement - Redesigned -->
-        <div class="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6">
-                <div class="flex items-center justify-between text-white">
-                    <div>
-                        <h2 class="text-xl font-bold flex items-center">
-                            <i class="fas fa-file-invoice-dollar mr-3"></i>Profit & Loss Statement
-                        </h2>
-                        <p class="text-blue-100 text-sm mt-1">{{ $startDate->format('M d, Y') }} - {{ $endDate->format('M d, Y') }}</p>
+        <!-- P&L Statement - Redesigned Grid -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center">
+                    <i class="fas fa-file-invoice-dollar mr-3 text-indigo-600"></i>Profit & Loss Statement
+                </h2>
+                <span class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-semibold">
+                    Net Margin: {{ number_format($summary['average_margin'], 1) }}%
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Revenue Card -->
+                <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden group">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="bg-green-100 p-3 rounded-lg text-green-600 group-hover:bg-green-600 group-hover:text-white transition-colors duration-300">
+                                <i class="fas fa-coins text-xl"></i>
+                            </div>
+                            <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Revenue</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-900 mb-1">₵{{ number_format($summary['total_revenue'], 2) }}</h3>
+                        <div class="flex items-center text-sm text-gray-500">
+                            <i class="fas fa-receipt mr-1"></i>
+                            {{ $summary['total_sales'] }} transactions
+                        </div>
                     </div>
-                    <div class="text-right">
-                        <p class="text-blue-100 text-xs uppercase tracking-wide">Net Profit Margin</p>
-                        <p class="text-3xl font-bold">{{ number_format($summary['average_margin'], 1) }}%</p>
+                    <div class="bg-green-50 px-6 py-3 border-t border-green-100">
+                        <div class="text-xs text-green-700 flex justify-between items-center">
+                             <span>Avg Transaction</span>
+                             <span class="font-bold">₵{{ number_format($summary['average_transaction'], 2) }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- COGS Card -->
+                <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden group">
+                    <div class="p-6">
+                         <div class="flex items-center justify-between mb-4">
+                            <div class="bg-red-100 p-3 rounded-lg text-red-600 group-hover:bg-red-600 group-hover:text-white transition-colors duration-300">
+                                <i class="fas fa-boxes text-xl"></i>
+                            </div>
+                            <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">COGS</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-900 mb-1">₵{{ number_format($summary['total_cogs'], 2) }}</h3>
+                        <div class="flex items-center text-sm text-gray-500">
+                            <i class="fas fa-cube mr-1"></i>
+                            Direct product costs
+                        </div>
+                    </div>
+                    <div class="bg-red-50 px-6 py-3 border-t border-red-100">
+                        <div class="text-xs text-red-700 flex justify-between items-center">
+                             <span>% of Revenue</span>
+                             <span class="font-bold">{{ number_format(($summary['total_cogs'] / max($summary['total_revenue'], 1)) * 100, 1) }}%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gross Profit Card -->
+                <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg overflow-hidden text-white relative">
+                    <div class="absolute top-0 right-0 -mt-2 -mr-2 w-24 h-24 bg-white opacity-10 rounded-full blur-xl"></div>
+                    <div class="p-6 relative z-10">
+                         <div class="flex items-center justify-between mb-4">
+                            <div class="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
+                                <i class="fas fa-wallet text-xl"></i>
+                            </div>
+                            <span class="text-xs font-medium text-indigo-100 uppercase tracking-wider">Gross Profit</span>
+                        </div>
+                        <h3 class="text-3xl font-extrabold mb-1">₵{{ number_format($summary['total_profit'], 2) }}</h3>
+                        <div class="flex items-center text-sm text-indigo-100">
+                            <i class="fas fa-chart-line mr-1"></i>
+                            Excludes OpEx
+                        </div>
+                    </div>
+                    <div class="bg-indigo-900/20 px-6 py-3 border-t border-white/10 backdrop-blur-md">
+                        <div class="text-xs text-indigo-50 flex justify-between items-center">
+                             <span>Gross Margin</span>
+                             <span class="font-bold bg-white/20 px-2 py-0.5 rounded">{{ number_format($summary['average_margin'], 2) }}%</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="p-6">
-                <!-- Revenue Section -->
-                <div class="mb-6">
-                    <div class="flex items-center justify-between p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
-                        <div class="flex items-center">
-                            <div class="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center mr-4">
-                                <i class="fas fa-coins text-white text-xl"></i>
-                            </div>
-                            <div>
-                                <p class="text-sm font-medium text-green-800 uppercase tracking-wide">Total Revenue</p>
-                                <p class="text-xs text-green-600 mt-1">{{ $summary['total_sales'] }} transactions</p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-2xl font-bold text-green-700">₵{{ number_format($summary['total_revenue'], 2) }}</p>
-                            <p class="text-xs text-green-600 mt-1">₵{{ number_format($summary['average_transaction'], 2) }} avg</p>
-                        </div>
-                    </div>
+            <!-- Operating Expenses Notice -->
+            <div class="mt-4 bg-blue-50 border border-blue-100 p-4 rounded-lg flex items-start">
+                <i class="fas fa-info-circle text-blue-500 mt-0.5 mr-3"></i>
+                <div>
+                     <p class="text-sm font-semibold text-blue-800">Note on Net Profit</p>
+                     <p class="text-xs text-blue-600 mt-1">
+                        Figures shown represent Gross Profit (Revenue - Cost of Sales). To determine Net Profit, please deduct operating expenses (Rent, Salaries, Utilities, etc.) from the Gross Profit figure.
+                    </p>
                 </div>
-
-                <!-- Cost of Goods Sold -->
-                <div class="mb-6">
-                    <div class="flex items-center justify-between p-4 bg-red-50 rounded-lg border-l-4 border-red-500">
-                        <div class="flex items-center">
-                            <div class="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center mr-4">
-                                <i class="fas fa-boxes text-white text-xl"></i>
-                            </div>
-                            <div>
-                                <p class="text-sm font-medium text-red-800 uppercase tracking-wide">Cost of Goods Sold</p>
-                                <p class="text-xs text-red-600 mt-1">Direct product costs</p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-2xl font-bold text-red-700">₵{{ number_format($summary['total_cogs'], 2) }}</p>
-                            <p class="text-xs text-red-600 mt-1">{{ number_format(($summary['total_cogs'] / max($summary['total_revenue'], 1)) * 100, 1) }}% of revenue</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Divider -->
-                <div class="border-t-2 border-gray-300 my-6"></div>
-
-                <!-- Gross Profit -->
-                <div class="mb-6">
-                    <div class="flex items-center justify-between p-5 bg-gradient-to-r from-emerald-50 to-green-50 rounded-lg border-2 border-emerald-400 shadow-sm">
-                        <div class="flex items-center">
-                            <div class="w-14 h-14 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg flex items-center justify-center mr-4 shadow-md">
-                                <i class="fas fa-chart-line text-white text-2xl"></i>
-                            </div>
-                            <div>
-                                <p class="text-base font-bold text-emerald-900 uppercase tracking-wide">Gross Profit</p>
-                                <p class="text-sm text-emerald-700 mt-1">Revenue - COGS</p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-3xl font-extrabold text-emerald-700">₵{{ number_format($summary['total_profit'], 2) }}</p>
-                            <p class="text-sm font-semibold text-emerald-600 mt-1">{{ number_format($summary['average_margin'], 2) }}% margin</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Operating Expenses Notice -->
-                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
-                    <div class="flex items-start">
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-info-circle text-blue-600 text-lg"></i>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm font-medium text-blue-800">Operating Expenses Not Tracked</p>
-                            <p class="text-xs text-blue-700 mt-1">
-                                This statement shows Gross Profit only. To calculate Net Profit, subtract operating expenses 
-                                (rent, utilities, salaries, marketing, etc.) from the gross profit shown above.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Visual Chart -->
-                @if($hasChartData)
-                <div class="mt-8">
-                    <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">
-                        <i class="fas fa-chart-bar mr-2"></i>Daily Profit & Loss Trend
-                    </h3>
-                    <div class="bg-gray-50 p-4 rounded-lg" style="height: 300px;">
-                        <canvas id="pnlChart"></canvas>
-                    </div>
-                </div>
-                @endif
             </div>
+
+             <!-- Visual Chart -->
+            @if($hasChartData)
+            <div class="mt-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">
+                    <i class="fas fa-chart-area mr-2"></i>Profitability Trend
+                </h3>
+                <div class="h-64">
+                    <canvas id="pnlChart"></canvas>
+                </div>
+            </div>
+            @endif
         </div>
 
 
@@ -698,7 +746,9 @@
         </div>
     </div>
 </div>
-@endsection
+
+
+
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>

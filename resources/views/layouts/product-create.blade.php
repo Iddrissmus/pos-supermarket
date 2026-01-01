@@ -90,7 +90,7 @@
                     
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Selling Mode</label>
-                        <select id="selling_mode" name="selling_mode" class="block w-full border rounded-md p-2">
+                        <select id="selling_mode" name="selling_mode" class="tom-select block w-full border rounded-md p-2">
                             <option value="unit">By Unit (Default)</option>
                             <option value="weight">By Weight</option>
                             <option value="box">By Box</option>
@@ -124,7 +124,7 @@
                         <div class="grid grid-cols-2 gap-4 pt-3 border-t border-purple-200">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Alternative Weight Unit</label>
-                                <select id="weight_unit" name="weight_unit" class="block w-full border rounded-md p-2">
+                                <select id="weight_unit" name="weight_unit" class="tom-select block w-full border rounded-md p-2">
                                     <option value="">-- None --</option>
                                     <option value="g">Grams (g)</option>
                                     <option value="kg">Kilograms (kg)</option>

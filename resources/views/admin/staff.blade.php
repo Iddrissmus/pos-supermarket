@@ -297,8 +297,8 @@
 <div id="assignModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="fixed inset-0 bg-gray-900/75 backdrop-blur-sm transition-opacity"></div>
     <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
-        <div class="relative transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
-            <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+        <div class="relative transform rounded-xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+            <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4 min-h-[400px]">
                 <div class="mb-5 flex items-center justify-between border-b border-gray-100 pb-4">
                     <h3 class="text-lg font-bold leading-6 text-gray-900">Assign Staff to Branch</h3>
                     <button onclick="closeAssignModal()" class="text-gray-400 hover:text-gray-500"><i class="fas fa-times"></i></button>
@@ -309,7 +309,7 @@
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Select Staff Member</label>
-                            <select name="user_id" required class="w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                            <select name="user_id" required class="tom-select w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
                                 <option value="">Choose a staff member...</option>
                                 <optgroup label="Managers">
                                     @foreach($managers as $manager)
@@ -325,7 +325,7 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Select Branch</label>
-                            <select name="branch_id" required class="w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                            <select name="branch_id" required class="tom-select w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
                                 <option value="">Choose a branch...</option>
                                 @foreach($branches as $branch)
                                     <option value="{{ $branch->id }}">{{ $branch->name }} ({{ $branch->region }})</option>
@@ -347,8 +347,8 @@
 <div id="createModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="fixed inset-0 bg-gray-900/75 backdrop-blur-sm transition-opacity"></div>
     <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
-        <div class="relative transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
-            <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+        <div class="relative transform rounded-xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+            <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4 min-h-[500px]">
                 <div class="mb-5 flex items-center justify-between border-b border-gray-100 pb-4">
                     <h3 class="text-lg font-bold leading-6 text-gray-900">Create New Staff Account</h3>
                      <button onclick="closeCreateModal()" class="text-gray-400 hover:text-gray-500"><i class="fas fa-times"></i></button>
@@ -372,7 +372,7 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                                <select name="role" required class="w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                                <select name="role" required class="tom-select w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
                                     <option value="cashier">Cashier</option>
                                     <option value="manager">Branch Manager</option>
                                 </select>
@@ -385,7 +385,7 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Assign to Branch (Optional)</label>
-                            <select name="branch_id" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                            <select name="branch_id" class="tom-select w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
                                 <option value="">Do not assign yet</option>
                                 @foreach($branches as $branch)
                                     <option value="{{ $branch->id }}">{{ $branch->name }}</option>

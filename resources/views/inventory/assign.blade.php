@@ -44,7 +44,7 @@
                     
                     @if(count($branches) > 1)
                         <div class="relative">
-                            <select id="branchSelect" class="block w-full pl-3 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm rounded-lg bg-gray-50 hover:bg-white transition-colors">
+                            <select id="branchSelect" class="tom-select block w-full pl-3 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm rounded-lg bg-gray-50 hover:bg-white transition-colors">
                                 <option value="">-- Choose Branch --</option>
                                 @foreach($branches as $branch)
                                     <option value="{{ $branch->id }}" 
@@ -132,7 +132,7 @@
                     <input type="text" id="productSearch" placeholder="Search products..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-gray-50 focus:bg-white transition-colors">
                 </div>
                 <div class="w-full sm:w-48">
-                    <select id="categoryFilter" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 bg-gray-50">
+                    <select id="categoryFilter" class="tom-select w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 bg-gray-50">
                         <option value="">All Categories</option>
                          @foreach($products->pluck('category')->unique()->filter() as $category)
                             <option value="{{ $category->id }}">{{ $category->name }}</option>

@@ -87,7 +87,7 @@
             <div class="p-6 space-y-6">
                 <div>
                     <label for="role" class="block text-sm font-medium text-gray-700 mb-1">user Role <span class="text-red-500">*</span></label>
-                    <select id="role" name="role" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base py-3 px-4" required onchange="toggleBusinessField()">
+                    <select id="role" name="role" class="tom-select w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base py-3 px-4" required onchange="toggleBusinessField()">
                         <option value="">Select a Role...</option>
                         <option value="superadmin" {{ old('role') == 'superadmin' ? 'selected' : '' }}>SuperAdmin (System Administrator)</option>
                         <option value="business_admin" {{ old('role') == 'business_admin' ? 'selected' : '' }}>Business Admin (Business Owner)</option>
@@ -98,7 +98,7 @@
 
                 <div id="business-field" class="hidden">
                     <label for="business_id" class="block text-sm font-medium text-gray-700 mb-1">Assign to Business <span class="text-red-500">*</span></label>
-                    <select id="business_id" name="business_id" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base py-3 px-4">
+                    <select id="business_id" name="business_id" class="tom-select w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base py-3 px-4">
                         <option value="">Select a Business...</option>
                         @foreach($businesses as $business)
                             <option value="{{ $business->id }}" {{ old('business_id') == $business->id ? 'selected' : '' }}>{{ $business->name }}</option>

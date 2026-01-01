@@ -125,7 +125,7 @@
                     <!-- Action Type -->
                     <div>
                         <label class="block text-xs font-medium text-gray-500 mb-1">Action Type</label>
-                        <select name="action" class="block w-full border-gray-300 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        <select name="action" class="tom-select block w-full border-gray-300 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="">All Actions</option>
                             @foreach($actionTypes as $type)
                                 <option value="{{ $type }}" {{ request('action') == $type ? 'selected' : '' }}>
@@ -138,7 +138,7 @@
                     <!-- User Filter -->
                     <div>
                         <label class="block text-xs font-medium text-gray-500 mb-1">User</label>
-                        <select name="user_id" class="block w-full border-gray-300 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        <select name="user_id" class="tom-select block w-full border-gray-300 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="">All Users</option>
                             @foreach($users as $user)
                                 <option value="{{ $user->id }}" {{ request('user_id') == $user->id ? 'selected' : '' }}>
@@ -152,7 +152,7 @@
                     @if(auth()->user()->role === 'superadmin' && isset($businesses))
                     <div>
                         <label class="block text-xs font-medium text-gray-500 mb-1">Business</label>
-                         <select name="business_id" class="block w-full border-gray-300 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                         <select name="business_id" class="tom-select block w-full border-gray-300 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="">All Businesses</option>
                             @foreach($businesses as $business)
                                 <option value="{{ $business->id }}" {{ request('business_id') == $business->id ? 'selected' : '' }}>

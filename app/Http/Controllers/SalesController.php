@@ -921,6 +921,11 @@ class SalesController extends Controller
         $user = Auth::user();
         $startDateInput = $request->input('start_date');
         $endDateInput = $request->input('end_date');
+        
+        // Additional Filters
+        $branchIdInput = $request->input('branch_id');
+        $categoryIdInput = $request->input('category_id');
+        $paymentMethodInput = $request->input('payment_method');
 
         // Date range handling
         $startDate = $startDateInput
@@ -944,6 +949,21 @@ class SalesController extends Controller
                 });
             })
             ->whereBetween('created_at', [$startDate, $endDate]);
+
+        // Apply additional filters
+        if ($branchIdInput && ($user->role === 'business_admin' || $user->role === 'superadmin')) {
+            $baseQuery->where('branch_id', $branchIdInput);
+        }
+
+        if ($categoryIdInput) {
+            $baseQuery->whereHas('items.product', function ($q) use ($categoryIdInput) {
+                $q->where('category_id', $categoryIdInput);
+            });
+        }
+
+        if ($paymentMethodInput) {
+            $baseQuery->where('payment_method', $paymentMethodInput);
+        }
 
         // Get detailed sales for table
         $sales = (clone $baseQuery)
@@ -974,6 +994,14 @@ class SalesController extends Controller
         // Period comparison
         $periodComparison = $this->compareToPreviousPeriod($startDate, $endDate, $user);
 
+        // Filter Data for Dropdowns
+        $branches = collect();
+        if ($user->role === 'business_admin' || $user->role === 'superadmin') {
+            $branches = Branch::where('business_id', $user->business_id)->get();
+        }
+
+        $categories = Category::where('business_id', $user->business_id)->get();
+
         return [
             'startDate' => $startDate,
             'endDate' => $endDate,
@@ -986,6 +1014,13 @@ class SalesController extends Controller
             'cashierStats' => $cashierStats,
             'periodComparison' => $periodComparison,
             'userBranchId' => $user->branch_id,
+            'branches' => $branches,
+            'categories' => $categories,
+            'filters' => [
+                'branch_id' => $branchIdInput,
+                'category_id' => $categoryIdInput,
+                'payment_method' => $paymentMethodInput,
+            ]
         ];
     }
 

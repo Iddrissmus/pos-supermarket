@@ -8,13 +8,13 @@
     <div class="sm:flex sm:justify-between sm:items-center mb-8">
         <div>
             <h1 class="text-2xl md:text-3xl font-bold text-slate-800">Stock Requests</h1>
-            <p class="text-slate-500 mt-1">Request inventory from other branches for <span class="font-medium text-indigo-600">{{ $manager->branch->display_label }}</span></p>
+            <p class="text-slate-500 mt-1">Request inventory from other branches for <span class="font-medium text-green-600">{{ $manager->branch->display_label }}</span></p>
         </div>
         <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
-            <button onclick="document.getElementById('bulkUploadModal').classList.remove('hidden')" class="btn bg-white border-slate-200 hover:border-slate-300 text-slate-600 hover:text-indigo-600">
+            <button onclick="document.getElementById('bulkUploadModal').classList.remove('hidden')" class="btn bg-white border-slate-200 hover:border-slate-300 text-slate-600 hover:text-green-600">
                 <i class="fas fa-file-excel mr-2 text-green-600"></i> Bulk Request
             </button>
-            <a href="{{ route('dashboard.manager') }}" class="btn bg-white border-slate-200 hover:border-slate-300 text-slate-600 hover:text-indigo-600">
+            <a href="{{ route('dashboard.manager') }}" class="btn bg-white border-slate-200 hover:border-slate-300 text-slate-600 hover:text-green-600">
                 <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
             </a>
         </div>
@@ -64,7 +64,7 @@
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden sticky top-8">
                 <div class="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                     <h2 class="font-bold text-slate-800">New Request</h2>
-                    <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600">Step 1</span>
+                    <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-600">Step 1</span>
                 </div>
                 <div class="p-6">
                     <form method="POST" action="{{ route('manager.item-requests.store') }}" class="space-y-4">
@@ -115,9 +115,9 @@
                         </div>
 
                         <!-- Calculator Result -->
-                        <div class="bg-indigo-50/50 rounded-lg p-3 text-center border border-indigo-100">
+                        <div class="bg-green-50/50 rounded-lg p-3 text-center border border-green-100">
                              <p class="text-xs text-slate-500 mb-1">Total Requsted Quantity</p>
-                             <p class="text-lg font-bold text-indigo-600" id="total-units-display">0 units</p>
+                             <p class="text-lg font-bold text-green-600" id="total-units-display">0 units</p>
                              <p class="text-[10px] text-slate-400" id="calc-breakdown">(0 boxes × 0 units)</p>
                         </div>
 
@@ -127,7 +127,7 @@
                             <textarea name="reason" rows="2" class="form-textarea w-full" placeholder="e.g. Low stock trigger"></textarea>
                         </div>
 
-                        <button type="submit" class="btn w-full bg-indigo-500 hover:bg-indigo-600 text-white shadow-sm group">
+                        <button type="submit" class="btn w-full bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl rounded-full py-3 transform hover:scale-[1.05] transition-all duration-200 group font-bold tracking-wide flex items-center justify-center">
                             Submit Request <i class="fas fa-paper-plane ml-2 group-hover:translate-x-1 transition-transform"></i>
                         </button>
                     </form>
@@ -211,7 +211,7 @@
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
                     <h2 class="font-bold text-slate-800">Request History</h2>
-                    <a href="#" class="text-xs font-medium text-indigo-600 hover:text-indigo-800">View All</a>
+                    <a href="#" class="text-xs font-medium text-green-600 hover:text-green-800">View All</a>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left">
@@ -369,8 +369,8 @@ function updateTotal() {
         <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
             <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div class="sm:flex sm:items-start">
-                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 sm:mx-0 sm:h-10 sm:w-10">
-                        <i class="fas fa-file-upload text-indigo-600"></i>
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 sm:mx-0 sm:h-10 sm:w-10">
+                        <i class="fas fa-file-upload text-green-600"></i>
                     </div>
                     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
                         <h3 class="text-lg leading-6 font-medium text-slate-900" id="modal-title">Bulk Request Upload</h3>
@@ -386,7 +386,7 @@ function updateTotal() {
                                 <li>Upload the saved file.</li>
                             </ol>
                             <div class="mt-3">
-                                <a href="{{ route('manager.item-requests.download-template') }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500 hover:underline">
+                                <a href="{{ route('manager.item-requests.download-template') }}" class="text-sm font-medium text-green-600 hover:text-green-500 hover:underline">
                                     <i class="fas fa-download mr-1"></i> Download Template
                                 </a>
                             </div>
@@ -399,14 +399,14 @@ function updateTotal() {
                                 file:mr-4 file:py-2 file:px-4
                                 file:rounded-full file:border-0
                                 file:text-sm file:font-semibold
-                                file:bg-indigo-50 file:text-indigo-700
-                                hover:file:bg-indigo-100 rounded-lg border border-slate-300">
+                                file:bg-green-50 file:text-green-700
+                                hover:file:bg-green-100 rounded-lg border border-slate-300">
                             
                             <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
-                                <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:col-start-2 sm:text-sm">
+                                <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:col-start-2 sm:text-sm">
                                     Upload
                                 </button>
-                                <button type="button" onclick="document.getElementById('bulkUploadModal').classList.add('hidden')" class="mt-3 w-full inline-flex justify-center rounded-md border border-slate-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:col-start-1 sm:text-sm">
+                                <button type="button" onclick="document.getElementById('bulkUploadModal').classList.add('hidden')" class="mt-3 w-full inline-flex justify-center rounded-md border border-slate-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:mt-0 sm:col-start-1 sm:text-sm">
                                     Cancel
                                 </button>
                             </div>

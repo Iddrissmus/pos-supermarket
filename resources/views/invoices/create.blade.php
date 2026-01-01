@@ -28,7 +28,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="col-span-1 md:col-span-2">
                         <label class="block text-sm font-medium mb-1" for="customer">Select Customer <span class="text-rose-500">*</span></label>
-                        <select id="customer" class="form-select w-full border-slate-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 py-2.5 rounded shadow-sm" name="customer_id">
+                        <select id="customer" class="form-select tom-select w-full border-slate-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 py-2.5 rounded shadow-sm" name="customer_id">
                             <option value="">Select a customer...</option>
                             @foreach($customers as $customer)
                                 <option value="{{ $customer->id }}" data-email="{{ $customer->email }}" data-phone="{{ $customer->phone }}">
@@ -161,7 +161,7 @@
                     <!-- Recurring Options -->
                     <div x-show="deliveryType === 'recurring'" class="pt-2 animate-fade-in-down" style="display: none;">
                          <label class="block text-sm font-medium mb-1" for="recurring_frequency">Frequency</label>
-                         <select id="recurring_frequency" class="form-select w-full">
+                         <select id="recurring_frequency" class="form-select tom-select w-full">
                             <option value="weekly">Weekly</option>
                             <option value="monthly" selected>Monthly</option>
                             <option value="quarterly">Quarterly</option>
@@ -182,7 +182,7 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium mb-1" for="branch">Issuing Branch</label>
-                        <select id="branch" class="form-select w-full" name="branch_id">
+                        <select id="branch" class="form-select tom-select w-full" name="branch_id">
                             @foreach($branches as $branch)
                                 <option value="{{ $branch->id }}" {{ count($branches) == 1 ? 'selected' : '' }}>
                                     {{ $branch->name }}

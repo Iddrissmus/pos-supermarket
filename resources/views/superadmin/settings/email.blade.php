@@ -41,7 +41,7 @@
                 <div class="sm:col-span-2">
                     <label for="mail_driver" class="block text-sm font-medium text-gray-700">Mail Driver</label>
                     <div class="mt-1">
-                        <select id="mail_driver" name="mail_driver" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg py-3">
+                        <select id="mail_driver" name="mail_driver" class="tom-select shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg py-3">
                              <option value="smtp" {{ old('mail_driver', $mail_driver) == 'smtp' ? 'selected' : '' }}>SMTP</option>
                             <option value="mailgun" {{ old('mail_driver', $mail_driver) == 'mailgun' ? 'selected' : '' }}>Mailgun</option>
                             <option value="ses" {{ old('mail_driver', $mail_driver) == 'ses' ? 'selected' : '' }}>Amazon SES</option>
@@ -97,7 +97,7 @@
                 <div class="sm:col-span-1">
                     <label for="mail_encryption" class="block text-sm font-medium text-gray-700">Encryption</label>
                     <div class="mt-1">
-                        <select id="mail_encryption" name="mail_encryption" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg py-3">
+                        <select id="mail_encryption" name="mail_encryption" class="tom-select shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg py-3">
                             <option value="tls" {{ old('mail_encryption', $mail_encryption) == 'tls' ? 'selected' : '' }}>TLS</option>
                             <option value="ssl" {{ old('mail_encryption', $mail_encryption) == 'ssl' ? 'selected' : '' }}>SSL</option>
                             <option value="null" {{ old('mail_encryption', $mail_encryption) == 'null' ? 'selected' : '' }}>None</option>

@@ -83,7 +83,7 @@
                 <div class="sm:col-span-1">
                     <label for="timezone" class="block text-sm font-medium text-gray-700">Timezone</label>
                     <div class="mt-1">
-                        <select id="timezone" name="timezone" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg py-3">
+                        <select id="timezone" name="timezone" class="tom-select shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg py-3">
                             <option value="UTC" {{ old('timezone', $timezone) == 'UTC' ? 'selected' : '' }}>UTC</option>
                             <option value="Africa/Accra" {{ old('timezone', $timezone) == 'Africa/Accra' ? 'selected' : '' }}>Africa/Accra (GMT)</option>
                             <option value="America/New_York" {{ old('timezone', $timezone) == 'America/New_York' ? 'selected' : '' }}>America/New_York (EST)</option>
@@ -97,7 +97,7 @@
                 <div class="sm:col-span-1">
                     <label for="locale" class="block text-sm font-medium text-gray-700">Default Language</label>
                     <div class="mt-1">
-                        <select id="locale" name="locale" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg py-3">
+                        <select id="locale" name="locale" class="tom-select shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg py-3">
                             <option value="en" {{ old('locale', $locale) == 'en' ? 'selected' : '' }}>English</option>
                             <option value="fr" {{ old('locale', $locale) == 'fr' ? 'selected' : '' }}>French</option>
                             <option value="es" {{ old('locale', $locale) == 'es' ? 'selected' : '' }}>Spanish</option>

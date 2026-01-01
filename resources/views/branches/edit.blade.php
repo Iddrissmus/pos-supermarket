@@ -147,7 +147,7 @@
                         <div>
                             <label for="location" class="block text-sm font-medium text-gray-700 mb-1">Region <span class="text-red-500">*</span></label>
                             <select id="location" name="region" required
-                                    class="w-full border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 shadow-sm">
+                                    class="tom-select w-full border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 shadow-sm">
                                 <option value="">Select Region</option>
                                 @foreach(['Greater Accra', 'Ashanti', 'Western', 'Eastern', 'Central', 'Northern', 'Upper East', 'Upper West', 'Volta', 'Brong Ahafo', 'Western North', 'Bono East', 'Ahafo', 'Savannah', 'North East', 'Oti'] as $region)
                                     <option value="{{ $region }}" {{ old('region', $branch->region) == $region ? 'selected' : '' }}>{{ $region }}</option>

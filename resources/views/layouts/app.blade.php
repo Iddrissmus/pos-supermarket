@@ -10,6 +10,35 @@
     {{-- WireUI scripts registration (v2 component tag) --}}
     <wireui:scripts />
     {{-- If on older WireUI, use: @wireUiScripts --}}
+    {{-- If on older WireUI, use: @wireUiScripts --}}
+    
+    <!-- Global TomSelect CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+    <style>
+        /* Global TomSelect Customization */
+        .ts-control {
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border-color: #d1d5db;
+        }
+        .ts-control:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 1px #3b82f6;
+        }
+        .ts-dropdown {
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            z-index: 50;
+        }
+        .ts-dropdown .option {
+            padding: 0.5rem 1rem;
+        }
+        .ts-dropdown .active {
+            background-color: #f3f4f6;
+            color: #111827;
+        }
+    </style>
+
     @stack('styles')
     <style>
         .sidebar {
@@ -140,6 +169,30 @@
     </div>
     
     @livewireScripts
+    
+    <!-- Global TomSelect JS -->
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const selectSettings = {
+                create: false,
+                sortField: {
+                    field: "text",
+                    direction: "asc"
+                },
+                placeholder: 'Select an option...',
+                plugins: ['clear_button'],
+            };
+            
+            // Auto-init for any element with .tom-select class
+            document.querySelectorAll('.tom-select').forEach((el) => {
+                if (!el.tomselect) { // Prevent double init
+                    new TomSelect(el, selectSettings);
+                }
+            });
+        });
+    </script>
+
     @stack('scripts')
 </body>
 </html>
