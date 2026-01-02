@@ -115,7 +115,11 @@ class ProductDashboardController extends Controller
             'recent_activities' => $recentActivities,
         ];
 
-        return view('layouts.productman', compact('products', 'stats', 'branches', 'selectedBranchId'));
+        // Extract unique categories from the products list
+        // Load category relationship if not already loaded (it is loaded as product.category)
+        $categories = $products->pluck('product.category')->unique('id')->filter()->values();
+
+        return view('layouts.productman', compact('products', 'stats', 'branches', 'selectedBranchId', 'categories'));
     }
     
     private function getRecentActivities($user)

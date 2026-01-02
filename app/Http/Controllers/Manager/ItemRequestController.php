@@ -20,49 +20,77 @@ class ItemRequestController extends Controller
      */
     public function index()
     {
-        $manager = Auth::user();
+        $user = Auth::user();
         
-        if (!$manager->managesBranch()) {
-            return redirect()->route('dashboard.manager')
-                ->with('error', 'You must be assigned to a branch to request items.');
+        // Allowed destination branches
+        $destinationBranches = collect();
+
+        if ($user->role === 'business_admin') {
+             $destinationBranches = Branch::where('business_id', $user->business_id)->get();
+        } elseif ($user->role === 'manager' && $user->branch_id) {
+             $destinationBranches = Branch::where('id', $user->branch_id)->get();
+        } else {
+             return redirect()->route('dashboard.manager')
+                ->with('error', 'You must be assigned to a branch or business to request items.');
         }
 
-        // Get pending requests for this manager's branch
-        $pendingRequests = StockTransfer::where('to_branch_id', $manager->branch_id)
-            ->where('status', 'pending')
-            ->with(['product', 'fromBranch.business', 'toBranch.business'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
+        // Get pending requests
+        $query = StockTransfer::where('status', 'pending')
+             ->with(['product', 'fromBranch.business', 'toBranch.business'])
+             ->orderBy('created_at', 'desc');
 
-        // Get completed requests for reference
-        $completedRequests = StockTransfer::where('to_branch_id', $manager->branch_id)
-            ->whereIn('status', ['approved', 'completed', 'rejected', 'cancelled'])
-            ->with(['product', 'fromBranch.business', 'toBranch.business'])
-            ->orderBy('updated_at', 'desc')
-            ->paginate(10, ['*'], 'completed_page');
+        if ($user->role === 'business_admin') {
+            $query->whereHas('toBranch', function($q) use ($user) {
+                $q->where('business_id', $user->business_id);
+            });
+        } else {
+            $query->where('to_branch_id', $user->branch_id);
+        }
+        
+        $pendingRequests = $query->paginate(10);
+
+        // Get completed requests
+        $completedQuery = StockTransfer::whereIn('status', ['approved', 'completed', 'rejected', 'cancelled'])
+             ->with(['product', 'fromBranch.business', 'toBranch.business'])
+             ->orderBy('updated_at', 'desc');
+
+        if ($user->role === 'business_admin') {
+            $completedQuery->whereHas('toBranch', function($q) use ($user) {
+                $q->where('business_id', $user->business_id);
+            });
+        } else {
+            $completedQuery->where('to_branch_id', $user->branch_id);
+        }
+
+        $completedRequests = $completedQuery->paginate(10, ['*'], 'completed_page');
 
         // Get available products from other branches OR from Warehouse
-        $businessId = $manager->branch->business_id;
+        $businessId = $user->business_id ?? $user->branch->business_id;
+        
+        // Exclude current user's branch IF they are a manager (to prevent self-request)
+        // If Business Admin, they can request FROM any branch TO any branch, so we might need distinct logic.
+        // For simplicity, let's list all valid sources.
         
         $availableProducts = Product::where('business_id', $businessId)
-            ->where(function($query) use ($manager) {
+            ->where(function($query) {
                 // Product has unassigned units (Warehouse Stock)
                 $query->whereColumn('total_units', '>', 'assigned_units')
                       // OR Product has stock in other branches
-                      ->orWhereHas('branchProducts', function($bp) use ($manager) {
-                          $bp->where('branch_id', '!=', $manager->branch_id)
-                             ->where('stock_quantity', '>', 0);
+                      ->orWhereHas('branchProducts', function($bp) {
+                          $bp->where('stock_quantity', '>', 0);
                       });
             })
             // Continue to eagerly load branchProducts for dropdown
-            ->with(['branchProducts' => function ($query) use ($manager) {
-                $query->where('branch_id', '!=', $manager->branch_id)
-                      ->where('stock_quantity', '>', 0)
+            ->with(['branchProducts' => function ($query) {
+                $query->where('stock_quantity', '>', 0)
                       ->with('branch.business');
             }])
             ->get();
 
-        return view('manager.item-requests', compact('pendingRequests', 'completedRequests', 'availableProducts', 'manager'));
+        // Check how many branches the business has in total
+        $totalBusinessBranches = Branch::where('business_id', $businessId)->count();
+
+        return view('manager.item-requests', compact('pendingRequests', 'completedRequests', 'availableProducts', 'user', 'destinationBranches', 'totalBusinessBranches'));
     }
 
     /**
@@ -70,20 +98,27 @@ class ItemRequestController extends Controller
      */
     public function store(Request $request)
     {
-        $manager = Auth::user();
+        $user = Auth::user();
         
-        if (!$manager->managesBranch()) {
+        // Define allowed destination branches
+        $allowedDestinationIds = [];
+        if ($user->role === 'business_admin') {
+             $allowedDestinationIds = Branch::where('business_id', $user->business_id)->pluck('id')->toArray();
+        } elseif ($user->role === 'manager' && $user->branch_id) {
+             $allowedDestinationIds = [$user->branch_id];
+        } else {
             return back()->with('error', 'You are not authorized to request items.');
         }
 
         $validated = $request->validate([
             'product_id' => 'required|exists:products,id',
+            'to_branch_id' => ['required', 'exists:branches,id', \Illuminate\Validation\Rule::in($allowedDestinationIds)],
             'from_branch_id' => [
                 'nullable',
                 'exists:branches,id',
-                function ($attribute, $value, $fail) use ($manager) {
-                    if ($value == $manager->branch_id) {
-                        $fail('You cannot request stock from your own branch.');
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($value == $request->to_branch_id) {
+                        $fail('Source and Destination branches cannot be the same.');
                     }
                 },
             ],
@@ -91,6 +126,8 @@ class ItemRequestController extends Controller
             'quantity_per_box' => 'required|integer|min:1',
             'reason' => 'nullable|string|max:500',
         ]);
+        
+        $destinationBranchId = $validated['to_branch_id'];
 
         // Calculate total quantity
         $totalQuantity = $validated['quantity_of_boxes'] * $validated['quantity_per_box'];
@@ -119,15 +156,14 @@ class ItemRequestController extends Controller
             if (!$sourceBranchProduct) {
                 return back()->with('error', 'Product not found in the selected branch.');
             }
-
+            
+            // Check Available Stock (stock_quantity)
             if ($sourceBranchProduct->stock_quantity < $totalQuantity) {
                 return back()->with('error', 'Insufficient stock in the selected branch. Available: ' . $sourceBranchProduct->stock_quantity . ' units.');
             }
-
-            if ($sourceBranchProduct->quantity_of_boxes < $validated['quantity_of_boxes']) {
-                return back()->with('error', 'Insufficient boxes in the selected branch. Available: ' . $sourceBranchProduct->quantity_of_boxes . ' boxes.');
-            }
             
+            // Ideally check boxes too, but if not tracked strictly, stock_quantity is primary.
+
             // Use branch-specific pricing/cost
             $price = $sourceBranchProduct->price;
             $costPrice = $sourceBranchProduct->cost_price;
@@ -138,7 +174,7 @@ class ItemRequestController extends Controller
         }
 
         // Check duplicate pending requests
-        $existingRequest = StockTransfer::where('to_branch_id', $manager->branch_id)
+        $existingRequest = StockTransfer::where('to_branch_id', $destinationBranchId)
             ->where('from_branch_id', $validated['from_branch_id'])
             ->where('product_id', $validated['product_id'])
             ->where('status', 'pending')
@@ -150,14 +186,14 @@ class ItemRequestController extends Controller
 
         StockTransfer::create([
             'from_branch_id' => $validated['from_branch_id'],
-            'to_branch_id' => $manager->branch_id,
+            'to_branch_id' => $destinationBranchId,
             'product_id' => $validated['product_id'],
             'quantity' => $totalQuantity,
             'quantity_of_boxes' => $validated['quantity_of_boxes'],
             'quantity_per_box' => $validated['quantity_per_box'],
             'reason' => $validated['reason'],
             'status' => 'pending',
-            'requested_by' => $manager->id,
+            'requested_by' => $user->id,
             'requested_at' => now(),
             // Pricing info
             'price' => $price,

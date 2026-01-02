@@ -8,7 +8,13 @@
     <div class="sm:flex sm:justify-between sm:items-center mb-8">
         <div>
             <h1 class="text-2xl md:text-3xl font-bold text-slate-800">Stock Requests</h1>
-            <p class="text-slate-500 mt-1">Request inventory from other branches for <span class="font-medium text-green-600">{{ $manager->branch->display_label }}</span></p>
+            <p class="text-slate-500 mt-1">
+                @if($user->branch)
+                    Request inventory from other branches for <span class="font-medium text-green-600">{{ $user->branch->display_label }}</span>
+                @else
+                    Request inventory and manage transfers between branches.
+                @endif
+            </p>
         </div>
         <div class="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
             <button onclick="document.getElementById('bulkUploadModal').classList.remove('hidden')" class="btn bg-white border-slate-200 hover:border-slate-300 text-slate-600 hover:text-green-600">
@@ -70,6 +76,34 @@
                     <form method="POST" action="{{ route('manager.item-requests.store') }}" class="space-y-4">
                         @csrf
                         
+                        <!-- To Branch (Destination) -->
+                        <div>
+                            @if(count($destinationBranches) > 1)
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Destination Branch</label>
+                                <select name="to_branch_id" class="form-select w-full h-12 text-lg" required>
+                                    <option value="">Select destination...</option>
+                                    @foreach($destinationBranches as $branch)
+                                        <option value="{{ $branch->id }}" {{ (old('to_branch_id') == $branch->id) ? 'selected' : '' }}>
+                                            {{ $branch->display_label }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            @else
+                                <input type="hidden" name="to_branch_id" value="{{ $destinationBranches->first()->id }}">
+                                <div class="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-store text-blue-500"></i>
+                                    </div>
+                                    <div class="ml-3">
+                                        <h3 class="text-sm font-medium text-blue-800">Requesting for:</h3>
+                                        <div class="text-sm text-blue-700">
+                                            {{ $destinationBranches->first()->display_label }}
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+
                         <!-- Product -->
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">Product</label>
@@ -88,11 +122,22 @@
                         <!-- Branch -->
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">Source Branch</label>
-                            <select id="from_branch_id" name="from_branch_id" 
-                                    class="form-select w-full h-12 text-lg" 
-                                    required disabled>
-                                <option value="">Select product first...</option>
-                            </select>
+                            
+                            @if($totalBusinessBranches > 1)
+                                <select id="from_branch_id" name="from_branch_id" 
+                                        class="form-select w-full h-12 text-lg" 
+                                        required disabled>
+                                    <option value="">Select product first...</option>
+                                </select>
+                            @else
+                                <!-- Single Branch Mode: Lock to Warehouse -->
+                                <input type="hidden" id="from_branch_id" name="from_branch_id" value="">
+                                <div class="w-full h-12 bg-slate-50 border border-slate-200 rounded-lg flex items-center px-3 text-slate-500">
+                                    <i class="fas fa-warehouse text-purple-400 mr-2"></i>
+                                    <span class="font-medium text-purple-700">Main Warehouse (Storage)</span>
+                                </div>
+                            @endif
+                            
                             <p id="stock-info" class="text-sm text-emerald-600 font-medium mt-2 min-h-[1.5rem]"></p>
                         </div>
 
@@ -181,7 +226,7 @@
                                         {{ optional($request->fromBranch)->display_label }}
                                     @else
                                         <i class="fas fa-warehouse text-purple-400 mr-1.5"></i>
-                                        <span class="px-2 py-0.5 rounded bg-purple-100 text-purple-700 font-semibold text-xs">Central Warehouse</span>
+                                        <span class="px-2 py-0.5 rounded bg-purple-100 text-purple-700 font-semibold text-xs">Main Warehouse (Storage)</span>
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 text-center">
@@ -240,7 +285,7 @@
                                     @if($request->from_branch_id)
                                         {{ optional($request->fromBranch)->name }}
                                     @else
-                                        Warehouse
+                                        Main Warehouse (Storage)
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 text-center">
@@ -286,20 +331,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 @if(($product->total_units - $product->assigned_units) > 0)
                 {
                     branch_id: "", 
-                    branch_name: "Central Warehouse",
+                    branch_name: "Main Warehouse (Storage)",
                     stock: {{ $product->total_units - $product->assigned_units }},
                     boxes: {{ floor(($product->total_units - $product->assigned_units) / max(1, $product->quantity_per_box ?? 1)) }}
                 },
                 @endif
                 @foreach($product->branchProducts as $bp)
-                @if($bp->branch_id != $manager->branch_id)
                 {
                     branch_id: "{{ $bp->branch_id }}", // Key as string for compatibility
                     branch_name: "{{ $bp->branch->display_label }}",
                     stock: {{ $bp->stock_quantity }},
                     boxes: {{ $bp->quantity_of_boxes ?? 0 }}
                 },
-                @endif
                 @endforeach
             ]
         };
@@ -310,42 +353,72 @@ document.addEventListener('DOMContentLoaded', function() {
         create: false,
         placeholder: "Search for a product...",
         onChange: function(value) {
-            updateBranchOptions(value);
+            updateBranchOptions();
         }
     });
 
-    // Initialize TomSelect for Branch
-    let branchTom = new TomSelect('#from_branch_id', {
-        create: false,
-        placeholder: "Select source...",
-        valueField: 'id',
-        labelField: 'name',
-        searchField: ['name'],
-        options: [],
-        render: {
-            option: function(data, escape) {
-                return '<div class="py-1"><div>' + escape(data.name) + '</div><div class="text-xs text-slate-500">' + escape(data.info) + '</div></div>';
+    // Destination Branch Element
+    const destinationSelect = document.querySelector('select[name="to_branch_id"]');
+    // Or it might be a hidden input
+    const destinationInput = document.querySelector('input[name="to_branch_id"]');
+    
+    if (destinationSelect) {
+        destinationSelect.addEventListener('change', function() {
+            updateBranchOptions();
+        });
+    }
+
+    // Initialize TomSelect for Branch if it exists as a select
+    let branchTom = null;
+    const branchSelectElement = document.getElementById('from_branch_id');
+    const isSingleBranchMode = branchSelectElement.tagName === 'INPUT';
+
+    if (!isSingleBranchMode) {
+        branchTom = new TomSelect('#from_branch_id', {
+            create: false,
+            placeholder: "Select source...",
+            valueField: 'id',
+            labelField: 'name',
+            searchField: ['name'],
+            options: [],
+            render: {
+                option: function(data, escape) {
+                    return '<div class="py-1"><div>' + escape(data.name) + '</div><div class="text-xs text-slate-500">' + escape(data.info) + '</div></div>';
+                },
+                item: function(data, escape) {
+                    // Determine if it's warehouse or branch
+                    let icon = (data.id === "") ? '<i class="fas fa-warehouse text-purple-400 mr-1"></i>' : '<i class="fas fa-store text-slate-400 mr-1"></i>';
+                    return '<div>' + icon + escape(data.name) + ' <span class="text-slate-500 text-xs">(' + escape(data.stock_info) + ')</span></div>';
+                }
             },
-            item: function(data, escape) {
-                return '<div>' + escape(data.name) + ' <span class="text-slate-500 text-xs">(' + escape(data.stock_info) + ')</span></div>';
+            onChange: function(value) {
+                updateStockInfo(value);
             }
-        },
-        onChange: function(value) {
-            updateStockInfo(value);
-        }
-    });
-    branchTom.disable();
+        });
+        branchTom.disable();
+    }
 
     // DOM Elements
     const boxesInput = document.getElementById('quantity_of_boxes');
     const unitsPerBoxInput = document.getElementById('quantity_per_box');
     const stockInfo = document.getElementById('stock-info');
 
-    function updateBranchOptions(productId) {
+    function updateBranchOptions() {
+        const productId = productTom.getValue();
+        // Get current destination ID (either from select or hidden input)
+        let destinationId = null;
+        if (destinationSelect) {
+            destinationId = destinationSelect.value;
+        } else if (destinationInput) {
+            destinationId = destinationInput.value;
+        }
+
         // Reset Inputs
-        branchTom.clear();
-        branchTom.clearOptions();
-        branchTom.disable();
+        if (branchTom) {
+            branchTom.clear();
+            branchTom.clearOptions();
+            branchTom.disable();
+        }
         
         boxesInput.value = '';
         boxesInput.max = '';
@@ -359,30 +432,38 @@ document.addEventListener('DOMContentLoaded', function() {
              // Set Units
              unitsPerBoxInput.value = data.quantity_per_box;
 
-             // Populate Branches
-             data.branches.forEach(branch => {
-                 branchTom.addOption({
-                     id: branch.branch_id,
-                     name: branch.branch_name,
-                     info: `${branch.boxes} boxes`,
-                     stock_info: `${branch.boxes} boxes`,
-                     boxes: branch.boxes,
-                     stock: branch.stock
+             if (isSingleBranchMode) {
+                 // Single Branch: Auto-set for Warehouse (ID "")
+                 const warehouseData = data.branches.find(b => b.branch_id === "") || { boxes: 0, stock: 0 };
+                 
+                 stockInfo.textContent = `Available in Main Warehouse (Storage): ${warehouseData.boxes} boxes (${warehouseData.stock} units)`;
+                 boxesInput.max = warehouseData.boxes;
+                 
+             } else {
+                 // Multi Branch: Populate dropdown
+                 data.branches.forEach(branch => {
+                     // FILTER: Do not show the branch if it matches the destination
+                     if (String(branch.branch_id) !== String(destinationId)) {
+                         branchTom.addOption({
+                             id: branch.branch_id,
+                             name: branch.branch_name,
+                             info: `${branch.boxes} boxes`,
+                             stock_info: `${branch.boxes} boxes`,
+                             boxes: branch.boxes,
+                             stock: branch.stock
+                         });
+                     }
                  });
-             });
-             
-             branchTom.enable();
+                 
+                 branchTom.enable();
+             }
         }
     }
 
     function updateStockInfo(branchId) {
-        // Handle warehouse (empty string id) or branch id
-        // TomSelect values are strings usually
+        if (!branchTom) return;
         
-        // Find the selected option data from TomSelect instance logic or just look up in our data if needed,
-        // but easier to pull from the option object if we stored it? 
-        // TomSelect options are stored in branchTom.options[value]
-        
+        // Find the selected option data from TomSelect instance logic
         // Note: branchId might be "" for warehouse, need to handle key carefully
         let option = branchTom.options[branchId];
         

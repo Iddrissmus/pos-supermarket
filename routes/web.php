@@ -411,18 +411,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/manager/cashiers/create', [\App\Http\Controllers\Manager\StaffAssignmentController::class, 'create'])
             ->name('manager.cashiers.create');
             
-        // Managers can request items from Business Admin
-        Route::get('/manager/item-requests', [\App\Http\Controllers\Manager\ItemRequestController::class, 'index'])
-            ->name('manager.item-requests.index');
-        Route::post('/manager/item-requests', [\App\Http\Controllers\Manager\ItemRequestController::class, 'store'])
-            ->name('manager.item-requests.store');
-        Route::patch('/manager/item-requests/{stockTransfer}/cancel', [\App\Http\Controllers\Manager\ItemRequestController::class, 'cancel'])
-            ->name('manager.item-requests.cancel');
-        Route::get('/manager/item-requests/download-template', [\App\Http\Controllers\Manager\ItemRequestController::class, 'downloadTemplate'])
-            ->name('manager.item-requests.download-template');
-        Route::post('/manager/item-requests/bulk-upload', [\App\Http\Controllers\Manager\ItemRequestController::class, 'uploadBulkRequests'])
-            ->name('manager.item-requests.bulk-upload');
-        
         // Manager handles daily sales monitoring (but cannot make sales)
         Route::get('/manager/daily-sales', function () {
             return view('manager.daily-sales');
@@ -436,6 +424,20 @@ Route::middleware('auth')->group(function () {
             ->name('manager.local-product.create');
         Route::post('/manager/local-product', [\App\Http\Controllers\Manager\LocalProductController::class, 'store'])
             ->name('manager.local-product.store');
+    });
+
+    // Shared Item Requests (Business Admin & Manager)
+    Route::middleware('role:business_admin,manager')->group(function () {
+        Route::get('/manager/item-requests', [\App\Http\Controllers\Manager\ItemRequestController::class, 'index'])
+            ->name('manager.item-requests.index');
+        Route::post('/manager/item-requests', [\App\Http\Controllers\Manager\ItemRequestController::class, 'store'])
+            ->name('manager.item-requests.store');
+        Route::patch('/manager/item-requests/{stockTransfer}/cancel', [\App\Http\Controllers\Manager\ItemRequestController::class, 'cancel'])
+            ->name('manager.item-requests.cancel');
+        Route::get('/manager/item-requests/download-template', [\App\Http\Controllers\Manager\ItemRequestController::class, 'downloadTemplate'])
+            ->name('manager.item-requests.download-template');
+        Route::post('/manager/item-requests/bulk-upload', [\App\Http\Controllers\Manager\ItemRequestController::class, 'uploadBulkRequests'])
+            ->name('manager.item-requests.bulk-upload');
     });
 
     // Business Admin, Manager & Cashier - All can view sales (filtered by controller)

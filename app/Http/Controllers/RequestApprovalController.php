@@ -60,12 +60,19 @@ class RequestApprovalController extends Controller
     {
         $user = Auth::user();
         
+        // Authorization check
         if (!$this->canProcessRequest($user, $stockTransfer)) {
             return back()->with('error', 'You are not authorized to approve this request.');
         }
 
+        // Validate that request is still pending
         if ($stockTransfer->status !== 'pending') {
             return back()->with('error', 'This request has already been processed.');
+        }
+
+        // Validate destination branch exists
+        if (!$stockTransfer->toBranch) {
+            return back()->with('error', 'Destination branch not found. Cannot process transfer.');
         }
 
         $validated = $request->validate([
@@ -129,7 +136,7 @@ class RequestApprovalController extends Controller
                     ]
                 );
 
-                $sourceLabel = $stockTransfer->from_branch_id ? $stockTransfer->fromBranch->display_label : 'Central Warehouse';
+                $sourceLabel = $stockTransfer->from_branch_id ? optional($stockTransfer->fromBranch)->display_label : 'Central Warehouse';
                 
                 $destBranchProduct->adjustStock(
                     $stockTransfer->quantity, 
@@ -158,10 +165,12 @@ class RequestApprovalController extends Controller
     {
         $user = Auth::user();
         
+        // Authorization check
         if (!$this->canProcessRequest($user, $stockTransfer)) {
             return back()->with('error', 'You are not authorized to reject this request.');
         }
 
+        // Validate that request is still pending
         if ($stockTransfer->status !== 'pending') {
             return back()->with('error', 'This request has already been processed.');
         }
@@ -184,18 +193,44 @@ class RequestApprovalController extends Controller
     {
         // Business admins can process any request within their business
         if ($user->role === 'business_admin') {
-            // Check if FROM branch is in business OR if TO branch is in business (for Warehouse requests)
+            $isSourceInBusiness = false;
+            $isDestInBusiness = false;
+
+            // 1. Check Source Ownership (if exists)
             if ($stockTransfer->from_branch_id) {
-                return $stockTransfer->fromBranch->business_id === $user->business_id;
-            } else {
-                // Warehouse Request: Admin owns the destination branch? Then they can approve fetching from Warehouse.
-                return $stockTransfer->toBranch->business_id === $user->business_id;
+                 $isSourceInBusiness = \App\Models\Branch::where('id', $stockTransfer->from_branch_id)
+                    ->where('business_id', $user->business_id)
+                    ->exists();
             }
+
+            // 2. Check Destination Ownership (if exists)
+            if ($stockTransfer->to_branch_id) {
+                 $isDestInBusiness = \App\Models\Branch::where('id', $stockTransfer->to_branch_id)
+                    ->where('business_id', $user->business_id)
+                    ->exists();
+            }
+
+            // 3. Authorization: Approved if EITHER end belongs to the business
+            if ($isSourceInBusiness || $isDestInBusiness) {
+                return true;
+            }
+
+            // 4. Fallback: Product Ownership
+            if (optional($stockTransfer->product)->business_id == $user->business_id) {
+                return true;
+            }
+            
+            // 5. Fallback: Requestor Ownership
+            if (optional($stockTransfer->requestedBy)->business_id == $user->business_id) {
+                return true;
+            }
+
+            return false;
         }
 
         // Managers can only process requests FROM their branch
         if ($user->role === 'manager' && $stockTransfer->from_branch_id) {
-            return $user->branch_id === $stockTransfer->from_branch_id;
+            return $user->branch_id == $stockTransfer->from_branch_id;
         }
 
         return false;

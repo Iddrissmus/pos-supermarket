@@ -145,7 +145,11 @@
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center gap-2 text-sm text-gray-700">
                                         <div class="flex flex-col items-center min-w-[3rem]">
-                                            <span class="font-bold text-gray-900">{{ optional($request->fromBranch)->display_label ?? 'N/A' }}</span>
+                                            @if($request->fromBranch)
+                                                <span class="font-bold text-gray-900">{{ $request->fromBranch->display_label }}</span>
+                                            @else
+                                                <span class="font-bold text-purple-600">Main Warehouse (Storage)</span>
+                                            @endif
                                             <span class="text-[10px] text-gray-400">Source</span>
                                         </div>
                                         <i class="fas fa-long-arrow-alt-right text-gray-400"></i>
@@ -285,7 +289,7 @@
         const icon = document.getElementById('modalIcon');
         
         if (action === 'approve') {
-            form.action = `/requests/approval/${requestId}/approve`;
+            form.action = `/requests/${requestId}/approve`;
             title.textContent = 'Approve Stock Transfer';
             description.innerHTML = 'This will immediately transfer stock from the source branch. <br><strong>This action cannot be undone.</strong>';
             
@@ -301,7 +305,7 @@
             icon.className = 'fas fa-check text-green-600';
             
         } else if (action === 'reject') {
-            form.action = `/requests/approval/${requestId}/reject`;
+            form.action = `/requests/${requestId}/reject`;
             title.textContent = 'Reject Request';
             description.textContent = 'Please provide a reason for rejecting this request. The requester will be notified.';
             
