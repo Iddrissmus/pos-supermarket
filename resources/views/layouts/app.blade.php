@@ -17,25 +17,34 @@
     <style>
         /* Global TomSelect Customization */
         .ts-control {
-            border-radius: 0.5rem;
-            padding: 0.5rem 0.75rem;
-            border-color: #d1d5db;
+            border-radius: 0.5rem !important; /* rounded-lg */
+            padding: 0.5rem 0.75rem !important; /* py-2 px-3 to match tailwind py-2 */
+            border-color: #d1d5db !important; /* gray-300 */
+            border-width: 1px !important;
+            background-color: #ffffff !important;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            font-size: 0.875rem !important; /* text-sm */
+            min-height: 38px !important; /* Match standard input height */
         }
         .ts-control:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 1px #3b82f6;
+            border-color: #6366f1 !important; /* indigo-500 */
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1) !important;
+            outline: none;
         }
         .ts-dropdown {
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            z-index: 50;
+            border-radius: 0.5rem !important;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            z-index: 1000;
+            margin-top: 4px;
         }
         .ts-dropdown .option {
-            padding: 0.5rem 1rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
         }
         .ts-dropdown .active {
-            background-color: #f3f4f6;
-            color: #111827;
+            background-color: #f5f3ff; /* indigo-50 */
+            color: #4338ca; /* indigo-700 */
         }
     </style>
 
@@ -127,18 +136,18 @@
         
         .main-content {
             margin-top: 60px;
-            margin-left: 0;
-            padding-left: 0;
-            transition: padding-left 0.3s ease, margin-left 0.3s ease;
+            min-height: calc(100vh - 60px);
+            transition: padding-left 0.3s ease;
+            position: relative;
         }
         
         body.auth .main-content {
-            margin-left: 64px;
+            padding-left: 64px;
         }
         
         /* Robust CSS-only sidebar expansion */
         body.auth .sidebar:hover ~ .main-content {
-            padding-left: 216px;
+            padding-left: 280px;
         }
     </style>
     <meta name="csrf-token" content="{{ csrf_token() }}">

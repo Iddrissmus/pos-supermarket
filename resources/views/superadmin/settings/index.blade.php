@@ -123,6 +123,72 @@
                         <i class="fas fa-chevron-right ml-2"></i>
                     </div>
                 </a>
+
+                <!-- Subscription Configuration (New) -->
+                <a href="{{ route('superadmin.plans.index') }}" class="block bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-teal-500 hover:shadow-lg transition-all cursor-pointer">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-tags text-teal-600 text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900">Subscription Plans</h3>
+                                <p class="text-sm text-gray-500">Manage business subscription plans</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="w-3 h-3 bg-green-500 rounded-full" title="Active"></span>
+                        </div>
+                    </div>
+                    <div class="flex items-center text-teal-600 text-sm font-medium">
+                        <span>Manage Plans</span>
+                        <i class="fas fa-chevron-right ml-2"></i>
+                    </div>
+                </a>
+                
+                <!-- Business Types -->
+                <a href="{{ route('superadmin.business-types.index') }}" class="block bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-orange-500 hover:shadow-lg transition-all cursor-pointer">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-store text-orange-600 text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900">Business Types</h3>
+                                <p class="text-sm text-gray-500">Manage business categories</p>
+                            </div>
+                        </div>
+                         <div class="flex items-center">
+                            <span class="w-3 h-3 bg-green-500 rounded-full" title="Active"></span>
+                        </div>
+                    </div>
+                    <div class="flex items-center text-orange-600 text-sm font-medium">
+                        <span>Manage Types</span>
+                        <i class="fas fa-chevron-right ml-2"></i>
+                    </div>
+                </a>
+
+                <!-- Tax Rates -->
+                <a href="{{ route('superadmin.tax-rates.index') }}" class="block bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-red-500 hover:shadow-lg transition-all cursor-pointer">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-percentage text-red-600 text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900">Tax Rates</h3>
+                                <p class="text-sm text-gray-500">Global tax configuration</p>
+                            </div>
+                        </div>
+                         <div class="flex items-center">
+                            <span class="w-3 h-3 bg-green-500 rounded-full" title="Active"></span>
+                        </div>
+                    </div>
+                    <div class="flex items-center text-red-600 text-sm font-medium">
+                        <span>Configure Taxes</span>
+                        <i class="fas fa-chevron-right ml-2"></i>
+                    </div>
+                </a>
             </div>
         </div>
     </div>

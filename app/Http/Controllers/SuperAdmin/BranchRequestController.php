@@ -11,6 +11,7 @@ use App\Notifications\BranchRequestRejected;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Services\ActivityLogger;
 
 class BranchRequestController extends Controller
 {
@@ -85,10 +86,16 @@ class BranchRequestController extends Controller
             ]);
 
             // Notify the requester
-            $requester = User::find($branchRequest->requested_by);
+            $requester = $branchRequest->requestedBy;
             if ($requester) {
                 $requester->notify(new BranchRequestApproved($branchRequest, $branch));
             }
+
+            // Log activity
+            ActivityLogger::logModel('approve', $branchRequest, [], [
+                'business_id' => $branchRequest->business_id,
+                'branch_name' => $branchRequest->branch_name
+            ]);
 
             DB::commit();
 
@@ -128,10 +135,17 @@ class BranchRequestController extends Controller
             ]);
 
             // Notify the requester
-            $requester = User::find($branchRequest->requested_by);
+            $requester = $branchRequest->requestedBy;
             if ($requester) {
                 $requester->notify(new BranchRequestRejected($branchRequest));
             }
+
+            // Log activity
+            ActivityLogger::logModel('reject', $branchRequest, [], [
+                'business_id' => $branchRequest->business_id,
+                'branch_name' => $branchRequest->branch_name,
+                'reason' => $validated['rejection_reason']
+            ]);
 
             DB::commit();
 

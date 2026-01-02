@@ -126,7 +126,7 @@
 
                     <!-- Action Buttons -->
                     <div class="flex items-center justify-end space-x-4 pt-4 border-t border-gray-100">
-                         <a href="{{ route('layouts.product') }}" class="text-sm font-medium text-gray-500 hover:text-gray-700">Cancel</a>
+                         <a href="{{ url()->previous() ?: route('layouts.product') }}" class="text-sm font-medium text-gray-500 hover:text-gray-700">Cancel</a>
                         <button type="submit" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                             <i class="fas fa-upload mr-2"></i> Import Products
                         </button>

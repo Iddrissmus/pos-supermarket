@@ -107,7 +107,7 @@
                 </div>
 
                  <!-- Currency Symbol -->
-                 <div class="sm:col-span-2">
+                 <div class="sm:col-span-1">
                     <label for="currency_symbol" class="block text-sm font-medium text-gray-700">Currency Symbol</label>
                     <div class="mt-1 relative rounded-md shadow-sm max-w-xs">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -118,6 +118,21 @@
                                placeholder="e.g. ₵">
                     </div>
                     @error('currency_symbol') <p class="mt-2 text-sm text-red-600">{{ $message }}</p> @enderror
+                </div>
+
+                <!-- Subscription Reminder Days -->
+                <div class="sm:col-span-1">
+                    <label for="subscription_reminder_days" class="block text-sm font-medium text-gray-700">Subscription Expiry Alert (Days)</label>
+                    <div class="mt-1 relative rounded-md shadow-sm max-w-xs">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="text-gray-500 sm:text-sm"><i class="fas fa-bell"></i></span>
+                        </div>
+                        <input type="number" name="subscription_reminder_days" id="subscription_reminder_days" value="{{ old('subscription_reminder_days', $subscription_reminder_days ?? 7) }}" 
+                               class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3" 
+                               min="1" max="30">
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">Days before expiry to send reminder.</p>
+                    @error('subscription_reminder_days') <p class="mt-2 text-sm text-red-600">{{ $message }}</p> @enderror
                 </div>
             </div>
 

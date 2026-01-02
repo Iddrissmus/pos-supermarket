@@ -45,7 +45,7 @@ class StockReceiptController extends Controller
         $user = Auth::user();
         $branches = $user->branch_id 
             ? Branch::with('business:id,name')->where('id', $user->branch_id)->get()
-            : Branch::with('business:id,name')->get();
+            : Branch::with('business:id,name')->where('business_id', $user->business_id)->get();
         
         // Managers can only see local suppliers (non-central suppliers)
         $suppliers = Supplier::where('is_active', true)

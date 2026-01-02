@@ -24,6 +24,8 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\ProcessRecurringInvoices::class,
         \App\Console\Commands\SendInvoiceReminders::class,
         \App\Console\Commands\SendScheduledInvoices::class,
+        \App\Console\Commands\CheckSubscriptionExpiry::class,
+        \App\Console\Commands\ConfirmPayments::class,
     ];
 
     /**
@@ -44,6 +46,12 @@ class Kernel extends ConsoleKernel
         $schedule->command('invoices:process-recurring')->dailyAt('01:00');
         $schedule->command('invoices:send-reminders')->dailyAt('09:00');
         $schedule->command('invoices:send-scheduled')->everyFiveMinutes(); // Check frequently
+        
+        // Subscription Expiry Check
+        $schedule->command('subscription:check-expiry')->dailyAt('07:00');
+
+        // Automated Payment Verification
+        $schedule->command('invoice:check-payments')->everyFiveMinutes();
     }
 
     /**

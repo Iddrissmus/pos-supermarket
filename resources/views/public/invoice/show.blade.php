@@ -89,7 +89,7 @@
                     @foreach($invoice->items as $item)
                     <div class="bg-white border border-slate-100 rounded-lg p-4 shadow-sm">
                         <div class="flex justify-between items-start mb-2">
-                            <span class="font-bold text-slate-800 text-sm">{{ $item->product->name ?? 'Unknown Item' }}</span>
+                            <span class="font-bold text-slate-800 text-sm">{{ $item->product_name }}</span>
                             <span class="font-bold text-slate-800 text-sm">GH₵ {{ number_format($item->line_total, 2) }}</span>
                         </div>
                         <div class="flex justify-between text-xs text-slate-500">
@@ -132,7 +132,7 @@
                             @foreach($invoice->items as $item)
                             <tr>
                                 <td class="py-4 text-sm font-medium text-slate-800">
-                                    {{ $item->product->name ?? 'Unknown Item' }}
+                                    {{ $item->product_name }}
                                 </td>
                                 <td class="py-4 text-sm text-slate-600 text-right">{{ $item->quantity }}</td>
                                 <td class="py-4 text-sm text-slate-600 text-right">{{ number_format($item->unit_price, 2) }}</td>

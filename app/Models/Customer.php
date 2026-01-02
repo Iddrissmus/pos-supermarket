@@ -22,6 +22,7 @@ class Customer extends Model
         'outstanding_balance',
         'payment_terms',
         'notes',
+        'business_id',
         'is_active'
     ];
 

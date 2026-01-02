@@ -34,8 +34,17 @@
         $pendingCount = $pendingRequests->count();
         $insufficientStockCount = 0;
         foreach($pendingRequests as $req) {
-            $bp = $req->fromBranch->branchProducts->where('product_id', $req->product_id)->first();
-            $available = $bp ? $bp->stock_quantity : 0;
+            if ($req->fromBranch) {
+                // Branch to Branch
+                $bp = $req->fromBranch->branchProducts->where('product_id', $req->product_id)->first();
+                $available = $bp ? $bp->stock_quantity : 0;
+            } else {
+                // Warehouse to Branch
+                $available = 0; // default
+                if ($req->product) {
+                    $available = $req->product->total_units - $req->product->assigned_units;
+                }
+            }
             if ($available < $req->quantity) {
                 $insufficientStockCount++;
             }
@@ -103,9 +112,16 @@
                     <tbody class="divide-y divide-gray-100 bg-white">
                         @foreach($pendingRequests as $request)
                             @php
-                                $sourceBranchProduct = $request->fromBranch->branchProducts
-                                    ->where('product_id', $request->product_id)->first();
-                                $availableStock = $sourceBranchProduct ? $sourceBranchProduct->stock_quantity : 0;
+                                if ($request->fromBranch) {
+                                    $sourceBranchProduct = $request->fromBranch->branchProducts
+                                        ->where('product_id', $request->product_id)->first();
+                                    $availableStock = $sourceBranchProduct ? $sourceBranchProduct->stock_quantity : 0;
+                                } else {
+                                    $availableStock = 0;
+                                    if ($request->product) {
+                                        $availableStock = $request->product->total_units - $request->product->assigned_units;
+                                    }
+                                }
                                 $canApprove = $availableStock >= $request->quantity;
                             @endphp
                             <tr class="group hover:bg-gray-50/80 transition-colors {{ !$canApprove ? 'bg-red-50/30' : '' }}">

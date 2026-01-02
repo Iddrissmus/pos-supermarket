@@ -17,7 +17,7 @@
                 <i class="fas fa-shopping-cart text-white text-sm"></i>
             </div>
             <div>
-                <h1 class="font-bold text-lg text-slate-800 leading-tight tracking-tight">POS Mafe</h1>
+                <h1 class="font-bold text-lg text-slate-800 leading-tight tracking-tight">ShaaGo</h1>
                 <p class="text-slate-500 text-[10px] uppercase font-bold tracking-wider">{{ $currentRole['name'] }}</p>
             </div>
         </div>

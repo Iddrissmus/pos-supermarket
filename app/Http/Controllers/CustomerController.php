@@ -14,6 +14,7 @@ class CustomerController extends Controller
     public function index(Request $request)
     {
         $customers = Customer::query()
+            ->where('business_id', auth()->user()->business_id)
             ->when($request->search, function ($query, $search) {
                 return $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
@@ -64,11 +65,20 @@ class CustomerController extends Controller
             'country' => 'nullable|string|max:100',
             'postal_code' => 'nullable|string|max:20',
             'customer_type' => 'required|in:individual,business',
-            'payment_terms' => 'required|in:immediate,net_15,net_30,net_60',
+            'payment_terms' => 'required|in:immediate,next_15,next_30,next_60',
             'notes' => 'nullable|string|max:1000',
         ]);
 
+        $validated['business_id'] = Auth::user()->business_id;
         $customer = Customer::create($validated);
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Customer created successfully',
+                'customer' => $customer
+            ]);
+        }
 
         return redirect()->route('customers.show', $customer)
             ->with('success', 'Customer created successfully! Customer #' . $customer->customer_number);
@@ -121,7 +131,7 @@ class CustomerController extends Controller
             'country' => 'nullable|string|max:100',
             'postal_code' => 'nullable|string|max:20',
             'customer_type' => 'required|in:individual,business',
-            'payment_terms' => 'required|in:immediate,net_15,net_30,net_60',
+            'payment_terms' => 'required|in:immediate,next_15,next_30,next_60',
             'notes' => 'nullable|string|max:1000',
             'is_active' => 'boolean',
         ]);

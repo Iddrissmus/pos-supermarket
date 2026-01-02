@@ -100,13 +100,14 @@ class SmsService
     public function sendWelcomeSms($name, $email, $password, $role, $phoneNumber)
     {
         $roleName = ucfirst(str_replace('_', ' ', $role));
+        $loginUrl = url('/login');
         
         $message = "Welcome {$name}!\n\n"
                  . "Your POS account has been created.\n\n"
                  . "Role: {$roleName}\n"
                  . "Email: {$email}\n"
                  . "Password: {$password}\n\n"
-                 . "Please login and change your password.\n\n"
+                 . "Login here: {$loginUrl}\n\n"
                  . "- POS System";
 
         return $this->sendSms($phoneNumber, $message);

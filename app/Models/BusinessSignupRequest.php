@@ -24,6 +24,7 @@ class BusinessSignupRequest extends Model
         'plan_type',
         'amount_paid',
         'transaction_reference',
+        'business_type_id',
     ];
 
     public function approver()

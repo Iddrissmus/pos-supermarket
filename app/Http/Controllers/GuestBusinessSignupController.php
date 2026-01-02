@@ -12,6 +12,16 @@ class GuestBusinessSignupController extends Controller
      * Store a new business signup request from the public landing page.
      */
     /**
+     * Show the business registration form.
+     */
+    public function create()
+    {
+        $plans = \App\Models\SubscriptionPlan::where('is_active', true)->get();
+        $businessTypes = \App\Models\BusinessType::where('is_active', true)->get();
+        return view('auth.register-business', compact('plans', 'businessTypes'));
+    }
+
+    /**
      * Store a new business signup request from the public landing page.
      */
     public function store(Request $request)
@@ -28,21 +38,27 @@ class GuestBusinessSignupController extends Controller
             'latitude' => ['nullable', 'numeric'],
             'longitude' => ['nullable', 'numeric'],
             'logo' => ['nullable', 'image', 'max:2048'],
-            'plan_type' => ['required', 'string', 'in:starter,growth,enterprise'],
+            'plan_type' => ['required', 'string', 'exists:subscription_plans,slug'],
+            'business_type_id' => ['required', 'exists:business_types,id'],
         ]);
 
         try {
+            Log::info('Processing guest business signup', ['email' => $validated['owner_email']]);
+
             if ($request->hasFile('logo')) {
                 $validated['logo'] = $request->file('logo')->store('logos', 'public');
             }
 
-            // Get Plan Price
-            $plans = config('plans');
-            $plan = $plans[$validated['plan_type']] ?? null;
+            // Get Plan Price from DB
+            $plan = \App\Models\SubscriptionPlan::where('slug', $validated['plan_type'])
+                ->where('is_active', true)
+                ->first();
+
             if (!$plan) {
-                return back()->withErrors(['general' => 'Invalid plan selected.']);
+                Log::warning('Inactive plan selected', ['slug' => $validated['plan_type']]);
+                return back()->withInput()->withErrors(['general' => 'Invalid or inactive plan selected.']);
             }
-            $amount = $plan['price'] * 100; // Paystack takes subunits (pesewas)
+            $amount = $plan->price * 100; // Paystack takes subunits (pesewas)
 
             // Create Pending Request
             $signupRequest = BusinessSignupRequest::create([
@@ -59,8 +75,11 @@ class GuestBusinessSignupController extends Controller
                 'longitude' => $validated['longitude'] ?? null,
                 'status' => 'pending_payment',
                 'plan_type' => $validated['plan_type'],
-                'amount_paid' => $plan['price'],
+                'business_type_id' => $validated['business_type_id'],
+                'amount_paid' => $plan->price,
             ]);
+
+            Log::info('Signup request created', ['id' => $signupRequest->id]);
 
             // Initialize Paystack
             $paystack = app(\App\Services\PaystackService::class);
@@ -72,14 +91,17 @@ class GuestBusinessSignupController extends Controller
             );
 
             if ($response && isset($response['data']['authorization_url'])) {
-                // Save reference if needed or just redirect
+                Log::info('Paystack initialized', ['url' => $response['data']['authorization_url']]);
                 return redirect($response['data']['authorization_url']);
             }
 
-            return back()->withErrors(['general' => 'Failed to initialize payment. Please try again.']);
+            Log::error('Paystack initialization failed', ['response' => $response]);
+            return back()->withInput()->withErrors(['general' => 'Failed to initialize payment: ' . ($response['message'] ?? 'Unknown Error')]);
 
         } catch (\Throwable $e) {
-            Log::error('Guest business signup failed: ' . $e->getMessage());
+            Log::error('Guest business signup failed: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
             return back()->withInput()->withErrors(['general' => 'Failed to submit request: ' . $e->getMessage()]);
         }
     }
@@ -119,19 +141,23 @@ class GuestBusinessSignupController extends Controller
                 $signupRequest->status = 'approved';
                 $signupRequest->save();
                 
-                // Get Plan Limits
-                $plans = config('plans');
-                $planDetails = $plans[$signupRequest->plan_type] ?? $plans['starter'];
+                // Get Plan Limits from DB
+                $planDetails = \App\Models\SubscriptionPlan::where('slug', $signupRequest->plan_type)->first();
+                $subscriptionDays = $planDetails ? $planDetails->duration_days : 30; // Default 30?
 
                 // 1. Create Business
                 $business = \App\Models\Business::create([
                     'name' => $signupRequest->business_name,
                     'logo' => $signupRequest->logo,
                     'status' => 'active',
-                    'plan_type' => $signupRequest->plan_type,
+                    // 'plan_type' => $signupRequest->plan_type, // Removed in favor of current_plan_id? Or kept for legacy/ease? 
+                    // Migration didn't remove plan_type, so we can keep it as string if useful, but we MUST set current_plan_id
+                    'plan_type' => $signupRequest->plan_type, 
+                    'current_plan_id' => $planDetails ? $planDetails->id : null,
+                    'business_type_id' => $signupRequest->business_type_id,
                     'subscription_status' => 'active',
-                    'subscription_expires_at' => now()->addMonth(), // Assuming monthly
-                    'max_branches' => $planDetails['max_branches'] ?? 1,
+                    'subscription_expires_at' => now()->addDays($subscriptionDays),
+                    'max_branches' => $planDetails ? $planDetails->max_branches : 1,
                 ]);
 
                 // 2. Create Admin User
@@ -164,11 +190,22 @@ class GuestBusinessSignupController extends Controller
 
                 \Illuminate\Support\Facades\DB::commit();
 
-                // 4. Send Credentials via Email
+                // 4. Send Credentials via Email & SMS
                 try {
+                    // Send Email
                     \Illuminate\Support\Facades\Mail::to($admin->email)->send(new \App\Mail\NewBusinessWelcome($admin, $password));
+                    
+                    // Send SMS
+                    $smsService = app(\App\Services\SmsService::class);
+                    $smsService->sendWelcomeSms(
+                        $admin->name,
+                        $admin->email,
+                        $password,
+                        $admin->role,
+                        $signupRequest->owner_phone
+                    );
                 } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error("Failed to send welcome email: " . $e->getMessage());
+                    \Illuminate\Support\Facades\Log::error("Failed to send welcome notifications: " . $e->getMessage());
                 }
 
                 // Auto Login

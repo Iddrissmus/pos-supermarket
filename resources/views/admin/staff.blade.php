@@ -322,6 +322,7 @@
                                     @endforeach
                                 </optgroup>
                             </select>
+                            @error('user_id') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Select Branch</label>
@@ -331,6 +332,7 @@
                                     <option value="{{ $branch->id }}">{{ $branch->name }} ({{ $branch->region }})</option>
                                 @endforeach
                             </select>
+                            @error('branch_id') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
                     </div>
                     <div class="mt-6 flex justify-end gap-3">
@@ -342,6 +344,13 @@
         </div>
     </div>
 </div>
+@if($errors->has('user_id') || $errors->has('branch_id'))
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        openAssignModal();
+    });
+</script>
+@endif
 
 <!-- Create Staff Modal -->
 <div id="createModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -359,38 +368,42 @@
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                            <input type="text" name="name" required class="w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="e.g. John Doe">
+                            <input type="text" name="name" value="{{ old('name') }}" required class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white placeholder-gray-400 text-gray-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none" placeholder="e.g. John Doe">
+                            @error('name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                            <input type="email" name="email" required class="w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="john@example.com">
+                            <input type="email" name="email" value="{{ old('email') }}" required class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white placeholder-gray-400 text-gray-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none" placeholder="john@example.com">
+                            @error('email') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
-                         <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                                <input type="text" name="phone" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                                <select name="role" required class="tom-select w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
-                                    <option value="cashier">Cashier</option>
-                                    <option value="manager">Branch Manager</option>
-                                </select>
-                            </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                            <input type="text" name="phone" value="{{ old('phone') }}" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white placeholder-gray-400 text-gray-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none" placeholder="e.g. 024XXXXXXX">
+                            @error('phone') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                            <select name="role" required class="tom-select w-full rounded-lg border-gray-400 bg-gray-50 shadow-sm focus:bg-white focus:border-emerald-500 focus:ring-emerald-500">
+                                <option value="cashier" {{ old('role') == 'cashier' ? 'selected' : '' }}>Cashier</option>
+                                <option value="manager" {{ old('role') == 'manager' ? 'selected' : '' }}>Branch Manager</option>
+                            </select>
+                            @error('role') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Initial Password</label>
-                            <input type="password" name="password" required minlength="8" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
-                            <p class="mt-1 text-xs text-gray-500">Must be at least 8 characters</p>
+                            <input type="password" name="password" required minlength="6" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white placeholder-gray-400 text-gray-900 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none" placeholder="••••••••">
+                            <p class="mt-1 text-xs text-gray-500">Must be at least 6 characters</p>
+                            @error('password') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Assign to Branch (Optional)</label>
-                            <select name="branch_id" class="tom-select w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                            <select name="branch_id" class="tom-select w-full rounded-lg border-gray-400 bg-gray-50 shadow-sm focus:bg-white focus:border-emerald-500 focus:ring-emerald-500">
                                 <option value="">Do not assign yet</option>
                                 @foreach($branches as $branch)
-                                    <option value="{{ $branch->id }}">{{ $branch->name }}</option>
+                                    <option value="{{ $branch->id }}" {{ old('branch_id') == $branch->id ? 'selected' : '' }}>{{ $branch->name }}</option>
                                 @endforeach
                             </select>
+                            @error('branch_id') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
                     </div>
                     <div class="mt-6 flex justify-end gap-3">
@@ -402,6 +415,13 @@
         </div>
     </div>
 </div>
+@if($errors->has('name') || $errors->has('email') || $errors->has('password') || $errors->has('role'))
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        openCreateModal();
+    });
+</script>
+@endif
 
 <script>
     function openAssignModal() {

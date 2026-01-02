@@ -36,9 +36,9 @@ class Assign extends Component
     {
         $user = Auth::user();
         
-        // Only auto-select branch for managers, not admins
-        if ($user->role === 'manager' && $user->branch_id) {
-            $this->branch_id = $user->branch_id;
+        // STRICT: Only Business Admins allowed
+        if ($user->role !== 'business_admin') {
+            abort(403, 'Unauthorized. Only Business Admins can manually assign stock.');
         }
         
         $this->stock_quantity = $this->stock_quantity ?? 0;
@@ -49,6 +49,17 @@ class Assign extends Component
     {
         $validated = $this->validate();
         $branch = Branch::with('business')->findOrFail($validated['branch_id']);
+        $product = Product::with('business')->findOrFail($validated['product_id']);
+
+        // 1. Validate Central Stock Availability
+        $requestQuantity = (int)$validated['stock_quantity'];
+        
+        if ($requestQuantity > 0) {
+            if (!$product->hasAvailableUnits($requestQuantity)) {
+                $this->dispatch('notify', type: 'error', message: 'Insufficient central stock. Available: ' . $product->available_units);
+                return;
+            }
+        }
 
         // Check if product is already assigned to this branch
         $existingBranchProduct = \App\Models\BranchProduct::where([
@@ -61,9 +72,15 @@ class Assign extends Component
             $newCostPrice = $validated['cost_price'] ?? 0;
             
             if ($existingBranchProduct->cost_price == $newCostPrice) {
-                // Same cost price - add to existing stock using adjustStock method
+                // Same cost price - add to existing stock
+                
+                // DEDUCT FROM CENTRAL STOCK
+                if ($requestQuantity > 0) {
+                    $product->assignUnits($requestQuantity);
+                }
+
                 $existingBranchProduct->adjustStock(
-                    $validated['stock_quantity'], 
+                    $requestQuantity, 
                     'stock_addition', 
                     'Stock added via product assignment'
                 );
@@ -74,50 +91,72 @@ class Assign extends Component
                     'reorder_level' => $validated['reorder_level'] ?? 0,
                 ]);
                 
-                $message = 'Stock added to existing product in ' . $branch->display_label . ' (+' . $validated['stock_quantity'] . ' units)';
+                $message = 'Stock added to existing product in ' . $branch->display_label . ' (+' . $requestQuantity . ' units)';
             } else {
-                // Different cost price - update all values (replace record)
+                // Different cost price - update/overwrite
+                // We need to account for stock changes accurately.
+                
                 $oldStock = $existingBranchProduct->stock_quantity;
+                
+                // Return old stock to central
+                if ($oldStock > 0) {
+                    $product->unassignUnits($oldStock);
+                }
+                
+                // Take new stock from central
+                // We must re-check availability because we just returned some, but maybe not enough if we are asking for MORE
+                // Actually, unassignUnits runs immediately so available units increase.
+                
+                // Refresh product to get updated available units
+                $product->refresh();
+                
+                if ($requestQuantity > 0) {
+                     if (!$product->hasAvailableUnits($requestQuantity)) {
+                         // Rollback: Re-assign the old stock back to central effectively (undo the unassign)
+                         $product->assignUnits($oldStock);
+                         
+                         $this->dispatch('notify', type: 'error', message: 'Insufficient central stock for new quantity.');
+                         return;
+                     }
+                     $product->assignUnits($requestQuantity);
+                }
+
                 $existingBranchProduct->update([
                     'price' => $validated['price'],
                     'cost_price' => $newCostPrice,
-                    'stock_quantity' => $validated['stock_quantity'],
+                    'stock_quantity' => $requestQuantity,
                     'reorder_level' => $validated['reorder_level'] ?? 0,
                 ]);
-                
-                // Trigger reorder check after stock update
-                try {
-                    (new \App\Services\StockReorderService())->checkItem(
-                        $existingBranchProduct->branch_id, 
-                        $existingBranchProduct->product_id
-                    );
-                } catch (\Throwable $e) {
-                    logger()->error('StockReorderService failed: ' . $e->getMessage());
-                }
                 
                 $message = 'Product assignment updated in ' . $branch->display_label . ' (different cost price detected)';
             }
         } else {
-            // Product doesn't exist in this branch - create new assignment
+            // New Assignment
+            
+            // DEDUCT FROM CENTRAL STOCK
+            if ($requestQuantity > 0) {
+                $product->assignUnits($requestQuantity);
+            }
+
             $branch->products()->attach($validated['product_id'], [
                 'price' => $validated['price'],
                 'cost_price' => $validated['cost_price'] ?? 0,
-                'stock_quantity' => $validated['stock_quantity'],
+                'stock_quantity' => $requestQuantity,
                 'reorder_level' => $validated['reorder_level'] ?? 0,
             ]);
             
-            // Trigger reorder check for newly assigned product
-            try {
-                (new \App\Services\StockReorderService())->checkItem(
-                    $validated['branch_id'], 
-                    $validated['product_id']
-                );
-            } catch (\Throwable $e) {
-                logger()->error('StockReorderService failed: ' . $e->getMessage());
-            }
-            
             $message = 'Product assigned to ' . $branch->display_label;
         }
+
+        // Trigger reorder check
+        try {
+             (new \App\Services\StockReorderService())->checkItem(
+                 $validated['branch_id'], 
+                 $validated['product_id']
+             );
+         } catch (\Throwable $e) {
+             logger()->error('StockReorderService failed: ' . $e->getMessage());
+         }
 
         $this->reset(['product_id', 'price', 'cost_price', 'stock_quantity', 'reorder_level']);
         $this->dispatch('notify', type: 'success', message: $message);
@@ -147,7 +186,7 @@ class Assign extends Component
 
     public function updatePivot(int $productId): void
     {
-        // Manual edit - sets exact values (doesn't add to existing stock)
+        // Manual edit
         $this->validate([
             'price' => ['nullable', 'numeric', 'min:0'],
             'cost_price' => ['nullable', 'numeric', 'min:0'],
@@ -158,6 +197,29 @@ class Assign extends Component
         if (!$this->branch_id) return;
         
         $branch = Branch::with('business')->findOrFail($this->branch_id);
+        $product = Product::findOrFail($productId);
+        
+        // Handle Stock Changes Logic
+        if ($this->stock_quantity !== null) {
+             $currentPivot = $branch->products()->where('product_id', $productId)->first()->pivot;
+             $currentStock = $currentPivot->stock_quantity;
+             $newStock = $this->stock_quantity;
+             
+             $diff = $newStock - $currentStock;
+             
+             if ($diff > 0) {
+                 // Trying to increase branch stock -> Deduct from Central
+                 if (!$product->hasAvailableUnits($diff)) {
+                     $this->dispatch('notify', type: 'error', message: 'Insufficient central stock to increase by ' . $diff);
+                     return;
+                 }
+                 $product->assignUnits($diff);
+             } elseif ($diff < 0) {
+                 // Trying to decrease branch stock -> Return to Central
+                 $product->unassignUnits(abs($diff));
+             }
+        }
+        
         $branch->products()->updateExistingPivot($productId, array_filter([
             'price' => $this->price,
             'cost_price' => $this->cost_price,
@@ -184,9 +246,20 @@ class Assign extends Component
     public function detach(int $productId): void
     {
         if (!$this->branch_id) return;
-    $branch = Branch::with('business')->findOrFail($this->branch_id);
+        $branch = Branch::with('business')->findOrFail($this->branch_id);
+        
+        // When detaching, we should probably return stock to central?
+        // Assuming detach means "remove product from branch", the stock should go back to warehouse.
+        $pivot = $branch->products()->where('product_id', $productId)->first()?->pivot;
+        if ($pivot && $pivot->stock_quantity > 0) {
+             $product = Product::find($productId);
+             if ($product) {
+                 $product->unassignUnits($pivot->stock_quantity);
+             }
+        }
+
         $branch->products()->detach($productId);
-    $this->dispatch('notify', type: 'success', message: 'Product removed from ' . $branch->display_label);
+        $this->dispatch('notify', type: 'success', message: 'Product removed from ' . $branch->display_label . ' and stock returned to warehouse.');
     }
 
     public function render()
@@ -197,55 +270,31 @@ class Assign extends Component
         $selectedBranch = null;
         $assigned = collect();
 
-        if ($user->role === 'business_admin') {
-            // Business admin can see all branches and products in their business
-            $branches = Branch::where('business_id', $user->business_id)
-                ->with('business')
+        // Business admin can see all branches and products in their business
+        // We know it is admin because of mount check
+        $branches = Branch::where('business_id', $user->business_id)
+            ->with('business')
+            ->orderBy('name')
+            ->get();
+        $products = Product::where('business_id', $user->business_id)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+        
+        if ($this->branch_id) {
+            $selectedBranch = Branch::with([
+                'business',
+                'products' => function ($q) {
+                    $q->orderBy('name');
+                }
+            ])->find($this->branch_id);
+            $assigned = $selectedBranch?->products ?? collect();
+        } else {
+            // If no branch selected, show all product assignments across business branches
+            $assigned = Branch::where('business_id', $user->business_id)
+                ->with(['products', 'business'])
+                ->whereHas('products')
                 ->orderBy('name')
                 ->get();
-            $products = Product::where('business_id', $user->business_id)
-                ->orderBy('name')
-                ->get(['id', 'name']);
-            
-            if ($this->branch_id) {
-                $selectedBranch = Branch::with([
-                    'business',
-                    'products' => function ($q) {
-                        $q->orderBy('name');
-                    }
-                ])->find($this->branch_id);
-                $assigned = $selectedBranch?->products ?? collect();
-            } else {
-                // If no branch selected, show all product assignments across business branches
-                $assigned = Branch::where('business_id', $user->business_id)
-                    ->with(['products', 'business'])
-                    ->whereHas('products')
-                    ->orderBy('name')
-                    ->get();
-            }
-            
-        } elseif ($user->role === 'manager' && $user->branch_id) {
-            // Manager can only see their own branch
-            $userBranch = Branch::find($user->branch_id);
-            if ($userBranch) {
-                $branches = Branch::with('business')
-                    ->where('id', $user->branch_id)
-                    ->get();
-                $products = Product::where('business_id', $userBranch->business_id)
-                    ->orderBy('name')
-                    ->get(['id', 'name']);
-                
-                // Manager's branch should already be selected from mount()
-                if ($this->branch_id) {
-                    $selectedBranch = Branch::with([
-                        'business',
-                        'products' => function ($q) {
-                            $q->orderBy('name');
-                        }
-                    ])->find($this->branch_id);
-                    $assigned = $selectedBranch?->products ?? collect();
-                }
-            }
         }
 
         return view('livewire.branch-products.assign', [
@@ -253,9 +302,7 @@ class Assign extends Component
             'products' => $products,
             'assigned' => $assigned,
             'selectedBranch' => $selectedBranch,
-            'isAdmin' => $user->role === 'business_admin',
+            'isAdmin' => true,
         ]);
     }
 }
-
-

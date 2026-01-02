@@ -516,6 +516,21 @@ class SalesController extends Controller
                     'branch_id' => $sale->branch_id,
                 ]);
 
+                // Record System Transaction (Only for Online Payments)
+                if (in_array($validated['payment_method'], ['card', 'mobile_money', 'paystack'])) {
+                    \App\Models\SystemTransaction::create([
+                        'business_id' => $sale->branch->business_id,
+                        'amount' => $sale->total,
+                        'currency' => 'GHS',
+                        'reference' => $validated['payment_reference'] ?? null,
+                        'channel' => $validated['payment_method'],
+                        'source_type' => get_class($sale),
+                        'source_id' => $sale->id,
+                        'status' => 'success',
+                        'payout_status' => 'pending',
+                    ]);
+                }
+
 
 
                 return $sale; // Return instance for use outside transaction
@@ -694,23 +709,35 @@ class SalesController extends Controller
 
         $subtotal = $request->subtotal;
         
-        // Use the same tax calculation as Sale model
-        $taxRate = Sale::DEFAULT_TAX_RATE;
-        $taxAmount = ($subtotal * $taxRate) / 100;
-        $total = $subtotal + $taxAmount;
+        // Dynamic Tax Calculation
+        $taxRates = \App\Models\TaxRate::active()->get();
+        $totalTaxAmount = 0;
+        $taxComponents = [];
+
+        foreach ($taxRates as $tax) {
+            $taxAmount = 0;
+            if ($tax->type === 'percentage') {
+                $taxAmount = ($subtotal * $tax->rate) / 100;
+            } else {
+                $taxAmount = $tax->rate;
+            }
+            
+            $totalTaxAmount += $taxAmount;
+            $taxComponents[] = [
+                'name' => $tax->name,
+                'rate' => $tax->rate,
+                'type' => $tax->type,
+                'amount' => round($taxAmount, 2)
+            ];
+        }
+
+        $total = $subtotal + $totalTaxAmount;
 
         return response()->json([
             'subtotal' => round($subtotal, 2),
-            'tax_rate' => $taxRate,
-            'tax_amount' => round($taxAmount, 2),
+            'tax_amount' => round($totalTaxAmount, 2),
             'total' => round($total, 2),
-            'tax_components' => [
-                [
-                    'name' => 'Sales Tax',
-                    'rate' => $taxRate,
-                    'amount' => round($taxAmount, 2)
-                ]
-            ],
+            'tax_components' => $taxComponents,
         ]);
     }
 
@@ -788,11 +815,28 @@ class SalesController extends Controller
     {
         $user = Auth::user();
 
-        if ($user && $user->branch_id) {
+        if (!$user) {
+            return collect();
+        }
+
+        // If user has a specific branch assigned, return only that branch
+        if ($user->branch_id) {
             return Branch::with('business:id,name')->where('id', $user->branch_id)->get();
         }
 
-        return Branch::with('business:id,name')->get();
+        // If Business Admin without specific branch, return ALL branches for their business
+        if ($user->role === 'business_admin' && $user->business_id) {
+            return Branch::with('business:id,name')
+                ->where('business_id', $user->business_id)
+                ->get();
+        }
+
+        // Superadmin fallback - seeing all branches (use with caution)
+        if ($user->role === 'superadmin') {
+            return Branch::with('business:id,name')->get(); 
+        }
+
+        return collect();
     }
 
     protected function buildProductCatalog($branches, bool $onlyInStock = true)

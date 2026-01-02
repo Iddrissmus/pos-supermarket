@@ -38,7 +38,7 @@
                     <h1 class="text-2xl font-semibold text-gray-800">Create New Branch</h1>
                     <p class="text-sm text-gray-600 mt-1">Add a new branch for {{ $business->name }}</p>
                 </div>
-                <a href="{{ route('businesses.index') }}" 
+                <a href="{{ auth()->user()->role === 'superadmin' ? route('businesses.index') : route('my-business') }}" 
                    class="text-gray-600 hover:text-gray-800">
                     <i class="fas fa-times text-xl"></i>
                 </a>
@@ -120,13 +120,13 @@
 
             <!-- Region (Auto-filled from map) -->
             <div class="mb-4">
-                <label for="location" class="block text-sm font-medium text-gray-700 mb-2">
+                <label for="region" class="block text-sm font-medium text-gray-700 mb-2">
                     Region <span class="text-red-500">*</span>
                 </label>
-                <select id="location" 
+                <select id="region" 
                         name="location" 
                         required
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 @error('location') border-red-500 @enderror">
+                        class="tom-select w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 @error('location') border-red-500 @enderror">
                     <option value="">Select Region</option>
                     <option value="Greater Accra" {{ old('location') == 'Greater Accra' ? 'selected' : '' }}>Greater Accra</option>
                     <option value="Ashanti" {{ old('location') == 'Ashanti' ? 'selected' : '' }}>Ashanti</option>
@@ -198,7 +198,7 @@
 
             <!-- Actions -->
             <div class="flex items-center justify-between pt-4 border-t border-gray-200">
-                <a href="{{ route('businesses.index') }}" 
+                <a href="{{ auth()->user()->role === 'superadmin' ? route('businesses.index') : route('my-business') }}" 
                    class="text-gray-600 hover:text-gray-800 inline-flex items-center">
                     <i class="fas fa-arrow-left mr-2"></i>Cancel
                 </a>
@@ -294,11 +294,22 @@ function reverseGeocode(lat, lng) {
             
             if (region) {
                 const regionSelect = document.getElementById('region');
+                let matchedValue = '';
+                
                 for (let option of regionSelect.options) {
-                    if (option.text.toLowerCase().includes(region.toLowerCase()) || 
-                        region.toLowerCase().includes(option.text.toLowerCase())) {
-                        regionSelect.value = option.value;
+                    // Check for partial match (case insensitive)
+                    if (option.value && (option.text.toLowerCase().includes(region.toLowerCase()) || 
+                        region.toLowerCase().includes(option.text.toLowerCase()))) {
+                        matchedValue = option.value;
                         break;
+                    }
+                }
+                
+                if (matchedValue) {
+                    if (regionSelect.tomselect) {
+                        regionSelect.tomselect.setValue(matchedValue);
+                    } else {
+                        regionSelect.value = matchedValue;
                     }
                 }
             }

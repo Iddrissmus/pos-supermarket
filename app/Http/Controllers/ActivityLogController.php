@@ -16,11 +16,16 @@ class ActivityLogController extends Controller
         $query = ActivityLog::with('user')
             ->latest();
 
-        // Business Admin: Only see logs from their business, exclude superadmin logs
+        // Business Admin: See logs from their business users OR logs related to their business (e.g. by SuperAdmin)
         if ($user->role === 'business_admin') {
-            $query->whereHas('user', function($q) use ($user) {
-                $q->where('business_id', $user->business_id)
-                  ->where('role', '!=', 'superadmin');
+            $query->where(function($q) use ($user) {
+                // Logs by my users
+                $q->whereHas('user', function($u) use ($user) {
+                    $u->where('business_id', $user->business_id)
+                      ->where('role', '!=', 'superadmin');
+                })
+                // OR logs strictly related to my business (checked via properties)
+                ->orWhere('properties->business_id', $user->business_id);
             });
         }
         // SuperAdmin: Can see all logs, but can filter by business

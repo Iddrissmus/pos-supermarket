@@ -38,7 +38,8 @@ class ManagerDashboardController extends Controller
             'total_businesses' => $businessCount,
             'total_branches' => $branchCount,
             'total_users' => $userCount,
-            'total_sales' => $saleCount,
+            'total_sales' => Sale::where('branch_id', $user->branch_id)->count(),
+            'today_sales' => Sale::where('branch_id', $user->branch_id)->whereDate('created_at', \Carbon\Carbon::today())->count(),
             'total_products' => $productCount,
             'recent_sales' => Sale::with([
                 'branch' => fn ($query) => $query->with('business:id,name'),

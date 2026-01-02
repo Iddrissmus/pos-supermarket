@@ -172,7 +172,7 @@
                                 </td>
                                 <td class="px-6 py-4 text-sm text-slate-600">{{ $sale->created_at->format('M d, H:i') }}</td>
                                 <td class="px-6 py-4 text-sm text-slate-600">{{ $sale->cashier->name ?? 'Unknown' }}</td>
-                                <td class="px-6 py-4 text-sm font-bold text-slate-800 text-right">₵{{ number_format($sale->total_amount, 2) }}</td>
+                                <td class="px-6 py-4 text-sm font-bold text-slate-800 text-right">₵{{ number_format($sale->total, 2) }}</td>
                             </tr>
                             @empty
                             <tr>

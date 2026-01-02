@@ -132,10 +132,10 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Payment Terms *</label>
                             <select name="payment_terms" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
-                                <option value="immediate" {{ old('payment_terms', $customer->payment_terms) === 'immediate' ? 'selected' : '' }}>Immediate Payment</option>
-                                <option value="net_15" {{ old('payment_terms', $customer->payment_terms) === 'net_15' ? 'selected' : '' }}>Net 15 Days</option>
-                                <option value="net_30" {{ old('payment_terms', $customer->payment_terms) === 'net_30' ? 'selected' : '' }}>Net 30 Days</option>
-                                <option value="net_60" {{ old('payment_terms', $customer->payment_terms) === 'net_60' ? 'selected' : '' }}>Net 60 Days</option>
+                                <option value="immediate" {{ old('payment_terms', $customer->payment_terms) === 'immediate' ? 'selected' : '' }}>Immediate</option>
+                                <option value="next_15" {{ old('payment_terms', $customer->payment_terms) === 'next_15' ? 'selected' : '' }}>Next 15 Days</option>
+                                <option value="next_30" {{ old('payment_terms', $customer->payment_terms) === 'next_30' ? 'selected' : '' }}>Next 30 Days</option>
+                                <option value="next_60" {{ old('payment_terms', $customer->payment_terms) === 'next_60' ? 'selected' : '' }}>Next 60 Days</option>
                             </select>
                         </div>
 

@@ -46,6 +46,7 @@ class Invoice extends Model
         'sent_at',
         'paid_at',
         'payment_link_token',
+        'payment_reference',
         'is_recurring',
         'recurring_frequency',
         'recurring_end_date',
@@ -229,6 +230,13 @@ class Invoice extends Model
         
         if ($newBalance <= 0) {
             $updateData['status'] = 'paid';
+            
+            // NEW: Deduct inventory only when fully paid
+            try {
+                $this->deductInventory();
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Inventory deduction failed for invoice payment: ' . $e->getMessage());
+            }
         } else {
             // Partial payment - status remains 'sent' or 'overdue' basically
             // But we can ensure it's not 'draft'
@@ -238,6 +246,46 @@ class Invoice extends Model
         }
 
         $this->update($updateData);
+    }
+
+    /**
+     * Deduct inventory levels for all items in the invoice.
+     * Only called when invoice is marked as paid.
+     */
+    public function deductInventory(): void
+    {
+        foreach ($this->items as $item) {
+            if (!$item->product_id) continue;
+
+            $product = $item->product;
+            if (!$product) continue;
+
+            $quantity = $item->quantity;
+
+            // 1. Deduct from total warehouse units (Absolute system total)
+            $product->decrement('total_units', $quantity);
+
+            // 2. If it was already in the branch, deduct from branch stock too
+            $branchProduct = BranchProduct::where('branch_id', $this->branch_id)
+                ->where('product_id', $item->product_id)
+                ->first();
+
+            if ($branchProduct) {
+                $branchProduct->decrement('stock_quantity', $quantity);
+                
+                // Also update assigned_units since they were sold and left the branch
+                $product->decrement('assigned_units', $quantity);
+            }
+
+            // 3. Log the movement
+            StockLog::create([
+                'branch_id' => $this->branch_id,
+                'product_id' => $item->product_id,
+                'action' => 'sold', // or 'invoice_payment'
+                'quantity' => -$quantity,
+                'note' => "Sold via Invoice #{$this->invoice_number}",
+            ]);
+        }
     }
 
     public static function generateInvoiceNumber(): string

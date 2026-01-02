@@ -42,29 +42,44 @@ class Sale extends Model
     /**
      * Calculate all totals including tax automatically
      */
-    public function calculateTotals($customTaxRate = null)
+    /**
+     * Calculate all totals including tax automatically
+     */
+    public function calculateTotals()
     {
         $itemsTotal = $this->items->sum('total');
         $this->subtotal = $itemsTotal;
 
-        // Use custom tax rate or default
-        $taxRate = $customTaxRate ?? self::DEFAULT_TAX_RATE;
-        $this->tax_rate = $taxRate;
+        // Fetch active tax rates
+        $activeTaxes = \App\Models\TaxRate::where('is_active', true)->get();
+        
+        $totalTaxAmount = 0;
+        $totalTaxRate = 0; // For legacy reference only
+        $components = [];
 
-        // Calculate tax amount
-        $this->tax_amount = ($this->subtotal * $taxRate) / 100;
+        foreach ($activeTaxes as $tax) {
+            $amount = 0;
+            if ($tax->type === 'percentage') {
+                $amount = ($this->subtotal * $tax->rate) / 100;
+                $totalTaxRate += $tax->rate;
+            } else {
+                $amount = $tax->rate; // Fixed amount
+            }
+            
+            $totalTaxAmount += $amount;
+            
+            $components[] = [
+                'name' => $tax->name,
+                'rate' => $tax->rate,
+                'type' => $tax->type,
+                'amount' => $amount
+            ];
+        }
 
-        // Calculate final total
+        $this->tax_rate = $totalTaxRate; // Approximate percentage for display if needed
+        $this->tax_amount = $totalTaxAmount;
         $this->total = $this->subtotal + $this->tax_amount;
-
-        // Update tax components with standard tax
-        $this->tax_components = [
-            [
-                'name' => 'Sales Tax',
-                'rate' => $taxRate,
-                'amount' => $this->tax_amount
-            ]
-        ];
+        $this->tax_components = $components;
 
         $this->save(); 
         return $this;

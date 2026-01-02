@@ -13,7 +13,7 @@ class PaystackService
 
     public function __construct()
     {
-        $this->secretKey = Setting::get('paystack_secret_key');
+        $this->secretKey = config('paystack.secret_key') ?: Setting::get('paystack_secret_key');
     }
 
     /**

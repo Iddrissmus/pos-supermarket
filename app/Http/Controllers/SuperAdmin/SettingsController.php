@@ -68,6 +68,7 @@ class SettingsController extends Controller
             'currency_symbol' => $settings['currency_symbol'] ?? '₵',
             'maintenance_mode' => $maintenanceMode,
             'bypass_url' => $bypassUrl,
+            'subscription_reminder_days' => $settings['subscription_reminder_days'] ?? 7,
         ]);
     }
 
@@ -83,7 +84,9 @@ class SettingsController extends Controller
             'timezone' => 'required|string|max:50',
             'locale' => 'required|string|max:10',
             'currency_symbol' => 'required|string|max:10',
+            'currency_symbol' => 'required|string|max:10',
             'maintenance_mode' => 'nullable|boolean',
+            'subscription_reminder_days' => 'nullable|integer|min:1|max:30',
         ]);
 
         Setting::set('site_name', $validated['site_name'], 'general', 'text', 'Application site name');
@@ -92,6 +95,7 @@ class SettingsController extends Controller
         Setting::set('timezone', $validated['timezone'], 'general', 'text', 'Application timezone');
         Setting::set('locale', $validated['locale'], 'general', 'text', 'Application locale');
         Setting::set('currency_symbol', $validated['currency_symbol'], 'general', 'text', 'Currency symbol');
+        Setting::set('subscription_reminder_days', $validated['subscription_reminder_days'] ?? 7, 'general', 'integer', 'Subscription expiry reminder days');
         
         // Handle maintenance mode - checkbox may not be in request if unchecked
         $maintenanceMode = isset($validated['maintenance_mode']) && $validated['maintenance_mode'];

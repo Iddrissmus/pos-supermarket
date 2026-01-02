@@ -59,10 +59,15 @@ Route::get('/pay/{uuid}', [\App\Http\Controllers\PublicInvoiceController::class,
 Route::post('/pay/{uuid}/process', [\App\Http\Controllers\PublicInvoiceController::class, 'pay'])->name('public.invoice.pay');
 Route::get('/pay/{uuid}/callback', [\App\Http\Controllers\PublicInvoiceController::class, 'callback'])->name('public.invoice.callback');
 
+// Subscription Payment (Public)
+Route::get('/subscription/pay/{id}', [\App\Http\Controllers\SubscriptionPaymentController::class, 'show'])->name('subscription.payment.show');
+Route::post('/subscription/pay/{id}/process', [\App\Http\Controllers\SubscriptionPaymentController::class, 'pay'])->name('subscription.payment.process');
+Route::get('/subscription/callback', [\App\Http\Controllers\SubscriptionPaymentController::class, 'callback'])->name('subscription.payment.callback');
+
 // Authentication - Role-specific login pages
 Route::middleware('guest')->group(function () {
     // New Business Registration Page
-    Route::view('/start', 'auth.register-business')->name('business.register');
+    Route::get('/start', [GuestBusinessSignupController::class, 'create'])->name('business.register');
 
     // Default login route - redirects to role selection or landing
     Route::get('/login', function () {
@@ -105,6 +110,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/superadmin/logs/download', [LogViewerController::class, 'download'])->name('superadmin.logs.download');
         Route::post('/superadmin/logs/clear', [LogViewerController::class, 'clear'])->name('superadmin.logs.clear');
         
+        // Subscription Management (New)
+        Route::resource('superadmin/plans', \App\Http\Controllers\SuperAdmin\SubscriptionPlanController::class)->names('superadmin.plans');
+        
+        // Business Types Management
+        Route::resource('superadmin/business-types', \App\Http\Controllers\SuperAdmin\BusinessTypeController::class)->names('superadmin.business-types');
+    Route::resource('superadmin/tax-rates', \App\Http\Controllers\SuperAdmin\TaxRateController::class)->names('superadmin.tax-rates');
+
         // Settings management
         Route::get('/superadmin/settings', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'index'])->name('superadmin.settings.index');
         Route::get('/superadmin/settings/general', [\App\Http\Controllers\SuperAdmin\SettingsController::class, 'general'])->name('superadmin.settings.general');
@@ -139,6 +151,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/branch-requests/{branchRequest}', [\App\Http\Controllers\SuperAdmin\BranchRequestController::class, 'show'])->name('superadmin.branch-requests.show');
         Route::post('/branch-requests/{branchRequest}/approve', [\App\Http\Controllers\SuperAdmin\BranchRequestController::class, 'approve'])->name('superadmin.branch-requests.approve');
         Route::post('/branch-requests/{branchRequest}/reject', [\App\Http\Controllers\SuperAdmin\BranchRequestController::class, 'reject'])->name('superadmin.branch-requests.reject');
+        
+        // Transaction Monitoring
+        Route::get('/superadmin/transactions', [\App\Http\Controllers\SuperAdmin\TransactionController::class, 'index'])->name('superadmin.transactions.index');
 
         // Business signup requests (from public landing page)
         Route::get('/business-signup/requests', [BusinessSignupRequestController::class, 'index'])
@@ -181,6 +196,7 @@ Route::middleware('auth')->group(function () {
         Route::get('branches/{branch}/edit', [BranchController::class, 'edit'])->name('branches.edit');
         Route::put('branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
         Route::delete('branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');
+        Route::delete('branch-requests/{branchRequest}', [BranchController::class, 'destroyRequest'])->name('branch-requests.destroy');
         
         // Category Management
         Route::resource('categories', \App\Http\Controllers\Admin\CategoryController::class);
@@ -217,6 +233,7 @@ Route::middleware('auth')->group(function () {
         // Invoicing System
         Route::resource('invoices', \App\Http\Controllers\InvoiceController::class);
         Route::post('invoices/{invoice}/send', [\App\Http\Controllers\InvoiceController::class, 'send'])->name('invoices.send');
+        Route::post('invoices/{invoice}/record-payment', [\App\Http\Controllers\InvoiceController::class, 'recordPayment'])->name('invoices.record-payment');
         Route::get('invoices/{invoice}/download-pdf', [\App\Http\Controllers\InvoiceController::class, 'downloadPdf'])->name('invoices.download-pdf');
     });
 
@@ -283,6 +300,7 @@ Route::middleware('auth')->group(function () {
         })->name('product.create');
         Route::post('/product', [ProductController::class, 'store'])->name('product.store');
         Route::put('/product/{product}', [ProductController::class, 'update'])->name('product.update');
+        Route::delete('/product/{product}', [ProductController::class, 'destroy'])->name('product.destroy');
         
         // Bulk Import & Assignment
         Route::get('/inventory/bulk-import', [ProductController::class, 'showBulkImport'])->name('inventory.bulk-import');

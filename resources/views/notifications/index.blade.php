@@ -101,9 +101,15 @@
                                         <div><span class="font-medium text-slate-500">Reorder:</span> <span class="text-slate-900 block">{{ $notification->data['reorder_level'] ?? 0 }}</span></div>
                                     </div>
                                     <div class="mt-2">
-                                        <a href="{{ route('layouts.assign') }}" class="inline-flex items-center text-xs font-semibold text-indigo-600 hover:text-indigo-800">
-                                            Assign Stock <i class="fas fa-arrow-right ml-1"></i>
-                                        </a>
+                                        @if(auth()->user()->managesBranch())
+                                             <a href="{{ route('manager.item-requests.index') }}" class="inline-flex items-center text-xs font-semibold text-indigo-600 hover:text-indigo-800">
+                                                Request Stock <i class="fas fa-arrow-right ml-1"></i>
+                                            </a>
+                                        @else
+                                            <a href="{{ route('layouts.assign') }}" class="inline-flex items-center text-xs font-semibold text-indigo-600 hover:text-indigo-800">
+                                                Assign Stock <i class="fas fa-arrow-right ml-1"></i>
+                                            </a>
+                                        @endif
                                     </div>
                                 @endif
 

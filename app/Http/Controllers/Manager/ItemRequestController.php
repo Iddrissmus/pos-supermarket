@@ -41,19 +41,26 @@ class ItemRequestController extends Controller
             ->orderBy('updated_at', 'desc')
             ->paginate(10, ['*'], 'completed_page');
 
-        // Get available products from other branches for requesting
+        // Get available products from other branches OR from Warehouse
         $businessId = $manager->branch->business_id;
+        
         $availableProducts = Product::where('business_id', $businessId)
+            ->where(function($query) use ($manager) {
+                // Product has unassigned units (Warehouse Stock)
+                $query->whereColumn('total_units', '>', 'assigned_units')
+                      // OR Product has stock in other branches
+                      ->orWhereHas('branchProducts', function($bp) use ($manager) {
+                          $bp->where('branch_id', '!=', $manager->branch_id)
+                             ->where('stock_quantity', '>', 0);
+                      });
+            })
+            // Continue to eagerly load branchProducts for dropdown
             ->with(['branchProducts' => function ($query) use ($manager) {
                 $query->where('branch_id', '!=', $manager->branch_id)
                       ->where('stock_quantity', '>', 0)
                       ->with('branch.business');
             }])
-            ->get()
-            ->filter(function ($product) {
-                // Only show products that have stock in other branches
-                return $product->branchProducts->count() > 0;
-            });
+            ->get();
 
         return view('manager.item-requests', compact('pendingRequests', 'completedRequests', 'availableProducts', 'manager'));
     }
@@ -71,7 +78,15 @@ class ItemRequestController extends Controller
 
         $validated = $request->validate([
             'product_id' => 'required|exists:products,id',
-            'from_branch_id' => 'required|exists:branches,id',
+            'from_branch_id' => [
+                'nullable',
+                'exists:branches,id',
+                function ($attribute, $value, $fail) use ($manager) {
+                    if ($value == $manager->branch_id) {
+                        $fail('You cannot request stock from your own branch.');
+                    }
+                },
+            ],
             'quantity_of_boxes' => 'required|integer|min:1',
             'quantity_per_box' => 'required|integer|min:1',
             'reason' => 'nullable|string|max:500',
@@ -79,25 +94,50 @@ class ItemRequestController extends Controller
 
         // Calculate total quantity
         $totalQuantity = $validated['quantity_of_boxes'] * $validated['quantity_per_box'];
+        $product = Product::findOrFail($validated['product_id']);
 
-        // Validate that the product exists in the source branch with sufficient stock
-        $sourceBranchProduct = \App\Models\BranchProduct::where('branch_id', $validated['from_branch_id'])
-            ->where('product_id', $validated['product_id'])
-            ->first();
+        // IF requesting from Warehouse (from_branch_id is null)
+        if (empty($validated['from_branch_id'])) {
+            if (!$product->hasAvailableUnits($totalQuantity)) {
+                return back()->with('error', 'Insufficient stock in Warehouse. Available: ' . $product->available_units . ' units.');
+            }
+            
+            // For Warehouse requests, we rely on the main product pricing
+            $price = $product->price;
+            $costPrice = $product->cost_price;
+            $pricePerKilo = $product->price_per_kilo;
+            $pricePerBox = $product->price_per_box;
+            $weightUnit = $product->weight_unit;
+            $pricePerUnitWeight = $product->price_per_unit_weight;
 
-        if (!$sourceBranchProduct) {
-            return back()->with('error', 'Product not found in the selected branch.');
+        } else {
+            // Requesting from another Branch
+            $sourceBranchProduct = \App\Models\BranchProduct::where('branch_id', $validated['from_branch_id'])
+                ->where('product_id', $validated['product_id'])
+                ->first();
+
+            if (!$sourceBranchProduct) {
+                return back()->with('error', 'Product not found in the selected branch.');
+            }
+
+            if ($sourceBranchProduct->stock_quantity < $totalQuantity) {
+                return back()->with('error', 'Insufficient stock in the selected branch. Available: ' . $sourceBranchProduct->stock_quantity . ' units.');
+            }
+
+            if ($sourceBranchProduct->quantity_of_boxes < $validated['quantity_of_boxes']) {
+                return back()->with('error', 'Insufficient boxes in the selected branch. Available: ' . $sourceBranchProduct->quantity_of_boxes . ' boxes.');
+            }
+            
+            // Use branch-specific pricing/cost
+            $price = $sourceBranchProduct->price;
+            $costPrice = $sourceBranchProduct->cost_price;
+            $pricePerKilo = $sourceBranchProduct->price_per_kilo;
+            $pricePerBox = $sourceBranchProduct->price_per_box;
+            $weightUnit = $sourceBranchProduct->weight_unit;
+            $pricePerUnitWeight = $sourceBranchProduct->price_per_unit_weight;
         }
 
-        if ($sourceBranchProduct->stock_quantity < $totalQuantity) {
-            return back()->with('error', 'Insufficient stock in the selected branch. Available: ' . $sourceBranchProduct->stock_quantity . ' units.');
-        }
-
-        if ($sourceBranchProduct->quantity_of_boxes < $validated['quantity_of_boxes']) {
-            return back()->with('error', 'Insufficient boxes in the selected branch. Available: ' . $sourceBranchProduct->quantity_of_boxes . ' boxes.');
-        }
-
-        // Check if there's already a pending request for the same product from the same branch
+        // Check duplicate pending requests
         $existingRequest = StockTransfer::where('to_branch_id', $manager->branch_id)
             ->where('from_branch_id', $validated['from_branch_id'])
             ->where('product_id', $validated['product_id'])
@@ -105,13 +145,8 @@ class ItemRequestController extends Controller
             ->exists();
 
         if ($existingRequest) {
-            return back()->with('error', 'You already have a pending request for this product from this branch.');
+            return back()->with('error', 'You already have a pending request for this product from this source.');
         }
-
-        // Fetch pricing information from source branch product
-        $sourceBranchProduct = BranchProduct::where('branch_id', $validated['from_branch_id'])
-            ->where('product_id', $validated['product_id'])
-            ->first();
 
         StockTransfer::create([
             'from_branch_id' => $validated['from_branch_id'],
@@ -124,16 +159,17 @@ class ItemRequestController extends Controller
             'status' => 'pending',
             'requested_by' => $manager->id,
             'requested_at' => now(),
-            // Include pricing information from source branch
-            'price' => $sourceBranchProduct->price ?? null,
-            'cost_price' => $sourceBranchProduct->cost_price ?? null,
-            'price_per_kilo' => $sourceBranchProduct->price_per_kilo ?? null,
-            'price_per_box' => $sourceBranchProduct->price_per_box ?? null,
-            'weight_unit' => $sourceBranchProduct->weight_unit ?? null,
-            'price_per_unit_weight' => $sourceBranchProduct->price_per_unit_weight ?? null,
+            // Pricing info
+            'price' => $price,
+            'cost_price' => $costPrice,
+            'price_per_kilo' => $pricePerKilo,
+            'price_per_box' => $pricePerBox,
+            'weight_unit' => $weightUnit,
+            'price_per_unit_weight' => $pricePerUnitWeight,
         ]);
 
-        return back()->with('success', 'Item request submitted successfully. Requesting ' . $validated['quantity_of_boxes'] . ' boxes (' . $totalQuantity . ' units) for review by an administrator.');
+        $sourceName = empty($validated['from_branch_id']) ? 'Central Warehouse' : 'Selected Branch';
+        return back()->with('success', 'Item request submitted successfully. Requesting ' . $validated['quantity_of_boxes'] . ' boxes (' . $totalQuantity . ' units) from ' . $sourceName . '.');
     }
 
     /**

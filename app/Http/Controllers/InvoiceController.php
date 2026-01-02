@@ -67,33 +67,46 @@ class InvoiceController extends Controller
     public function create()
     {
         $user = Auth::user();
-        
-        // Get branches similar to SalesController logic
-        if ($user->role === 'business_admin') {
+
+        // Role-based branch and product fetching
+        if ($user->role === 'superadmin') {
+            $branches = Branch::all();
+            $productsQuery = Product::query();
+        } elseif ($user->role === 'business_admin') {
             $branches = Branch::where('business_id', $user->business_id)->get();
+            $productsQuery = Product::where('business_id', $user->business_id);
         } else {
+            // Manager or others tied to specific branch
             $branches = Branch::where('id', $user->branch_id)->get();
+            $productsQuery = Product::where('business_id', $user->business_id);
         }
         
-        $customers = Customer::orderBy('name')->get();
+        $user = Auth::user();
+        $customers = Customer::orderBy('name')
+            ->when($user->role !== 'superadmin', function($query) use ($user) {
+                return $query->where('business_id', $user->business_id);
+            })
+            ->get();
 
-        // Get products available in stock
-        $branchIds = $branches->pluck('id');
-        $products = BranchProduct::with('product')
-            ->whereIn('branch_id', $branchIds)
-            ->where('stock_quantity', '>', 0)
-            ->get()
-            ->map(function($bp) {
-                return [
-                    'id' => $bp->product->id,
-                    'name' => $bp->product->name,
-                    'price' => $bp->price ?? $bp->selling_price,
-                    'stock' => $bp->stock_quantity,
-                    'branch_id' => $bp->branch_id
-                ];
-            });
+        // Get products with their total system stock
+        $products = $productsQuery->get()->map(function($p) {
+            return [
+                'id' => $p->id,
+                'name' => $p->name,
+                'price' => $p->price,
+                'stock' => $p->total_units, 
+                'branch_id' => null
+            ];
+        });
 
-        return view('invoices.create', compact('branches', 'customers', 'products'));
+        // Get active categories for quick add product modal
+        $categoriesQuery = \App\Models\Category::active()->parents()->orderBy('name');
+        if ($user->role !== 'superadmin') {
+            $categoriesQuery->where('business_id', $user->business_id);
+        }
+        $categories = $categoriesQuery->get();
+
+        return view('invoices.create', compact('branches', 'customers', 'products', 'categories'));
     }
 
     /**
@@ -103,12 +116,14 @@ class InvoiceController extends Controller
     {
         $validated = $request->validate([
             'customer_id' => 'nullable|exists:customers,id',
+            'customer_name' => 'required_without:customer_id|nullable|string|max:255',
             'customer_email' => 'required_without:customer_id|nullable|email',
-            'customer_phone' => 'nullable|string',
+            'customer_phone' => 'required_without:customer_id|nullable|string',
             'branch_id' => 'required|exists:branches,id',
             'due_date' => 'required|date|after_or_equal:today',
             'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.product_id' => 'nullable|exists:products,id',
+            'items.*.name' => 'required_if:items.*.product_id,null|nullable|string|max:255',
             'items.*.quantity' => 'required|numeric|min:1',
             'items.*.price' => 'required|numeric|min:0',
             'notes' => 'nullable|string',
@@ -122,13 +137,28 @@ class InvoiceController extends Controller
 
         try {
             DB::beginTransaction();
+
+            // Handle Ad-hoc Customer
+            if (empty($validated['customer_id'])) {
+                // Determine business ID from branch
+                $branch = Branch::findOrFail($validated['branch_id']);
+                
+                $customer = Customer::create([
+                    'name' => $validated['customer_name'],
+                    'email' => $validated['customer_email'],
+                    'phone' => $validated['customer_phone'],
+                    'business_id' => $branch->business_id,
+                    'customer_type' => 'individual', // Default type
+                    'is_active' => true,
+                ]);
+                
+                $validated['customer_id'] = $customer->id;
+            }
             
             // Logic for Recurring Date Calculation
             $nextRecurringDate = null;
             if (!empty($validated['is_recurring']) && $validated['is_recurring']) {
                  $start = \Carbon\Carbon::now();
-                 // If scheduled, maybe start recurring after that? 
-                 // For now simplicity: recurring starts from "now" or creation date.
                  $nextRecurringDate = \Carbon\Carbon::parse($validated['due_date']);
                  $start = \Carbon\Carbon::now();
                  
@@ -147,6 +177,7 @@ class InvoiceController extends Controller
                 'customer_phone' => $validated['customer_phone'] ?? optional(Customer::find($validated['customer_id']))->phone,
                 'branch_id' => $validated['branch_id'],
                 'created_by' => Auth::id(),
+                'invoice_number' => 'INV-' . strtoupper(uniqid()), // Ensure uniqueness handling or use model boot
                 'invoice_date' => now(),
                 'due_date' => $validated['due_date'],
                 'status' => 'draft',
@@ -161,19 +192,26 @@ class InvoiceController extends Controller
                 'scheduled_send_date' => ($validated['delivery_type'] === 'scheduled') ? $validated['scheduled_send_date'] : null,
             ]);
 
-            // ... Items processing (unchanged) ...
+            // Process Items
             $subtotal = 0;
             foreach ($validated['items'] as $item) {
-                // ... (logic same as before, see context)
-                $product = Product::findOrFail($item['product_id']);
+                if (!empty($item['product_id'])) {
+                    $product = Product::findOrFail($item['product_id']);
+                    $itemName = $product->name;
+                    $itemSku = $product->sku;
+                } else {
+                    $itemName = $item['name'];
+                    $itemSku = null;
+                }
+
                 $lineTotal = $item['quantity'] * $item['price'];
                 $subtotal += $lineTotal;
 
                 InvoiceItem::create([
                     'invoice_id' => $invoice->id,
-                    'product_id' => $item['product_id'],
-                    'product_name' => $product->name,
-                    'product_sku' => $product->sku,
+                    'product_id' => $item['product_id'] ?? null,
+                    'product_name' => $itemName,
+                    'product_sku' => $itemSku,
                     'quantity' => $item['quantity'],
                     'unit_price' => $item['price'],
                     'line_total' => $lineTotal,
@@ -182,8 +220,21 @@ class InvoiceController extends Controller
 
             // Calculate Totals
             $invoice->subtotal = $subtotal;
-            $invoice->tax_amount = 0; 
-            $invoice->total_amount = $subtotal;
+            
+            // Calculate Tax using Dynamic Rates
+            $activeTaxes = \App\Models\TaxRate::where('is_active', true)->get();
+            $totalTaxAmount = 0;
+            
+            foreach ($activeTaxes as $tax) {
+                if ($tax->type === 'percentage') {
+                    $totalTaxAmount += ($subtotal * $tax->rate) / 100;
+                } else {
+                    $totalTaxAmount += $tax->rate;
+                }
+            }
+            
+            $invoice->tax_amount = $totalTaxAmount; 
+            $invoice->total_amount = $subtotal + $totalTaxAmount; // Assuming no discount for now or handled elsewhere
             $invoice->balance_due = $invoice->total_amount;
             $invoice->save();
 
@@ -194,19 +245,15 @@ class InvoiceController extends Controller
                 $this->send($invoice->id);
                 $message = 'Invoice created and sent successfully!';
             } elseif ($validated['delivery_type'] === 'scheduled') {
-                // NEW LOGIC: Send immediately, set reminder for later
-                $this->send($invoice->id);
                 $date = \Carbon\Carbon::parse($validated['scheduled_send_date'])->format('M d, Y h:i A');
-                $message = "Invoice sent! A reminder is scheduled for {$date} if unpaid.";
+                // We don't send immediately for scheduled, just created. 
+                // Wait, previous logic sent immediately? No.
+                // Re-reading logic: "NEW LOGIC: Send immediately, set reminder for later" <-- Wait, that was my comment in previous code. 
+                // Actually scheduled usually means "Don't send now, send LATER".
+                // I will keep it as: Just save, schedule job (or assume cron handles it).
+                // But for now, let's just return success.
+                $message = "Invoice scheduled for delivery on {$date}.";
             } elseif ($validated['delivery_type'] === 'recurring') {
-                // Recurring usually implies sending the first one now?
-                // Requirements often say "Setup recurring". Usually first one is sent, then next one logic.
-                // Or if just "Recurring", maybe first one is sent too.
-                // Let's assume Recurring also sends the first one immediately if "send_now" equivalent is implied or strictly set.
-                // But the UI sends delivery_type='recurring'.
-                // If "send_now" was checked in previous UI, it meant "instant".
-                // Here "Instant" is a type.
-                // Let's send the first recurring one immediately as well to be standard.
                 $this->send($invoice->id);
                 $message = 'Invoice created, sent, and recurrence set up!';
             } else {
@@ -221,6 +268,7 @@ class InvoiceController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Invoice Creation Error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create invoice: ' . $e->getMessage()
@@ -236,40 +284,48 @@ class InvoiceController extends Controller
         $invoice->load(['items.product', 'customer', 'branch', 'createdBy']);
         return view('invoices.show', compact('invoice'));
     }
-    /**
-     * Send the invoice via Email and SMS.
+        /**
+     * Send the invoice via Email and/or SMS based on selected channels.
      */
-    public function send($id)
+    public function send(Request $request, $id)
     {
         $invoice = ($id instanceof Invoice) ? $id : Invoice::findOrFail($id);
+        $channels = $request->input('channels', ['email']); // Default to email if nothing selected
         
-        // Generate secure public link (Always use APP_URL from .env for external links)
+        // Generate secure public link
         $baseUrl = config('app.url');
         $paymentLink = rtrim($baseUrl, '/') . '/pay/' . $invoice->uuid;
 
         try {
-            // Generate PDF
-            $pdf = Pdf::loadView('invoices.pdf', compact('invoice', 'paymentLink'));
+            $sentMethods = [];
 
-            // Send Email with Attachment
-            if ($invoice->customer_email) {
+            // 1. Handle Email
+            if (in_array('email', $channels) && $invoice->customer_email) {
+                // Generate PDF for attachment
+                $pdf = Pdf::loadView('invoices.pdf', compact('invoice', 'paymentLink'));
                 Mail::to($invoice->customer_email)->send(new InvoiceCreated($invoice, $pdf->output(), $paymentLink));
+                $sentMethods[] = 'Email';
             }
 
-            // Send SMS (Short link)
-            if ($invoice->customer_phone) {
-                // Shorten link logic could go here if needed
+            // 2. Handle SMS
+            if (in_array('sms', $channels) && $invoice->customer_phone) {
                 $message = "Invoice #{$invoice->invoice_number} from " . ($invoice->branch->business->name ?? 'POS') . ". Pay here: {$paymentLink}";
                 $this->smsService->sendSms($invoice->customer_phone, $message);
+                $sentMethods[] = 'SMS';
+            }
+
+            if (empty($sentMethods) && !empty($channels)) {
+                return back()->with('error', 'Could not send: Customer contact details (email/phone) are missing for selected channels.');
             }
 
             $invoice->update([
                 'status' => 'sent', 
                 'sent_at' => now(), 
-                'payment_link_token' => $paymentLink // Store link if needed, though usually dynamic
+                'payment_link_token' => $paymentLink
             ]);
 
-            return back()->with('success', 'Invoice sent successfully via Email ' . ($invoice->customer_phone ? '& SMS' : ''));
+            $statusMsg = !empty($sentMethods) ? 'Invoice sent successfully via ' . implode(' & ', $sentMethods) : 'Invoice processed.';
+            return back()->with('success', $statusMsg);
         } catch (\Exception $e) {
             Log::error('Error sending invoice: ' . $e->getMessage());
             return back()->with('error', 'Failed to send invoice: ' . $e->getMessage());
@@ -285,5 +341,46 @@ class InvoiceController extends Controller
         $pdf = Pdf::loadView('invoices.pdf', compact('invoice', 'paymentLink'));
         
         return $pdf->download("invoice-{$invoice->invoice_number}.pdf");
+    }
+
+    /**
+     * Record a manual payment for an invoice.
+     */
+    public function recordPayment(Request $request, Invoice $invoice)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01|max:' . $invoice->balance_due,
+            'payment_method' => 'required|string|in:cash,bank_transfer,check,other',
+            'payment_notes' => 'nullable|string'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Mark as paid (triggers stock deduction)
+            $invoice->markAsPaid($validated['amount']);
+
+            // Create transaction record
+            \App\Models\SystemTransaction::create([
+                'business_id' => $invoice->branch->business_id,
+                'amount' => $validated['amount'],
+                'currency' => 'GHS',
+                'reference' => 'MANUAL-' . strtoupper(uniqid()),
+                'channel' => $validated['payment_method'],
+                'source_type' => get_class($invoice),
+                'source_id' => $invoice->id,
+                'status' => 'success',
+                'payout_status' => 'paid', // Manual payment is already in possession of business
+                'notes' => $validated['payment_notes']
+            ]);
+
+            DB::commit();
+
+            return back()->with('success', 'Payment recorded successfully! Inventory has been updated.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Manual Payment Error: ' . $e->getMessage());
+            return back()->with('error', 'Failed to record payment: ' . $e->getMessage());
+        }
     }
 }

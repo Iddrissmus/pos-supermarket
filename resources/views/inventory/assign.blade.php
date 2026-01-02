@@ -108,7 +108,15 @@
                     </div>
                      <div class="flex justify-between items-center p-3 bg-teal-50 rounded-lg border border-teal-100">
                         <span class="text-sm text-teal-800 font-medium">Total Cost Value</span>
-                        <span id="totalCost" class="font-bold text-teal-700 text-xl">₵0.00</span>
+                        <span id="totalCost" class="font-bold text-teal-700 text-lg">₵0.00</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                        <span class="text-sm text-indigo-800 font-medium">Est. Sales Value</span>
+                        <span id="totalSales" class="font-bold text-indigo-700 text-lg">₵0.00</span>
+                    </div>
+                     <div class="flex justify-between items-center p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                        <span class="text-sm text-emerald-800 font-medium">Potential Profit</span>
+                        <span id="totalProfit" class="font-bold text-emerald-700 text-xl">₵0.00</span>
                     </div>
                 </div>
 
@@ -251,6 +259,8 @@
     const clearBtn = document.getElementById('clearBtn');
     const selectedCountEl = document.getElementById('selectedCount');
     const totalCostEl = document.getElementById('totalCost');
+    const totalSalesEl = document.getElementById('totalSales');
+    const totalProfitEl = document.getElementById('totalProfit');
     const totalUnitsEl = document.getElementById('totalUnits');
     
     let selectedBranchId = null;
@@ -283,7 +293,7 @@
     }
 
     // Calculation Logic
-    document.querySelectorAll('.boxes-input, .units-per-box-input').forEach(input => {
+    document.querySelectorAll('.boxes-input, .units-per-box-input, .price-input').forEach(input => {
         input.addEventListener('input', function() {
             const row = this.closest('tr');
             const boxes = parseFloat(row.querySelector('.boxes-input').value) || 0;
@@ -340,22 +350,29 @@
         let count = 0;
         let units = 0;
         let cost = 0;
+        let sales = 0;
 
         document.querySelectorAll('.product-checkbox:checked').forEach(cb => {
             const row = cb.closest('tr');
             const boxes = parseFloat(row.querySelector('.boxes-input').value) || 0;
             const perBox = parseFloat(row.querySelector('.units-per-box-input').value) || 1;
             const cVal = parseFloat(row.querySelector('.cost-input').value) || 0;
+            const sVal = parseFloat(row.querySelector('.price-input').value) || parseFloat(row.querySelector('.price-input').placeholder) || 0;
             
             const total = boxes * perBox;
             count++;
             units += total;
-            cost += total * cVal; // Total cost value
+            cost += total * cVal; 
+            sales += total * sVal;
         });
 
         selectedCountEl.textContent = count;
         totalUnitsEl.textContent = units.toLocaleString();
         totalCostEl.textContent = '₵' + cost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        totalSalesEl.textContent = '₵' + sales.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
+        const profit = sales - cost;
+        totalProfitEl.textContent = '₵' + profit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
         
         assignBtn.disabled = count === 0 || !selectedBranchId;
         assignBtn.className = assignBtn.disabled 
@@ -431,9 +448,7 @@
 
             const data = await res.json();
             if(res.ok) {
-                // Success
-                 // Use a nice modal or redirect
-                alert(data.message);
+                // Success - Flash message is set in session
                 window.location.href = '{{ route("layouts.productman") }}';
             } else {
                 alert('Error: ' + (data.error || 'Assignment failed'));
@@ -448,4 +463,39 @@
         }
     });
 </script>
+@push('scripts')
+<!-- Scripts for dropdown behavior -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize TomSelect for branch selection
+        if (document.getElementById('branchSelect') && document.getElementById('branchSelect').tagName === 'SELECT') {
+            new TomSelect('#branchSelect', {
+                create: false,
+                sortField: {
+                    field: "text",
+                    direction: "asc"
+                },
+                placeholder: "-- Choose Branch --",
+                onChange: function(value) {
+                    // Manually trigger the existing branch selection logic
+                    const event = new Event('change');
+                    document.getElementById('branchSelect').dispatchEvent(event);
+                }
+            });
+        }
+
+        // Initialize TomSelect for category filter
+        if (document.getElementById('categoryFilter')) {
+            new TomSelect('#categoryFilter', {
+                create: false,
+                placeholder: "All Categories"
+            });
+        }
+    });
+</script>
+@endpush
+
 @endsection

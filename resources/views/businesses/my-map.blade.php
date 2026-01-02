@@ -56,6 +56,9 @@
                  <a href="{{ route('my-business') }}" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors font-medium border border-white/20">
                     <i class="fas fa-arrow-left mr-2"></i> Business Profile
                 </a>
+                 <a href="{{ route('branches.index') }}" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors font-medium border border-white/20">
+                    <i class="fas fa-list mr-2"></i> View All Branches
+                </a>
             </div>
         </div>
     </div>

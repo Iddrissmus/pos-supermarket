@@ -153,14 +153,13 @@
                 <div class="bg-white rounded-xl shadow-lg border border-indigo-100 p-6 sticky top-6">
                     <h3 class="text-sm font-semibold text-gray-900 mb-4">Review Action</h3>
                     
-                    <form action="{{ route('superadmin.branch-requests.approve', $branchRequest) }}" method="POST" class="mb-3">
-                        @csrf
-                        <button type="submit" 
-                                onclick="return confirm('Approve this request? This will immediately create new branch.')"
+                    <div class="mb-3">
+                        <button type="button" 
+                                onclick="document.getElementById('approveModal').classList.remove('hidden')"
                                 class="w-full flex justify-center items-center px-4 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
                             <i class="fas fa-check-circle mr-2"></i> Approve & Create
                         </button>
-                    </form>
+                    </div>
 
                     <button type="button" 
                             onclick="document.getElementById('rejectModal').classList.remove('hidden')"
@@ -198,6 +197,43 @@
     </div>
 </div>
 
+<!-- Approve Modal -->
+<div id="approveModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="document.getElementById('approveModal').classList.add('hidden')"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        
+        <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
+            <form action="{{ route('superadmin.branch-requests.approve', $branchRequest) }}" method="POST">
+                @csrf
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 sm:mx-0 sm:h-10 sm:w-10">
+                            <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">Approve Branch Request</h3>
+                            <div class="mt-2">
+                                <p class="text-sm text-gray-500">Are you sure you want to approve this request? This will immediately create a new branch for <strong>{{ $branchRequest->business->name }}</strong>.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Confirm Approval
+                    </button>
+                    <button type="button" onclick="document.getElementById('approveModal').classList.add('hidden')" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Reject Modal -->
 <div id="rejectModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
@@ -216,9 +252,11 @@
                         </div>
                         <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
                             <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">Reject Branch Request</h3>
-                            <div class="mt-2">
+                            <div class="mt-2 text-left">
                                 <p class="text-sm text-gray-500 mb-3">Please provide a reason for rejecting this request. The requester will be notified.</p>
-                                <textarea name="rejection_reason" rows="3" required class="w-full shadow-sm focus:ring-red-500 focus:border-red-500 block sm:text-sm border-gray-300 rounded-md" placeholder="Enter reason..."></textarea>
+                                <textarea name="rejection_reason" rows="4" required 
+                                          class="w-full rounded-lg border-gray-400 bg-gray-50 shadow-sm focus:bg-white focus:border-red-500 focus:ring-red-500 block sm:text-sm p-3 transition-colors resize-none placeholder-gray-400" 
+                                          placeholder="e.g. The location is too close to an existing branch..."></textarea>
                             </div>
                         </div>
                     </div>

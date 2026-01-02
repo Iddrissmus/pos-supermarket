@@ -78,7 +78,7 @@ class ProductController extends Controller
             ->get();
 
         if ($user->role === 'manager' && $user->branch_id) {
-            // Manager: show only their branch's products
+            // Manager: show only their branch's products (Keep existing logic for managers)
             $productsQuery = BranchProduct::where('branch_id', $user->branch_id)
                 ->with(['product.category'])
                 ->whereHas('product', function($q) {
@@ -109,56 +109,51 @@ class ProductController extends Controller
             // Get paginated products for display
             $products = $productsQuery->orderBy('updated_at', 'desc')->paginate(15);
 
-            $totalProducts = BranchProduct::where('branch_id', $user->branch_id)
-                ->whereHas('product', function($q) {
-                    $q->whereNotNull('category_id');
-                })
-                ->count();
+            $totalProducts = BranchProduct::where('branch_id', $user->branch_id)->count();
             $inStoreProducts = BranchProduct::where('branch_id', $user->branch_id)
-                ->where(function($q) {
-                    $q->where('stock_quantity', '>', 0)
-                      ->whereColumn('stock_quantity', '>', 'reorder_level')
-                      ->where('stock_quantity', '>', 10);
-                })
-                ->whereHas('product', function($q) {
-                    $q->whereNotNull('category_id');
-                })
+                ->where('stock_quantity', '>', 0)
                 ->count();
             $lowStockProducts = BranchProduct::where('branch_id', $user->branch_id)
                 ->where(function($query) {
                     $query->whereColumn('stock_quantity', '<=', 'reorder_level')
                           ->orWhere('stock_quantity', '<=', 10);
                 })
-                ->whereHas('product', function($q) {
-                    $q->whereNotNull('category_id');
-                })
                 ->count();
             $outOfStockProducts = BranchProduct::where('branch_id', $user->branch_id)
                 ->where('stock_quantity', '<=', 0)
-                ->whereHas('product', function($q) {
-                    $q->whereNotNull('category_id');
-                })
                 ->count();
+
         } else {
-            // Business admin/superadmin: show all branches' products
-            $productsQuery = BranchProduct::whereIn('branch_id', $branchIds)
-                ->with(['product.category', 'branch'])
-                ->whereHas('product', function($q) {
-                    $q->whereNotNull('category_id');
-                });
+            // Business Admin / SuperAdmin: Show ALL products in the business catalog
+            // This ensures products not yet assigned to a branch are still visible.
+            $productsQuery = Product::where('business_id', $user->business_id)
+                ->with(['category', 'branchProducts.branch']); // Eager load branch assignments
+
             if ($categoryId) {
-                $productsQuery->whereHas('product', function($q) use ($categoryId) {
-                    $q->where('category_id', $categoryId);
-                });
+                $productsQuery->where('category_id', $categoryId);
             }
+            
+            // For stock filters, we need to check aggregated stock or branch specific stock?
+            // "Low Stock" in a catalog context usually implies "Aggregate stock is low" or "Any branch is low"?
+            // Let's us aggregate stock from the 'products' table 'stock' column if it exists/is used, 
+            // OR check relation.
+            // Based on view logic: $product->stock ?? 0. 
+            // The logic below attempts to filter based on underlying assumptions. 
+            // If using `branchProducts`, we can filter products that have at least one branch low.
+            // But simplifying for catalog view: we show the Product.
+            
             if ($lowStockOnly) {
-                $productsQuery->where(function($query) {
-                    $query->whereColumn('stock_quantity', '<=', 'reorder_level')
-                          ->orWhere('stock_quantity', '<=', 10);
-                });
+                 // Low Stock: 1 to 10 available units
+                 $productsQuery->whereRaw('(total_units - assigned_units) <= 10')
+                               ->whereRaw('(total_units - assigned_units) > 0'); 
             }
             if ($inStoreOnly) {
-                $applyInStoreScope($productsQuery);
+                // In Stock (Healthy): > 10 available units
+                $productsQuery->whereRaw('(total_units - assigned_units) > 10');
+            }
+            if ($outOfStockOnly) {
+                // Out of Stock: 0 available units
+                $productsQuery->whereRaw('(total_units - assigned_units) <= 0');
             }
             
             // Get ALL products for financial metrics calculation
@@ -168,37 +163,18 @@ class ProductController extends Controller
             // Get paginated products for display
             $products = $productsQuery->orderBy('updated_at', 'desc')->paginate(15);
 
-            // Calculate stats for all accessible branches
-            $totalProducts = BranchProduct::whereIn('branch_id', $branchIds)
-                ->whereHas('product', function($q) {
-                    $q->whereNotNull('category_id');
-                })
-                ->count();
-            $inStoreProducts = BranchProduct::whereIn('branch_id', $branchIds)
-                ->where(function($q) {
-                    $q->where('stock_quantity', '>', 0)
-                      ->whereColumn('stock_quantity', '>', 'reorder_level')
-                      ->where('stock_quantity', '>', 10);
-                })
-                ->whereHas('product', function($q) {
-                    $q->whereNotNull('category_id');
-                })
-                ->count();
-            $lowStockProducts = BranchProduct::whereIn('branch_id', $branchIds)
-                ->where(function($query) {
-                    $query->whereColumn('stock_quantity', '<=', 'reorder_level')
-                          ->orWhere('stock_quantity', '<=', 10);
-                })
-                ->whereHas('product', function($q) {
-                    $q->whereNotNull('category_id');
-                })
-                ->count();
-            $outOfStockProducts = BranchProduct::whereIn('branch_id', $branchIds)
-                ->where('stock_quantity', '<=', 0)
-                ->whereHas('product', function($q) {
-                    $q->whereNotNull('category_id');
-                })
-                ->count();
+            // Calculate stats for entire business catalog based on total units (Mutually Exclusive)
+            $totalProducts = Product::where('business_id', $user->business_id)->count();
+            // In Stock = Healthy (>10)
+            $inStoreProducts = Product::where('business_id', $user->business_id)
+                ->whereRaw('total_units - assigned_units > 10')->count();
+            // Low Stock = 1-10
+            $lowStockProducts = Product::where('business_id', $user->business_id)
+                ->whereRaw('total_units - assigned_units > 0')
+                ->whereRaw('total_units - assigned_units <= 10')->count();
+            // Out of Stock = 0
+            $outOfStockProducts = Product::where('business_id', $user->business_id)
+                ->whereRaw('total_units - assigned_units <= 0')->count();
         }
 
         // Calculate financial metrics for ALL products (not just paginated)
@@ -263,10 +239,18 @@ class ProductController extends Controller
         $totalCostPrice = 0;
 
         foreach($products as $item) {
-            $branchProduct = $item->product ? $item : null;
-            $sellingPrice = $branchProduct->price ?? 0;
-            $costPrice = $branchProduct->cost_price ?? 0;
-            $quantity = $branchProduct->stock_quantity ?? 0;
+            // Support both BranchProduct and Product models
+            $isBranchProduct = isset($item->product_id) && method_exists($item, 'product');
+            
+            $sellingPrice = $item->price ?? 0;
+            $costPrice = $item->cost_price ?? 0;
+            
+            if ($isBranchProduct) {
+                $quantity = $item->stock_quantity ?? 0;
+            } else {
+                // For main catalog (Warehouse), only count units available for assignment
+                $quantity = $item->available_units ?? 0;
+            }
             
             $totalSellingPrice += ($sellingPrice * $quantity);
             $totalCostPrice += ($costPrice * $quantity);
@@ -290,9 +274,18 @@ class ProductController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
-            'category_id' => 'nullable|exists:categories,id',
+            'category_id' => [
+                'nullable',
+                function ($attribute, $value, $fail) {
+                    if ($value === 'new') return;
+                    if (!\App\Models\Category::where('id', $value)->exists()) {
+                        $fail('The selected category is invalid.');
+                    }
+                },
+            ],
             'new_category_name' => 'nullable|string|max:255',
             'image' => 'nullable|image|max:2048',
+            'barcode' => 'nullable|string|max:13',
 
             // optional branch/stock fields
             'branch_id' => 'nullable|exists:branches,id',
@@ -336,8 +329,8 @@ class ProductController extends Controller
                 // Get business_id from the selected branch
                 $businessId = \App\Models\Branch::where('id', $validatedData['branch_id'])->value('business_id');
             } else {
-                // If no branch selected, get the first available business (for admin/general products)
-                $businessId = \App\Models\Business::first()?->id;
+                // If no branch selected, assign to the user's business
+                $businessId = Auth::user()->business_id ?? \App\Models\Business::first()?->id;
             }
             
             if (!$businessId) {
@@ -588,16 +581,26 @@ class ProductController extends Controller
     public function destroy(string $id)
     {
         $product = Product::findOrFail($id);
+        $user = auth()->user();
+
+        // Authorization check
+        if ($user->role === 'business_admin' && $product->business_id !== $user->business_id) {
+            return response()->json(['error' => 'You can only delete products in your own business.'], 403);
+        }
+
+        if ($user->role !== 'superadmin' && $user->role !== 'business_admin') {
+            return response()->json(['error' => 'You do not have permission to delete products.'], 403);
+        }
         
         // Log product deletion activity
         ActivityLogger::logModel('delete', $product, [
             'name' => $product->name,
-            'stock' => $product->stock ?? 0,
+            'stock' => $product->total_units ?? 0,
             'price' => $product->price ?? 0,
         ], []);
         
         $product->delete();
-        return response()->json(['message' => 'Product deleted successfully'], 204);
+        return response()->json(['message' => 'Product deleted successfully']);
     }
 
     /**
@@ -610,7 +613,10 @@ class ProductController extends Controller
         // may only import into their assigned branch.
         if ($user->role === 'superadmin') {
             $branches = Branch::orderBy('name')->get();
-        } elseif (($user->role === 'business_admin' || $user->role === 'manager') && $user->branch_id) {
+        } elseif ($user->role === 'business_admin' && $user->business_id) {
+            // Business Admin sees all branches in their business
+            $branches = Branch::where('business_id', $user->business_id)->orderBy('name')->get();
+        } elseif ($user->role === 'manager' && $user->branch_id) {
             $branches = Branch::where('id', $user->branch_id)->get();
         } else {
             // No branch assigned or not permitted
@@ -682,9 +688,19 @@ class ProductController extends Controller
         $userRole = $user->role;
         $userBranchName = null;
         
-        if ($user->role === 'business_admin' || $user->role === 'manager') {
+        if ($user->role === 'business_admin') {
+             // For Business Admins without specific branch, show generic "Business Admin" or similar
+             // But for bulk assignment VIEW, we generally just need the role context.
+             // If we want to show a branch name, we might just show the Business Name if no branch set
+             if ($user->branch_id) {
+                 $branch = Branch::find($user->branch_id);
+                 $userBranchName = $branch ? $branch->name : 'Unknown';
+             } else {
+                 $userBranchName = 'All Branches (Business Admin)';
+             }
+        } elseif ($user->role === 'manager') {
             if (empty($user->branch_id)) {
-                abort(403, 'No branch assigned.');
+                return view('errors.no-branch');
             }
             $branch = Branch::find($user->branch_id);
             $userBranchName = $branch ? $branch->name : 'Unknown';
@@ -726,7 +742,7 @@ class ProductController extends Controller
             $import = new \App\Imports\BulkAssignmentImport(
                 $user->business_id,
                 $user->role,
-                $user->branch_id
+                $user->branch_id // This can act as a default, but the Import class might need handling for null
             );
             
             \Maatwebsite\Excel\Facades\Excel::import($import, $request->file('file'));
@@ -786,9 +802,17 @@ class ProductController extends Controller
         if ($user->role === 'superadmin') {
             $products = Product::with(['category', 'branchProducts.branch'])->get();
             $branches = Branch::with('manager')->orderBy('name')->get();
-        } elseif ($user->role === 'business_admin' || $user->role === 'manager') {
+        } elseif ($user->role === 'business_admin') {
+             $products = Product::where('business_id', $user->business_id)
+                ->with(['category', 'branchProducts.branch'])
+                ->get();
+             // Allow assigning to ANY branch in the business
+             $branches = Branch::where('business_id', $user->business_id)
+                ->with('manager')
+                ->get();
+        } elseif ($user->role === 'manager') {
             if (empty($user->branch_id)) {
-                abort(403, 'No branch assigned.');
+                return view('errors.no-branch');
             }
             $products = Product::where('business_id', $user->business_id)
                 ->with(['category', 'branchProducts.branch'])
@@ -827,19 +851,26 @@ class ProductController extends Controller
         $branchId = $request->branch_id;
 
         // Verify access
-        $branch = Branch::findOrFail($branchId);
-        if ($user->role === 'superadmin') {
-            // allowed
-        } elseif ($user->role === 'business_admin' || $user->role === 'manager') {
-            if (empty($user->branch_id) || (int)$user->branch_id !== (int)$branchId) {
-                return response()->json(['error' => 'Access denied'], 403);
-            }
-            if ($branch->business_id !== $user->business_id) {
-                return response()->json(['error' => 'Access denied'], 403);
-            }
-        } else {
-            return response()->json(['error' => 'Access denied'], 403);
+    $branch = Branch::findOrFail($branchId);
+    
+    if ($user->role === 'superadmin') {
+        // Superadmin has full access to all branches
+    } elseif ($user->role === 'business_admin') {
+        // Business Admin can assign to any branch within their business
+        if ($branch->business_id !== $user->business_id) {
+            return response()->json(['error' => 'Access denied: Branch does not belong to your business'], 403);
         }
+    } elseif ($user->role === 'manager') {
+        // Manager can ONLY assign to their own branch
+        if (empty($user->branch_id) || (int)$user->branch_id !== (int)$branchId) {
+            return response()->json(['error' => 'Access denied: You are not assigned to this branch'], 403);
+        }
+        if ($branch->business_id !== $user->business_id) {
+            return response()->json(['error' => 'Access denied: Branch context mismatch'], 403);
+        }
+    } else {
+        return response()->json(['error' => 'Access denied: Insufficient permissions'], 403);
+    }
 
         try {
             $assignedCount = 0;
@@ -917,6 +948,8 @@ class ProductController extends Controller
                 $response['warnings'] = $errors;
                 $response['message'] .= " Some products were skipped due to insufficient inventory.";
             }
+
+            session()->flash('success', $response['message']);
 
             return response()->json($response);
 

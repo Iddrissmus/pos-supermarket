@@ -53,14 +53,27 @@ class BulkAssignmentImport implements ToCollection, WithHeadingRow
                     continue;
                 }
 
-                // Find product by name or barcode
-                $productIdentifier = trim($row['product_name_or_barcode']);
+                // Find product by name or barcode (Robust matching)
+                $productIdentifier = trim($row['product_name_or_barcode'] ?? $row['product_name']);
+                
+                // Try finding by exact barcode first (highest precision)
                 $product = Product::where('business_id', $this->businessId)
-                    ->where(function($query) use ($productIdentifier) {
-                        $query->whereRaw('LOWER(TRIM(name)) = ?', [strtolower($productIdentifier)])
-                              ->orWhereRaw('LOWER(TRIM(barcode)) = ?', [strtolower($productIdentifier)]);
-                    })
-                    ->first();
+                     ->where('barcode', $productIdentifier)
+                     ->first();
+
+                // If not found, try by name (insensitive)
+                if (!$product) {
+                    $product = Product::where('business_id', $this->businessId)
+                        ->whereRaw('LOWER(TRIM(name)) = ?', [strtolower($productIdentifier)])
+                        ->first();
+                }
+
+                // If still not found, try a looser match for name (handling internal spaces differently)
+                if (!$product) {
+                     $product = Product::where('business_id', $this->businessId)
+                        ->where('name', 'LIKE', '%' . $productIdentifier . '%')
+                        ->first();
+                }
 
                 if (!$product) {
                     $this->errors[] = "Row {$rowNumber}: Product '{$productIdentifier}' not found.";
@@ -80,9 +93,12 @@ class BulkAssignmentImport implements ToCollection, WithHeadingRow
                     continue;
                 }
 
-                // For business admins/managers, verify they can only assign to their branch
-                if (($this->userRole === 'business_admin' || $this->userRole === 'manager') && $branch->id !== $this->userBranchId) {
-                    $this->errors[] = "Row {$rowNumber}: You can only assign products to your branch.";
+                // Permission Check:
+                // Super Admin: Can assign to any branch (business_id check is implicit in queries above? No, we should ensure)
+                // Business Admin: Can assign to ANY branch in their business.
+                // Manager: Can ONLY assign to their own branch.
+                if ($this->userRole === 'manager' && $branch->id !== $this->userBranchId) {
+                    $this->errors[] = "Row {$rowNumber}: Managers can only assign products to their own branch ({$branch->name}).";
                     $this->skippedCount++;
                     continue;
                 }

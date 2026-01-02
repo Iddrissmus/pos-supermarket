@@ -75,12 +75,6 @@ class BusinessController extends Controller
 
         $business->name = $validated['name'];
         // Update optional fields if they exist in the request/model
-        // Assuming business model has these fields or we want to support them
-        // For now, let's stick to what's likely on the model or add them if needed. 
-        // Based on previous reads, Name and Logo are standard. 
-        // Let's check the model or migration if I can, but standard practice is safe.
-        // Actually, let's just save name and logo for now as I know those exist.
-        // I'll check migration later if I want to add more.
         
         $business->save();
 
@@ -98,7 +92,10 @@ class BusinessController extends Controller
             abort(403, 'Only Super Admin can create a business.');
         }
             
-        return view('businesses.create');
+        $businessTypes = \App\Models\BusinessType::where('is_active', true)->get();
+        $plans = \App\Models\SubscriptionPlan::where('is_active', true)->get();
+
+        return view('businesses.create', compact('businessTypes', 'plans'));
     }
 
     /**
@@ -108,64 +105,82 @@ class BusinessController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'business_type_id' => 'required|exists:business_types,id',
+            'plan_id' => 'required|exists:subscription_plans,id',
+            'owner_name' => 'required|string|max:255',
+            'owner_email' => 'required|email|max:255|unique:users,email',
             'branch_name' => 'required|string|max:255',
             'address' => 'required|string|max:500',
             'region' => 'required|string|max:100',
             'contact' => 'required|string|max:20',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
-            'logo' => 'nullable|image|max:2048', // Optional logo, max size 2MB
+            'logo' => 'nullable|image|max:2048',
         ]);
 
-        // Handle logo upload if present
+        // Handle logo upload
+        $logoPath = null;
         if ($request->hasFile('logo')) {
             $logoPath = $request->file('logo')->store('logos', 'public');
-            $validated['logo'] = $logoPath;
         }
 
-        // Create the business
-        $business = Business::create([
-            'name' => $validated['name'],
-            'logo' => $validated['logo'] ?? null,
-        ]);
-        
-        // Automatically create the first branch with the business location
-        Branch::create([
-            'business_id' => $business->id,
-            'name' => $validated['branch_name'],
-            'address' => $validated['address'],
-            'region' => $validated['region'],
-            'contact' => $validated['contact'],
-            'latitude' => $validated['latitude'] ?? null,
-            'longitude' => $validated['longitude'] ?? null,
-            'manager_id' => null, // Will be assigned by Business Admin later
-        ]);
-        
-        // Send SMS notification to the business contact
+        \DB::beginTransaction();
+
         try {
-            Log::info("Attempting to send SMS for business creation", [
-                'business_name' => $business->name,
-                'contact' => $validated['contact']
+            // 1. Create Owner User
+            $owner = User::create([
+                'name' => $validated['owner_name'],
+                'email' => $validated['owner_email'],
+                'password' => \Hash::make(\Str::random(12)), // Temp password, they should reset or we send it? 
+                // For now, let's assume they set it via "Forgot Password" or we don't send it? 
+                // Better: We are sending an invoice link. After payment, maybe prompt to set password?
+                // Or simply: It's an inactive user. 
+                'role' => 'business_admin',
+                'status' => 'active', // User is active, Business is inactive? Or User inactive?
+                // Use 'active' user so they can theoretically log in if we gave them credentials, 
+                // but business middleware would block them.
+                'phone' => $validated['contact'],
             ]);
+
+            // 2. Create Business (Inactive)
+            $business = Business::create([
+                'name' => $validated['name'],
+                'logo' => $logoPath,
+                'owner_id' => $owner->id,
+                'business_type_id' => $validated['business_type_id'],
+                'current_plan_id' => $validated['plan_id'],
+                'status' => 'inactive',
+                'subscription_status' => 'pending_payment',
+            ]);
+
+            // Assign business to owner
+            $owner->update(['business_id' => $business->id]);
+
+            // 3. Create Main Branch
+            Branch::create([
+                'business_id' => $business->id,
+                'name' => $validated['branch_name'],
+                'address' => $validated['address'],
+                'region' => $validated['region'],
+                'contact' => $validated['contact'],
+                'latitude' => $validated['latitude'] ?? null,
+                'longitude' => $validated['longitude'] ?? null,
+                'manager_id' => $owner->id, // Assign owner as initial manager
+            ]);
+
+            // 4. Send Invoice Notification
+            $plan = \App\Models\SubscriptionPlan::find($validated['plan_id']);
+            $owner->notify(new \App\Notifications\SubscriptionInvoiceNotification($business, $plan));
+
+            \DB::commit();
             
-            $smsService = new SmsService();
-            $message = "Welcome! Your business '{$business->name}' has been successfully registered in our POS system. Main branch: {$validated['branch_name']}, Location: {$validated['address']}, {$validated['region']}. A Business Admin will be assigned soon.";
-            
-            $smsSent = $smsService->sendSms($validated['contact'], $message);
-            
-            if ($smsSent) {
-                Log::info("Business creation SMS sent successfully to {$validated['contact']}");
-                return redirect()->route('businesses.index')
-                    ->with('success', "Business '{$business->name}' created successfully with main branch '{$validated['branch_name']}'! SMS notification sent to {$validated['contact']}.");
-            } else {
-                Log::warning("Business creation SMS sending returned false for {$validated['contact']}");
-            }
+            return view('businesses.success', compact('business', 'owner', 'plan'));
+
         } catch (\Exception $e) {
-            Log::error('Business creation SMS failed: ' . $e->getMessage());
+            \DB::rollBack();
+            Log::error('Business creation failed: ' . $e->getMessage());
+            return back()->with('error', 'Failed to create business: ' . $e->getMessage())->withInput();
         }
-        
-        return redirect()->route('businesses.index')
-            ->with('success', "Business '{$business->name}' created successfully with main branch '{$validated['branch_name']}'! You can now create a Business Admin user and assign them to this business.");
     }
 
     /**

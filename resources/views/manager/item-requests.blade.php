@@ -74,8 +74,8 @@
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">Product</label>
                             <select id="product_id" name="product_id" 
-                                    class="form-select w-full" 
-                                    required onchange="updateBranchOptions()">
+                                    class="form-select w-full h-12 text-lg" 
+                                    required>
                                 <option value="">Select a product...</option>
                                 @foreach($availableProducts as $product)
                                     <option value="{{ $product->id }}">
@@ -89,11 +89,11 @@
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">Source Branch</label>
                             <select id="from_branch_id" name="from_branch_id" 
-                                    class="form-select w-full" 
+                                    class="form-select w-full h-12 text-lg" 
                                     required disabled>
                                 <option value="">Select product first...</option>
                             </select>
-                            <p id="stock-info" class="text-xs text-emerald-600 font-medium mt-1 min-h-[1rem]"></p>
+                            <p id="stock-info" class="text-sm text-emerald-600 font-medium mt-2 min-h-[1.5rem]"></p>
                         </div>
 
                         <div class="grid grid-cols-2 gap-4">
@@ -101,33 +101,33 @@
                                 <label class="block text-sm font-medium text-slate-700 mb-1">Boxes</label>
                                 <div class="relative">
                                     <input type="number" id="quantity_of_boxes" name="quantity_of_boxes" min="1" 
-                                           class="form-input w-full pr-8" required placeholder="0">
+                                           class="form-input w-full pr-8 h-12 text-lg font-bold text-slate-800" required placeholder="0">
                                     <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                        <i class="fas fa-box text-slate-400 text-xs"></i>
+                                        <i class="fas fa-box text-slate-400"></i>
                                     </div>
                                 </div>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-1">Units/Box</label>
                                 <input type="number" id="quantity_per_box" name="quantity_per_box" min="1" 
-                                       class="form-input w-full bg-slate-50" required readonly>
+                                       class="form-input w-full bg-slate-50 h-12 text-lg text-slate-600" required readonly>
                             </div>
                         </div>
 
                         <!-- Calculator Result -->
-                        <div class="bg-green-50/50 rounded-lg p-3 text-center border border-green-100">
+                        <div class="bg-green-50/50 rounded-lg p-4 text-center border border-green-100">
                              <p class="text-xs text-slate-500 mb-1">Total Requsted Quantity</p>
-                             <p class="text-lg font-bold text-green-600" id="total-units-display">0 units</p>
-                             <p class="text-[10px] text-slate-400" id="calc-breakdown">(0 boxes × 0 units)</p>
+                             <p class="text-2xl font-bold text-green-600" id="total-units-display">0 units</p>
+                             <p class="text-xs text-slate-400" id="calc-breakdown">(0 boxes × 0 units)</p>
                         </div>
 
                         <!-- Reason -->
                          <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">Reason (Optional)</label>
-                            <textarea name="reason" rows="2" class="form-textarea w-full" placeholder="e.g. Low stock trigger"></textarea>
+                            <textarea name="reason" rows="3" class="form-textarea w-full text-base" placeholder="e.g. Low stock trigger"></textarea>
                         </div>
 
-                        <button type="submit" class="btn w-full bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl rounded-full py-3 transform hover:scale-[1.05] transition-all duration-200 group font-bold tracking-wide flex items-center justify-center">
+                        <button type="submit" class="btn w-full bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl rounded-full py-4 text-lg transform hover:scale-[1.02] transition-all duration-200 group font-bold tracking-wide flex items-center justify-center">
                             Submit Request <i class="fas fa-paper-plane ml-2 group-hover:translate-x-1 transition-transform"></i>
                         </button>
                     </form>
@@ -139,7 +139,7 @@
                      <i class="fas fa-box-open text-xl"></i>
                  </div>
                  <h3 class="text-lg font-bold text-amber-800">No Products Available</h3>
-                 <p class="text-sm text-amber-700 mt-2">There are currently no products available in other branches to request.</p>
+                 <p class="text-sm text-amber-700 mt-2">There are currently no products available in other branches (or warehouse) to request.</p>
             </div>
             @endif
         </div>
@@ -176,7 +176,13 @@
                                     <div class="text-xs text-slate-500">{{ $request->product->barcode }}</div>
                                 </td>
                                 <td class="px-6 py-4 text-sm text-slate-600">
-                                    <i class="fas fa-store text-slate-400 mr-1.5"></i>{{ optional($request->fromBranch)->display_label }}
+                                    @if($request->from_branch_id)
+                                        <i class="fas fa-store text-slate-400 mr-1.5"></i>
+                                        {{ optional($request->fromBranch)->display_label }}
+                                    @else
+                                        <i class="fas fa-warehouse text-purple-400 mr-1.5"></i>
+                                        <span class="px-2 py-0.5 rounded bg-purple-100 text-purple-700 font-semibold text-xs">Central Warehouse</span>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-4 text-center">
                                     <span class="font-bold text-slate-800">{{ $request->quantity_of_boxes }}</span> <span class="text-xs text-slate-500">boxes</span>
@@ -231,7 +237,11 @@
                                     <div class="font-medium text-slate-800">{{ $request->product->name }}</div>
                                 </td>
                                 <td class="px-6 py-4 text-sm text-slate-600">
-                                    {{ optional($request->fromBranch)->name }}
+                                    @if($request->from_branch_id)
+                                        {{ optional($request->fromBranch)->name }}
+                                    @else
+                                        Warehouse
+                                    @endif
                                 </td>
                                 <td class="px-6 py-4 text-center">
                                     <span class="text-sm font-medium text-slate-700">{{ $request->quantity_of_boxes }} boxes</span>
@@ -265,97 +275,138 @@
 
 <!-- Scripts -->
 <script>
-// Logic preserved but using modern DOM manipulation
-const productBranchData = {};
+document.addEventListener('DOMContentLoaded', function() {
+    // Data passed from blade
+    const productBranchData = {};
 
-@foreach($availableProducts as $product)
-    productBranchData[{{ $product->id }}] = {
-        quantity_per_box: {{ $product->quantity_per_box ?? 1 }},
-        branches: [
-            @foreach($product->branchProducts as $bp)
-            {
-                branch_id: {{ $bp->branch_id }},
-                branch_name: "{{ $bp->branch->display_label }}",
-                stock: {{ $bp->stock_quantity }},
-                boxes: {{ $bp->quantity_of_boxes ?? 0 }}
+    @foreach($availableProducts as $product)
+        productBranchData[{{ $product->id }}] = {
+            quantity_per_box: {{ $product->quantity_per_box ?? 1 }},
+            branches: [
+                @if(($product->total_units - $product->assigned_units) > 0)
+                {
+                    branch_id: "", 
+                    branch_name: "Central Warehouse",
+                    stock: {{ $product->total_units - $product->assigned_units }},
+                    boxes: {{ floor(($product->total_units - $product->assigned_units) / max(1, $product->quantity_per_box ?? 1)) }}
+                },
+                @endif
+                @foreach($product->branchProducts as $bp)
+                @if($bp->branch_id != $manager->branch_id)
+                {
+                    branch_id: "{{ $bp->branch_id }}", // Key as string for compatibility
+                    branch_name: "{{ $bp->branch->display_label }}",
+                    stock: {{ $bp->stock_quantity }},
+                    boxes: {{ $bp->quantity_of_boxes ?? 0 }}
+                },
+                @endif
+                @endforeach
+            ]
+        };
+    @endforeach
+
+    // Initialize TomSelect for Product
+    let productTom = new TomSelect('#product_id', {
+        create: false,
+        placeholder: "Search for a product...",
+        onChange: function(value) {
+            updateBranchOptions(value);
+        }
+    });
+
+    // Initialize TomSelect for Branch
+    let branchTom = new TomSelect('#from_branch_id', {
+        create: false,
+        placeholder: "Select source...",
+        valueField: 'id',
+        labelField: 'name',
+        searchField: ['name'],
+        options: [],
+        render: {
+            option: function(data, escape) {
+                return '<div class="py-1"><div>' + escape(data.name) + '</div><div class="text-xs text-slate-500">' + escape(data.info) + '</div></div>';
             },
-            @endforeach
-        ]
-    };
-@endforeach
+            item: function(data, escape) {
+                return '<div>' + escape(data.name) + ' <span class="text-slate-500 text-xs">(' + escape(data.stock_info) + ')</span></div>';
+            }
+        },
+        onChange: function(value) {
+            updateStockInfo(value);
+        }
+    });
+    branchTom.disable();
 
-function updateBranchOptions() {
-    const productSelect = document.getElementById('product_id');
-    const branchSelect = document.getElementById('from_branch_id');
-    const stockInfo = document.getElementById('stock-info');
+    // DOM Elements
     const boxesInput = document.getElementById('quantity_of_boxes');
     const unitsPerBoxInput = document.getElementById('quantity_per_box');
-    
-    const selectedProductId = productSelect.value;
-    
-    // Reset state
-    branchSelect.innerHTML = '<option value="">Select source branch</option>';
-    branchSelect.disabled = true;
-    stockInfo.textContent = '';
-    boxesInput.max = '';
-    unitsPerBoxInput.value = '';
-    updateTotal(); // reset calculator
-    
-    if (selectedProductId && productBranchData[selectedProductId]) {
-        const productData = productBranchData[selectedProductId];
-        
-        // Auto-fill units
-        unitsPerBoxInput.value = productData.quantity_per_box;
-        branchSelect.disabled = false;
-        
-        // Populate branches
-        productData.branches.forEach(function(branch) {
-            const option = document.createElement('option');
-            option.value = branch.branch_id;
-            // Simplified text for cleaner select
-            option.textContent = `${branch.branch_name} (${branch.boxes} boxes)`;
-            option.setAttribute('data-boxes', branch.boxes);
-            option.setAttribute('data-stock', branch.stock);
-            branchSelect.appendChild(option);
-        });
-    }
-}
-
-// Branch selection handler
-document.getElementById('from_branch_id').addEventListener('change', function() {
-    const branchSelect = document.getElementById('from_branch_id');
     const stockInfo = document.getElementById('stock-info');
-    const boxesInput = document.getElementById('quantity_of_boxes');
-    
-    const selectedOption = branchSelect.options[branchSelect.selectedIndex];
-    
-    if (selectedOption && selectedOption.getAttribute('data-boxes')) {
-        const availableBoxes = parseInt(selectedOption.getAttribute('data-boxes'));
-        const availableStock = parseInt(selectedOption.getAttribute('data-stock'));
+
+    function updateBranchOptions(productId) {
+        // Reset Inputs
+        branchTom.clear();
+        branchTom.clearOptions();
+        branchTom.disable();
         
-        stockInfo.textContent = `Available: ${availableBoxes} boxes (${availableStock} units)`;
-        boxesInput.max = availableBoxes;
-    } else {
-        stockInfo.textContent = '';
+        boxesInput.value = '';
         boxesInput.max = '';
+        unitsPerBoxInput.value = '';
+        stockInfo.textContent = '';
+        updateTotal();
+
+        if (productId && productBranchData[productId]) {
+             const data = productBranchData[productId];
+             
+             // Set Units
+             unitsPerBoxInput.value = data.quantity_per_box;
+
+             // Populate Branches
+             data.branches.forEach(branch => {
+                 branchTom.addOption({
+                     id: branch.branch_id,
+                     name: branch.branch_name,
+                     info: `${branch.boxes} boxes`,
+                     stock_info: `${branch.boxes} boxes`,
+                     boxes: branch.boxes,
+                     stock: branch.stock
+                 });
+             });
+             
+             branchTom.enable();
+        }
     }
+
+    function updateStockInfo(branchId) {
+        // Handle warehouse (empty string id) or branch id
+        // TomSelect values are strings usually
+        
+        // Find the selected option data from TomSelect instance logic or just look up in our data if needed,
+        // but easier to pull from the option object if we stored it? 
+        // TomSelect options are stored in branchTom.options[value]
+        
+        // Note: branchId might be "" for warehouse, need to handle key carefully
+        let option = branchTom.options[branchId];
+        
+        if (option) {
+            stockInfo.textContent = `Available: ${option.boxes} boxes (${option.stock} units)`;
+            boxesInput.max = option.boxes;
+        } else {
+            stockInfo.textContent = '';
+            boxesInput.max = '';
+        }
+    }
+
+    // Calculator Logic
+    function updateTotal() {
+        const boxes = parseInt(boxesInput.value) || 0;
+        const units = parseInt(unitsPerBoxInput.value) || 0;
+        const total = boxes * units;
+        
+        document.getElementById('total-units-display').textContent = `${total} units`;
+        document.getElementById('calc-breakdown').textContent = `(${boxes} boxes × ${units} units/box)`;
+    }
+
+    boxesInput.addEventListener('input', updateTotal);
 });
-
-// Calculator
-const boxInput = document.getElementById('quantity_of_boxes');
-const unitsInput = document.getElementById('quantity_per_box');
-
-boxInput.addEventListener('input', updateTotal);
-unitsInput.addEventListener('input', updateTotal);
-
-function updateTotal() {
-    const boxes = parseInt(boxInput.value) || 0;
-    const units = parseInt(unitsInput.value) || 0;
-    const total = boxes * units;
-    
-    document.getElementById('total-units-display').textContent = `${total} units`;
-    document.getElementById('calc-breakdown').textContent = `(${boxes} boxes × ${units} units/box)`;
-}
 </script>
 
 <!-- Bulk Upload Modal -->

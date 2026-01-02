@@ -30,7 +30,7 @@
         @csrf
 
         <!-- Main Card -->
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-6">
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm mb-6">
             <div class="p-6 border-b border-gray-100 bg-gray-50/50">
                 <h2 class="text-base font-semibold text-gray-800">Business Identity</h2>
                 <p class="text-xs text-gray-500">Basic information about the organization.</p>
@@ -50,6 +50,45 @@
                            class="w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base py-3 px-4 @error('name') border-red-500 @enderror"
                            required>
                     @error('name')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Business Type -->
+                <div class="mt-4">
+                    <label for="business_type_id" class="block text-sm font-medium text-gray-700 mb-1">
+                        Business Type <span class="text-red-500">*</span>
+                    </label>
+                    <select id="business_type_id" name="business_type_id" class="tom-select w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base py-3 px-4 @error('business_type_id') border-red-500 @enderror" required>
+                        <option value="">Select Type...</option>
+                        @foreach($businessTypes as $type)
+                            <option value="{{ $type->id }}" {{ old('business_type_id') == $type->id ? 'selected' : '' }}>
+                                {{ $type->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('business_type_id')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Subscription Plan -->
+                <div class="mt-4">
+                    <label for="plan_id" class="block text-sm font-medium text-gray-700 mb-1">
+                        Subscription Plan <span class="text-red-500">*</span>
+                    </label>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="plan-container">
+                        @foreach($plans as $plan)
+                        <label class="plan-option relative border rounded-lg p-4 flex flex-col cursor-pointer hover:border-indigo-500 transition-colors {{ old('plan_id') == $plan->id ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200' }}">
+                            <input type="radio" name="plan_id" value="{{ $plan->id }}" class="sr-only plan-radio" {{ old('plan_id') == $plan->id ? 'checked' : '' }} required>
+                            <span class="font-bold text-gray-900">{{ $plan->name }}</span>
+                            <span class="text-sm text-gray-500">{{ $plan->description }}</span>
+                            <span class="mt-2 text-indigo-600 font-bold">GHS {{ number_format($plan->price, 2) }}</span>
+                            <span class="text-xs text-gray-400">/ {{ $plan->duration_days }} days</span>
+                        </label>
+                        @endforeach
+                    </div>
+                    @error('plan_id')
                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                     @enderror
                 </div>
@@ -78,9 +117,52 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Owner Information -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm mb-6">
+            <div class="p-6 border-b border-gray-100 bg-gray-50/50">
+                <h2 class="text-base font-semibold text-gray-800">Owner Information</h2>
+                <p class="text-xs text-gray-500">The primary account holder for this business.</p>
+            </div>
+            
+            <div class="p-6 space-y-6">
+                <!-- Owner Name -->
+                <div>
+                    <label for="owner_name" class="block text-sm font-medium text-gray-700 mb-1">
+                        Full Name <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" 
+                           id="owner_name" 
+                           name="owner_name" 
+                           value="{{ old('owner_name') }}"
+                           class="w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base py-3 px-4 @error('owner_name') border-red-500 @enderror"
+                           required>
+                    @error('owner_name')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Owner Email -->
+                <div>
+                    <label for="owner_email" class="block text-sm font-medium text-gray-700 mb-1">
+                        Email Address <span class="text-red-500">*</span>
+                    </label>
+                    <input type="email" 
+                           id="owner_email" 
+                           name="owner_email" 
+                           value="{{ old('owner_email') }}"
+                           class="w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base py-3 px-4 @error('owner_email') border-red-500 @enderror"
+                           required>
+                     @error('owner_email')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                     @enderror
+                     <p class="text-xs text-gray-500 mt-1">An invoice link will be sent to this address.</p>
+                </div>
+            </div>
+        </div>
 
         <!-- Location Card -->
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
             <div class="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
                 <div>
                     <h2 class="text-base font-semibold text-gray-800">Headquarters / Main Branch</h2>
@@ -101,8 +183,11 @@
                            id="branch_name" 
                            name="branch_name" 
                            value="{{ old('branch_name', 'Main Office') }}"
-                           class="w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base py-3 px-4"
+                           class="w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base py-3 px-4 @error('branch_name') border-red-500 @enderror"
                            required>
+                    @error('branch_name')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <!-- Map Section -->
@@ -134,6 +219,9 @@
                                   placeholder="Select on map to auto-fill..."
                                   readonly
                                   required>{{ old('address') }}</textarea>
+                        @error('address')
+                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     <div>
@@ -151,6 +239,9 @@
                                 </option>
                             @endforeach
                         </select>
+                        @error('region')
+                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     <div>
@@ -162,8 +253,11 @@
                                name="contact" 
                                value="{{ old('contact') }}"
                                placeholder="05X XXX XXXX"
-                               class="w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base py-3 px-4"
+                               class="w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base py-3 px-4 @error('contact') border-red-500 @enderror"
                                required>
+                        @error('contact')
+                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        @enderror
                     </div>
                 </div>
 
@@ -263,13 +357,48 @@
         const possibleRegions = [data.address.state, data.address.region, data.address.county].filter(Boolean);
         const searchText = possibleRegions.join(' ').toLowerCase();
         
+        let foundValue = '';
         for (let option of regionSelect.options) {
             if (option.value && searchText.includes(option.value.toLowerCase())) {
-                regionSelect.value = option.value;
+                foundValue = option.value;
                 break;
             }
         }
+        
+        if (foundValue) {
+            if (regionSelect.tomselect) {
+                regionSelect.tomselect.setValue(foundValue);
+            } else {
+                regionSelect.value = foundValue;
+            }
+        }
     }
+    
+    // Plan Selection Styling
+    document.addEventListener('DOMContentLoaded', () => {
+        const planRadios = document.querySelectorAll('.plan-radio');
+        const planLabels = document.querySelectorAll('.plan-option');
+        
+        function updatePlanStyles() {
+            planLabels.forEach(label => {
+                const radio = label.querySelector('input[type="radio"]');
+                if (radio.checked) {
+                    label.classList.add('border-indigo-500', 'bg-indigo-50');
+                    label.classList.remove('border-gray-200');
+                } else {
+                    label.classList.remove('border-indigo-500', 'bg-indigo-50');
+                    label.classList.add('border-gray-200');
+                }
+            });
+        }
+        
+        planRadios.forEach(radio => {
+            radio.addEventListener('change', updatePlanStyles);
+        });
+        
+        // Initial run
+        updatePlanStyles();
+    });
     
     // Search functionality
     document.getElementById('search-btn').addEventListener('click', performSearch);

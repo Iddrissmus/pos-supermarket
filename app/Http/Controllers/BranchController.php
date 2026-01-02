@@ -15,6 +15,33 @@ use Illuminate\Support\Facades\Notification;
 class BranchController extends Controller
 {
     /**
+     * Display a listing of branches.
+     */
+    public function index()
+    {
+        $user = auth()->user();
+        
+        $pendingRequests = collect();
+        if ($user->role === 'superadmin') {
+            $branches = Branch::with(['business', 'manager'])->latest()->paginate(20);
+        } elseif ($user->role === 'business_admin') {
+            $branches = Branch::with('manager')
+                ->where('business_id', $user->business_id)
+                ->latest()
+                ->paginate(20);
+                
+            $pendingRequests = BranchRequest::where('business_id', $user->business_id)
+                ->whereIn('status', ['pending', 'rejected'])
+                ->latest()
+                ->get();
+        } else {
+             abort(403, 'Unauthorized');
+        }
+
+        return view('branches.index', compact('branches', 'pendingRequests'));
+    }
+
+    /**
      * Show the branch details for the authenticated user (Manager/Cashier)
      */
     public function myBranch()
@@ -25,22 +52,28 @@ class BranchController extends Controller
 
         // If Business Admin has no specific branch assigned, try to find their main branch
         if (!$branchId && $user->role === 'business_admin') {
-            $mainBranch = Branch::where('business_id', $user->business_id)
+            // Priority 1: Main Branch
+            $branch = Branch::where('business_id', $user->business_id)
                 ->where('is_main', true)
                 ->first();
                 
-            $branchId = $mainBranch ? $mainBranch->id : null;
-            
-            // Fallback: any branch
-            if (!$branchId) {
-                $anyBranch = Branch::where('business_id', $user->business_id)->first();
-                $branchId = $anyBranch ? $anyBranch->id : null;
+            // Priority 2: Any branch created by me (if added_by exists, or just any branch)
+            if (!$branch) {
+                $branch = Branch::where('business_id', $user->business_id)->oldest()->first();
+            }
+
+            if ($branch) {
+                // Determine if we should redirect or show
+                return view('branches.show', compact('branch'));
+            } else {
+                // No branches at all
+                return redirect()->route('branches.create')->with('info', 'Welcome! Please create your first branch to get started.');
             }
         }
 
         if (!$branchId) {
-            // detailed error for business admin
              if ($user->role === 'business_admin') {
+                 // Should be caught above, but safety check
                  return redirect()->route('branches.create')->with('error', 'You have no branches yet. Please create one.');
              }
             abort(404, 'You are not assigned to any branch.');
@@ -48,8 +81,6 @@ class BranchController extends Controller
 
         $branch = Branch::with(['business', 'manager'])->findOrFail($branchId);
 
-        // Reuse the show view or a specific one if needed. 
-        // We can just use the 'show' view now that we have it!
         return view('branches.show', compact('branch'));
     }
 
@@ -61,11 +92,8 @@ class BranchController extends Controller
         $user = auth()->user();
         
         // Get the business for this user
-        if ($user->role === 'superadmin') {
-            // SuperAdmin can create branch for any business
-            // This shouldn't normally be used, but just in case
-            abort(403, 'Please create branches through the business edit page.');
-        } elseif ($user->role === 'business_admin') {
+        // Check for Business Admin first (Primary use case)
+        if ($user->role === 'business_admin') {
             $business = Business::find($user->business_id);
             
             if (!$business) {
@@ -73,6 +101,11 @@ class BranchController extends Controller
             }
             
             return view('branches.create', compact('business'));
+        } elseif ($user->role === 'superadmin') {
+            // SuperAdmin should generally add branches via the Business Edit page
+            // Redirect them there or show a helpful message
+            return redirect()->route('businesses.index')
+                ->with('info', 'To add a branch, please select a business and use the "Add Branch" option.');
         } else {
             abort(403, 'Unauthorized access');
         }
@@ -96,7 +129,8 @@ class BranchController extends Controller
         $user = Auth::user();
 
         // Check permission
-        if ($user->role === 'business_admin' && $business->business_admin_id !== $user->id) {
+        // Check permission
+        if ($user->role === 'business_admin' && $business->id !== $user->business_id) {
             abort(403, 'You can only add branches to your own business.');
         }
 
@@ -106,7 +140,7 @@ class BranchController extends Controller
             $pendingRequests = BranchRequest::where('business_id', $business->id)->where('status', 'pending')->count();
             
             if (($currentBranches + $pendingRequests) >= $business->max_branches) {
-                return back()->withInput()->with('error', "You have reached your plan limit of {$business->max_branches} branch(es). Please upgrade your subscription to add more.");
+                return back()->withInput()->with('error', "You have reached the maximum limit of {$business->max_branches} branch(es) allowed on your current plan. To expand your business with more locations, please upgrade your subscription.");
             }
         }
 
@@ -138,7 +172,7 @@ class BranchController extends Controller
                 'business_id' => $branchRequest->business_id,
             ]);
 
-            return redirect()->route('businesses.index')
+            return redirect()->route('my-business')
                 ->with('success', 'Branch request submitted successfully! Waiting for superadmin approval.');
         } else {
             // Superadmin creates branch directly
@@ -170,7 +204,8 @@ class BranchController extends Controller
         $user = auth()->user();
 
         // Check permission
-        if ($user->role === 'business_admin' && $branch->business->business_admin_id !== $user->id) {
+        // Check permission
+        if ($user->role === 'business_admin' && $branch->business_id !== $user->business_id) {
             abort(403, 'You can only view branches in your own business.');
         }
 
@@ -183,7 +218,8 @@ class BranchController extends Controller
         $user = auth()->user();
 
         // Check permission
-        if ($user->role === 'business_admin' && $branch->business->business_admin_id !== $user->id) {
+        // Check permission
+        if ($user->role === 'business_admin' && $branch->business_id !== $user->business_id) {
             abort(403, 'You can only edit branches in your own business.');
         }
 
@@ -195,7 +231,7 @@ class BranchController extends Controller
         $branch = Branch::findOrFail($id);
         $user = auth()->user();
 
-        if ($user->role === 'business_admin' && $branch->business->business_admin_id !== $user->id) {
+        if ($user->role === 'business_admin' && $branch->business_id !== $user->business_id) {
             abort(403, 'You can only edit branches in your own business.');
         }
 
@@ -218,7 +254,7 @@ class BranchController extends Controller
         $branch = Branch::findOrFail($id);
         $user = auth()->user();
 
-        if ($user->role === 'business_admin' && $branch->business->business_admin_id !== $user->id) {
+        if ($user->role === 'business_admin' && $branch->business_id !== $user->business_id) {
             abort(403, 'You can only delete branches in your own business.');
         }
 
@@ -234,5 +270,22 @@ class BranchController extends Controller
         $branch->delete();
 
         return redirect()->back()->with('success', "Branch '{$branchName}' deleted successfully!");
+    }
+
+    /**
+     * Delete a branch request.
+     */
+    public function destroyRequest(BranchRequest $branchRequest)
+    {
+        $user = auth()->user();
+
+        // Check authorization
+        if ($user->role !== 'superadmin' && $user->business_id !== $branchRequest->business_id) {
+            abort(403, 'Unauthorized');
+        }
+
+        $branchRequest->delete();
+
+        return redirect()->back()->with('success', 'Branch request deleted successfully.');
     }
 }

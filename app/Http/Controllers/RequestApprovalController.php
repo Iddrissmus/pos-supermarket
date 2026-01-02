@@ -26,44 +26,44 @@ class RequestApprovalController extends Controller
 
         if ($user->role === 'business_admin') {
             // Business admins can see all pending requests for their business
+            // Include both Branch-to-Branch AND Warehouse-to-Branch requests
             $businessId = $user->business_id;
-            $pendingRequests = $query->whereHas('fromBranch', function($q) use ($businessId) {
-                    $q->where('business_id', $businessId);
+            
+            $pendingRequests = $query->where(function($q) use ($businessId) {
+                    $q->whereHas('fromBranch', function($sq) use ($businessId) {
+                        $sq->where('business_id', $businessId);
+                    })
+                    ->orWhere(function($sq) use ($businessId) {
+                        $sq->whereNull('from_branch_id')
+                           ->whereHas('toBranch', function($ssq) use ($businessId) {
+                               $ssq->where('business_id', $businessId);
+                           });
+                    });
                 })
                 ->orderBy('created_at', 'desc')
                 ->paginate(15);
         } elseif ($user->role === 'manager' && $user->branch_id) {
-            // Managers only see requests for their branch (as source)
+            // Managers only see requests FROM their branch (as source) to approve? 
+            // Usually managers request IN, but if they receive a request FROM another branch, they might need to approve?
+            // Assuming this controller is for OUTBOUND approval (sending stock).
             $pendingRequests = $query->where('from_branch_id', $user->branch_id)
                 ->orderBy('created_at', 'desc')
                 ->paginate(15);
         } else {
-            // For users without permission, return empty paginated result
-            $pendingRequests = new \Illuminate\Pagination\LengthAwarePaginator(
-                [],
-                0,
-                15,
-                1,
-                ['path' => request()->url()]
-            );
+            $pendingRequests = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15, 1, ['path' => request()->url()]);
         }
 
         return view('requests.approval', compact('pendingRequests'));
     }
 
-    /**
-     * Approve a request and execute stock transfer
-     */
     public function approve(Request $request, StockTransfer $stockTransfer)
     {
         $user = Auth::user();
         
-        // Authorization check
         if (!$this->canProcessRequest($user, $stockTransfer)) {
             return back()->with('error', 'You are not authorized to approve this request.');
         }
 
-        // Validate that request is still pending
         if ($stockTransfer->status !== 'pending') {
             return back()->with('error', 'This request has already been processed.');
         }
@@ -74,16 +74,48 @@ class RequestApprovalController extends Controller
 
         try {
             DB::transaction(function () use ($stockTransfer, $validated, $user) {
-                // Check source branch has sufficient stock
-                $sourceBranchProduct = BranchProduct::where('branch_id', $stockTransfer->from_branch_id)
-                    ->where('product_id', $stockTransfer->product_id)
-                    ->first();
+                $product = $stockTransfer->product;
+                
+                // COST PRICE & PRICE determination
+                $transferCostPrice = 0;
+                $transferPrice = 0;
+                $transferReorderLevel = 10;
 
-                if (!$sourceBranchProduct || $sourceBranchProduct->stock_quantity < $stockTransfer->quantity) {
-                    throw new \Exception('Insufficient stock at source branch.');
+                // HANDLE SOURCE DEDUCTION
+                if ($stockTransfer->from_branch_id) {
+                    // Branch-to-Branch
+                    $sourceBranchProduct = BranchProduct::where('branch_id', $stockTransfer->from_branch_id)
+                        ->where('product_id', $stockTransfer->product_id)
+                        ->first();
+
+                    if (!$sourceBranchProduct || $sourceBranchProduct->stock_quantity < $stockTransfer->quantity) {
+                        throw new \Exception('Insufficient stock at source branch.');
+                    }
+                    
+                    $transferCostPrice = $sourceBranchProduct->cost_price;
+                    $transferPrice = $sourceBranchProduct->price;
+                    $transferReorderLevel = $sourceBranchProduct->reorder_level ?? 10;
+
+                    $sourceBranchProduct->adjustStock(
+                        -$stockTransfer->quantity, 
+                        'transfer_out', 
+                        "Transfer to {$stockTransfer->toBranch->display_label} - Request #{$stockTransfer->id}"
+                    );
+                } else {
+                    // Warehouse-to-Branch
+                    // Check central availability
+                    if (!$product->hasAvailableUnits($stockTransfer->quantity)) {
+                         throw new \Exception('Insufficient stock in Central Warehouse. Available: ' . $product->available_units);
+                    }
+                    
+                    $transferCostPrice = $product->cost_price;
+                    $transferPrice = $product->price;
+                    
+                    // Deduct from Central
+                    $product->assignUnits($stockTransfer->quantity);
                 }
 
-                // Get or create destination branch product
+                // HANDLE DESTINATION ADDITION
                 $destBranchProduct = BranchProduct::firstOrCreate(
                     [
                         'branch_id' => $stockTransfer->to_branch_id,
@@ -91,23 +123,18 @@ class RequestApprovalController extends Controller
                     ],
                     [
                         'stock_quantity' => 0,
-                        'cost_price' => $sourceBranchProduct->cost_price,
-                        'price' => $sourceBranchProduct->price,
-                        'reorder_level' => $sourceBranchProduct->reorder_level ?? 10
+                        'cost_price' => $transferCostPrice,
+                        'price' => $transferPrice,
+                        'reorder_level' => $transferReorderLevel
                     ]
                 );
 
-                // Execute stock transfer using adjustStock method
-                $sourceBranchProduct->adjustStock(
-                    -$stockTransfer->quantity, 
-                    'transfer_out', 
-                    "Transfer to {$stockTransfer->toBranch->display_label} - Request #{$stockTransfer->id}"
-                );
+                $sourceLabel = $stockTransfer->from_branch_id ? $stockTransfer->fromBranch->display_label : 'Central Warehouse';
                 
                 $destBranchProduct->adjustStock(
                     $stockTransfer->quantity, 
                     'transfer_in', 
-                    "Transfer from {$stockTransfer->fromBranch->display_label} - Request #{$stockTransfer->id}"
+                    "Transfer from {$sourceLabel} - Request #{$stockTransfer->id}"
                 );
 
                 // Update request status
@@ -119,7 +146,6 @@ class RequestApprovalController extends Controller
                 ]);
             });
 
-            // Send notifications after transaction completes
             $this->notifyTransferCompletion($stockTransfer->fresh(['fromBranch', 'toBranch', 'product']));
 
             return back()->with('success', 'Request approved successfully. Stock has been transferred.');
@@ -128,19 +154,14 @@ class RequestApprovalController extends Controller
         }
     }
 
-    /**
-     * Reject a request
-     */
     public function reject(Request $request, StockTransfer $stockTransfer)
     {
         $user = Auth::user();
         
-        // Authorization check
         if (!$this->canProcessRequest($user, $stockTransfer)) {
             return back()->with('error', 'You are not authorized to reject this request.');
         }
 
-        // Validate that request is still pending
         if ($stockTransfer->status !== 'pending') {
             return back()->with('error', 'This request has already been processed.');
         }
@@ -159,37 +180,39 @@ class RequestApprovalController extends Controller
         return back()->with('success', 'Request rejected successfully.');
     }
 
-    /**
-     * Check if user can process this request
-     */
     private function canProcessRequest($user, StockTransfer $stockTransfer): bool
     {
         // Business admins can process any request within their business
         if ($user->role === 'business_admin') {
-            return $stockTransfer->fromBranch->business_id === $user->business_id;
+            // Check if FROM branch is in business OR if TO branch is in business (for Warehouse requests)
+            if ($stockTransfer->from_branch_id) {
+                return $stockTransfer->fromBranch->business_id === $user->business_id;
+            } else {
+                // Warehouse Request: Admin owns the destination branch? Then they can approve fetching from Warehouse.
+                return $stockTransfer->toBranch->business_id === $user->business_id;
+            }
         }
 
-        // Managers can only process requests from their branch
-        if ($user->role === 'manager' && $user->branch_id === $stockTransfer->from_branch_id) {
-            return true;
+        // Managers can only process requests FROM their branch
+        if ($user->role === 'manager' && $stockTransfer->from_branch_id) {
+            return $user->branch_id === $stockTransfer->from_branch_id;
         }
 
         return false;
     }
 
-    /**
-     * Send notifications to managers when stock transfer is completed
-     */
     private function notifyTransferCompletion(StockTransfer $transfer): void
     {
         try {
-            // Notify sender branch manager
-            $fromBranchManagers = User::where('role', 'manager')
-                ->where('branch_id', $transfer->from_branch_id)
-                ->get();
+            // Notify sender branch manager (if not warehouse)
+            if ($transfer->from_branch_id) {
+                $fromBranchManagers = User::where('role', 'manager')
+                    ->where('branch_id', $transfer->from_branch_id)
+                    ->get();
 
-            foreach ($fromBranchManagers as $manager) {
-                $manager->notify(new StockTransferCompletedNotification($transfer, false));
+                foreach ($fromBranchManagers as $manager) {
+                    $manager->notify(new StockTransferCompletedNotification($transfer, false));
+                }
             }
 
             // Notify recipient branch manager

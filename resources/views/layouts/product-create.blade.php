@@ -21,12 +21,12 @@
             <div class="grid grid-cols-1 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Product Name *</label>
-                    <input id="product_name" name="name" type="text" required class="mt-1 block w-full border rounded-md p-2" />
+                    <input id="product_name" name="name" type="text" required class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white placeholder-gray-400 text-gray-900 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all outline-none" />
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Description</label>
-                    <textarea id="product_description" name="description" class="mt-1 block w-full border rounded-md p-2" rows="4"></textarea>
+                    <textarea id="product_description" name="description" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white placeholder-gray-400 text-gray-900 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all outline-none" rows="4"></textarea>
                 </div>
 
                 <div>
@@ -36,7 +36,7 @@
                         <input type="text" 
                             id="category_search" 
                             placeholder="Search categories..." 
-                            class="w-full border rounded-md p-2 pr-10"
+                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white placeholder-gray-400 text-gray-900 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all outline-none"
                             autocomplete="off"
                         />
                         <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
@@ -90,7 +90,7 @@
                     
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Selling Mode</label>
-                        <select id="selling_mode" name="selling_mode" class="tom-select block w-full border rounded-md p-2">
+                        <select id="selling_mode" name="selling_mode" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all outline-none">
                             <option value="unit">By Unit (Default)</option>
                             <option value="weight">By Weight</option>
                             <option value="box">By Box</option>
@@ -102,21 +102,21 @@
                         <!-- Box Weight -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Weight per Box (kg)</label>
-                            <input id="box_weight" name="box_weight" type="number" step="0.001" min="0" class="mt-1 block w-full border rounded-md p-2" placeholder="e.g., 12.500" />
+                            <input id="box_weight" name="box_weight" type="number" step="0.001" min="0" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white placeholder-gray-400 text-gray-900 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all outline-none" placeholder="e.g., 12.500" />
                             <p class="text-xs text-gray-500 mt-1">Optional: Weight of one full box in kilograms</p>
                         </div>
 
                         <!-- Price Per Kilo -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Price per Kilogram</label>
-                            <input id="price_per_kilo" name="price_per_kilo" type="number" step="0.01" min="0" class="mt-1 block w-full border rounded-md p-2" placeholder="e.g., 25.00" />
+                            <input id="price_per_kilo" name="price_per_kilo" type="number" step="0.01" min="0" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white placeholder-gray-400 text-gray-900 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all outline-none" placeholder="e.g., 25.00" />
                             <p class="text-xs text-gray-500 mt-1">Selling price per kg</p>
                         </div>
 
                         <!-- Price Per Box -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Price per Box</label>
-                            <input id="price_per_box" name="price_per_box" type="number" step="0.01" min="0" class="mt-1 block w-full border rounded-md p-2" placeholder="e.g., 300.00" />
+                            <input id="price_per_box" name="price_per_box" type="number" step="0.01" min="0" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white placeholder-gray-400 text-gray-900 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all outline-none" placeholder="e.g., 300.00" />
                             <p class="text-xs text-gray-500 mt-1">Selling price for complete box</p>
                         </div>
 
@@ -124,7 +124,7 @@
                         <div class="grid grid-cols-2 gap-4 pt-3 border-t border-purple-200">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Alternative Weight Unit</label>
-                                <select id="weight_unit" name="weight_unit" class="tom-select block w-full border rounded-md p-2">
+                                <select id="weight_unit" name="weight_unit" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all outline-none">
                                     <option value="">-- None --</option>
                                     <option value="g">Grams (g)</option>
                                     <option value="kg">Kilograms (kg)</option>
@@ -135,7 +135,7 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Price per Unit Weight</label>
-                                <input id="price_per_unit_weight" name="price_per_unit_weight" type="number" step="0.01" min="0" class="mt-1 block w-full border rounded-md p-2" placeholder="e.g., 0.025" />
+                                <input id="price_per_unit_weight" name="price_per_unit_weight" type="number" step="0.01" min="0" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white placeholder-gray-400 text-gray-900 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all outline-none" placeholder="e.g., 0.025" />
                             </div>
                         </div>
                     </div>
@@ -150,12 +150,12 @@
                 <div id="regular_pricing" class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Selling Price <span id="price_required">*</span></label>
-                        <input id="product_price" name="price" type="number" step="0.01" class="mt-1 block w-full border rounded-md p-2" />
+                        <input id="product_price" name="price" type="number" step="0.01" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white placeholder-gray-400 text-gray-900 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all outline-none" />
                         <p class="text-xs text-gray-500 mt-1" id="price_hint">Price per unit</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Cost Price *</label>
-                        <input id="product_cost_price" name="cost_price" type="number" step="0.01" required class="mt-1 block w-full border rounded-md p-2" />
+                        <input id="product_cost_price" name="cost_price" type="number" step="0.01" required class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white placeholder-gray-400 text-gray-900 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all outline-none" />
                         <p class="text-xs text-gray-500 mt-1">Your purchase cost per unit</p>
                     </div>
                 </div>
@@ -168,17 +168,17 @@
                     <div class="grid grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Quantity of Boxes *</label>
-                            <input id="quantity_of_boxes" name="quantity_of_boxes" type="number" min="0" required class="mt-1 block w-full border rounded-md p-2" placeholder="e.g., 5" />
+                            <input id="quantity_of_boxes" name="quantity_of_boxes" type="number" min="0" required class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white placeholder-gray-400 text-gray-900 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all outline-none" placeholder="e.g., 5" />
                             <p class="text-xs text-gray-500 mt-1">Number of boxes</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Units per Box *</label>
-                            <input id="quantity_per_box" name="quantity_per_box" type="number" min="1" required class="mt-1 block w-full border rounded-md p-2" placeholder="e.g., 24" />
+                            <input id="quantity_per_box" name="quantity_per_box" type="number" min="1" required class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white placeholder-gray-400 text-gray-900 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all outline-none" placeholder="e.g., 24" />
                             <p class="text-xs text-gray-500 mt-1">Units in each box</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Total Units</label>
-                            <input id="total_units" name="stock_quantity" type="number" class="mt-1 block w-full border rounded-md p-2 bg-gray-100" readonly />
+                            <input id="total_units" name="stock_quantity" type="number" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-gray-50 text-gray-500" readonly />
                             <p class="text-xs text-gray-500 mt-1">Auto-calculated</p>
                         </div>
                     </div>
@@ -194,8 +194,8 @@
                 </div>
 
                 <div class="flex justify-end space-x-3 mt-4">
-                    <a href="{{ route('layouts.product') }}" class="px-4 py-2 border rounded-lg">Cancel</a>
-                    <button type="submit" id="submitBtn" class="px-4 py-2 bg-green-600 text-white rounded-lg">Save Product</button>
+                    <a href="{{ route('layouts.product') }}" class="px-6 py-3 border-2 border-gray-200 rounded-xl text-gray-700 font-bold hover:bg-gray-50 transition-all">Cancel</a>
+                    <button type="submit" id="submitBtn" class="px-6 py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700 focus:ring-4 focus:ring-green-500/20 transition-all">Save Product</button>
                 </div>
             </div>
         </form>

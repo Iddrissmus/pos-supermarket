@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="min-h-screen bg-gray-50 p-6">
+<div class="min-h-screen bg-gray-50 px-6 pb-6 pt-20">
     <div class="max-w-7xl mx-auto">
         <!-- Modern Header -->
         <div class="relative bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl shadow-lg overflow-hidden mb-8">

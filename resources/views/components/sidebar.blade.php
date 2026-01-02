@@ -55,6 +55,11 @@
                         <a href="{{ route('superadmin.branch-requests.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('superadmin.branch-requests.*') ? 'text-purple-600 font-semibold' : 'text-gray-700' }}">Branch Requests</a>
                     </div>
                     
+                    <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('superadmin.transactions.*') ? 'active bg-purple-50' : 'hover:bg-gray-50' }}">
+                        <i class="fas fa-money-bill-wave sidebar-icon {{ request()->routeIs('superadmin.transactions.*') ? 'text-purple-600' : 'text-gray-500' }}"></i>
+                        <a href="{{ route('superadmin.transactions.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('superadmin.transactions.*') ? 'text-purple-600 font-semibold' : 'text-gray-700' }}">Transactions</a>
+                    </div>
+                    
                     <div class="mt-4 mb-2 px-3">
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider sidebar-text">Security</p>
                     </div>
@@ -208,6 +213,32 @@
                         <a href="{{ route('customers.index') }}" class="sidebar-text ml-3 text-sm {{ request()->routeIs('customers.*') ? 'text-blue-600 font-semibold' : 'text-gray-700' }}">Customers</a>
                     </div>
                     
+                    @php
+                        // Check if subscription plan includes reporting
+                        $business = auth()->user()->business;
+                        // Assuming new JSON format where features -> reporting -> enabled = true or simply in array
+                        // If features is array of strings: in_array('reporting', $features)
+                        // Or if we check specific features like 'sales_reports'
+                        $features = $business?->currentPlan?->features ?? [];
+                        // Simplified check: assume if 'reporting' key exists or 'sales_reports' exists
+                        $hasReporting = isset($features['reporting']) || in_array('reporting', $features) || isset($features['sales_reports']) || in_array('sales_reports', $features);
+                        
+                        // If undefined (legacy plans), default to true? Or false to be strict?
+                        // Let's be strict: only show if explicitly allowed or if user is superadmin (logic handled elsewhere)
+                        // But wait, existing plans might not have feature flags yet. 
+                        // Let's assume true if features is empty (legacy) for now, OR enforce migration.
+                        // Better: check if "features" is not empty. If empty, maybe default true. 
+                        // But for new system, "Basic" plan might have explicitly empty features for reporting.
+                        
+                        // Robust check: 
+                        // 1. Is it a new style plan? (has features field populated)
+                        // 2. If yes, check for 'reporting' or 'sales_reports'.
+                        // 3. If no (legacy), allow it.
+                        $isNewPlan = !empty($features);
+                        $showReports = !$isNewPlan || $hasReporting;
+                    @endphp
+
+                    @if($showReports)
                     <div class="sidebar-item flex items-center px-3 py-2.5 rounded-lg mb-1 cursor-pointer {{ request()->routeIs('sales.report*') ? 'active bg-blue-50' : 'hover:bg-gray-50' }}">
                         <i class="fas fa-chart-bar sidebar-icon {{request()->routeIs('sales.report*') ? 'text-blue-600' : 'text-gray-500'}}"></i>
                         <a href="{{route('sales.report')}}" class="sidebar-text ml-3 text-sm {{request()->routeIs('sales.report*') ? 'text-blue-600 font-semibold' : 'text-gray-700'}}">Business Reports</a>
@@ -217,6 +248,7 @@
                         <i class="fas fa-chart-pie sidebar-icon {{request()->routeIs('product-reports.*') ? 'text-blue-600' : 'text-gray-500'}}"></i>
                         <a href="{{route('product-reports.index')}}" class="sidebar-text ml-3 text-sm {{request()->routeIs('product-reports.*') ? 'text-blue-600 font-semibold' : 'text-gray-700'}}">Product Analytics</a>
                     </div>
+                    @endif
 
                     <div class="mt-4 mb-2 px-3">
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider sidebar-text">Security</p>

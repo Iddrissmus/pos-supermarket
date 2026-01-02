@@ -65,6 +65,9 @@ class PublicInvoiceController extends Controller
             );
 
             if ($response['status'] && isset($response['data']['authorization_url'])) {
+                // Store the transaction reference for later verification
+                $invoice->update(['payment_reference' => $response['data']['reference']]);
+                
                 return redirect($response['data']['authorization_url']);
             }
 
@@ -96,6 +99,19 @@ class PublicInvoiceController extends Controller
             // Mark invoice as paid
             $invoice->markAsPaid($amountPaid); // Using model method
             
+            // Record System Transaction (Revenue Tracking)
+            \App\Models\SystemTransaction::create([
+                'business_id' => $invoice->branch->business_id,
+                'amount' => $amountPaid,
+                'currency' => 'GHS',
+                'reference' => $reference,
+                'channel' => 'paystack', // Or 'online'
+                'source_type' => get_class($invoice),
+                'source_id' => $invoice->id,
+                'status' => 'success',
+                'payout_status' => 'pending', // Online payment needs payout
+            ]);
+
             // Check if fully paid or partial? 
             // Model method defaults to full balance if amount not passed, but here we pass explicitly.
             // Adjust logic if partial payments allowed. For now assume full.

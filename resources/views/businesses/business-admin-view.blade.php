@@ -94,7 +94,10 @@
                 <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
                     <div>
                         <p class="text-sm font-medium text-gray-500">Total Staff</p>
-                        <p class="text-2xl font-bold text-gray-900 mt-1">{{ \App\Models\User::where('business_id', $business->id)->count() }}</p>
+                        <div class="flex flex-col">
+                            <p class="text-2xl font-bold text-gray-900 mt-1">{{ \App\Models\User::where('business_id', $business->id)->count() }}</p>
+                            <p class="text-xs text-gray-400 mt-1">Includes Admins & Employees</p>
+                        </div>
                     </div>
                     <div class="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center text-purple-600">
                         <i class="fas fa-users text-xl"></i>
@@ -113,53 +116,112 @@
             </div>
 
             <!-- Edit Form -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="p-6 border-b border-gray-100">
-                    <h2 class="text-lg font-bold text-gray-900 flex items-center">
-                        <i class="fas fa-pen-to-square text-blue-600 mr-2"></i> Edit Business Profile
-                    </h2>
-                </div>
-                <div class="p-6">
+            <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden relative">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
+                <div class="p-8">
+                    <div class="flex items-center justify-between mb-8">
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-900">Edit Profile</h2>
+                            <p class="text-sm text-gray-500 mt-1">Update your business identity and branding</p>
+                        </div>
+                        <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
+                             <i class="fas fa-sliders text-xl"></i>
+                        </div>
+                    </div>
+
                     <form action="{{ route('my-business.update') }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
                         
-                        <div class="grid grid-cols-1 gap-6">
-                            <!-- Logo Upload -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Business Logo</label>
-                                <div class="flex items-center gap-4">
-                                    <div class="relative group w-20 h-20 rounded-lg overflow-hidden border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center hover:border-blue-500 transition-colors">
+                        <div class="space-y-8">
+                            <!-- Logo Upload Section -->
+                            <div class="p-6 border border-dashed border-gray-300 rounded-xl bg-gray-50/50 hover:bg-white hover:border-blue-400 hover:shadow-md transition-all group">
+                                <label class="block text-sm font-semibold text-gray-700 mb-4">Business Logo</label>
+                                <div class="flex flex-col sm:flex-row items-center gap-8">
+                                    <!-- Current Preview -->
+                                    <div class="relative w-32 h-32 flex-shrink-0" id="logo-preview-container">
                                         @if($business->logo)
-                                            <img src="{{ asset('storage/' . $business->logo) }}" class="w-full h-full object-cover">
+                                            <img src="{{ asset('storage/' . $business->logo) }}" class="w-full h-full object-cover rounded-xl shadow-sm border border-gray-200" id="logo-preview-image">
                                         @else
-                                            <i class="fas fa-image text-gray-400 text-2xl"></i>
+                                            <div class="w-full h-full rounded-xl bg-blue-100 text-blue-500 flex items-center justify-center text-4xl font-bold border border-blue-200" id="logo-preview-placeholder">
+                                                {{ strtoupper(substr($business->name, 0, 1)) }}
+                                            </div>
                                         @endif
-                                        <input type="file" name="logo" class="absolute inset-0 opacity-0 cursor-pointer">
+                                        <div class="absolute -bottom-2 -right-2 bg-green-500 text-white p-1.5 rounded-full shadow-sm text-xs border-2 border-white">
+                                            <i class="fas fa-check"></i>
+                                        </div>
                                     </div>
-                                    <div class="text-sm text-gray-500">
-                                        <p class="font-medium text-gray-900">Click to upload new logo</p>
-                                        <p>SVG, PNG, JPG or GIF (max. 2MB)</p>
+                                    
+                                    <!-- Upload Control -->
+                                    <div class="flex-1 w-full relative">
+                                        <input type="file" name="logo" id="logo-upload" class="peer absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" accept="image/*">
+                                        <div class="flex flex-col items-center justify-center py-6 px-4 border-2 border-transparent peer-hover:border-blue-100 rounded-xl transition-colors">
+                                           <div class="mb-3 text-blue-500 bg-blue-50 p-3 rounded-full">
+                                                <i class="fas fa-cloud-arrow-up text-xl"></i>
+                                           </div>
+                                            <p class="text-sm font-medium text-gray-900 text-center">
+                                                <span class="text-blue-600 hover:underline">Click to upload</span> or drag and drop
+                                            </p>
+                                            <p class="text-xs text-gray-500 mt-1 text-center">SVG, PNG, JPG (max. 2MB)</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Name -->
+                            <!-- Business Name -->
                             <div>
-                                <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
-                                <input type="text" name="name" id="name" value="{{ old('name', $business->name) }}" 
-                                       class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 shadow-sm" required>
+                                <label for="name" class="block text-sm font-semibold text-gray-700 mb-2">Business Name</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fas fa-building text-gray-400"></i>
+                                    </div>
+                                    <input type="text" name="name" id="name" value="{{ old('name', $business->name) }}" 
+                                           class="pl-10 block w-full rounded-lg border-gray-300 bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-blue-500 transition-colors py-3" 
+                                           placeholder="Enter your business name" required>
+                                </div>
+                                <p class="mt-2 text-xs text-gray-500">This name will appear on all your receipts and public pages.</p>
                             </div>
                         </div>
 
-                        <div class="mt-6 flex items-center justify-end">
-                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-semibold shadow-sm transition-all flex items-center">
-                                <i class="fas fa-save mr-2"></i> Save Changes
+                        <div class="mt-8 pt-6 border-t border-gray-100 flex items-center justify-end gap-4">
+                            <button type="reset" class="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                Reset
+                            </button>
+                            <button type="submit" class="px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 shadow-md hover:shadow-lg transition-all flex items-center">
+                                <i class="fas fa-save mr-2"></i> Save Profile
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
+            
+            <script>
+                document.getElementById('logo-upload').addEventListener('change', function(e) {
+                    const file = this.files[0];
+                    if (file) {
+                        // Check file size (2MB)
+                        if (file.size > 2 * 1024 * 1024) {
+                            alert('File is too large! Please upload an image smaller than 2MB.');
+                            this.value = ''; // Clear input
+                            return;
+                        }
+
+                        // Preview Image
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const container = document.getElementById('logo-preview-container');
+                            // Create new image tag or update existing
+                            container.innerHTML = `
+                                <img src="${e.target.result}" class="w-full h-full object-cover rounded-xl shadow-sm border border-gray-200">
+                                <div class="absolute -bottom-2 -right-2 bg-green-500 text-white p-1.5 rounded-full shadow-sm text-xs border-2 border-white">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                            `;
+                        }
+                        reader.readAsDataURL(file);
+                    }
+                });
+            </script>
 
             <!-- Branches List -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -182,7 +244,7 @@
                                     <h3 class="font-semibold text-gray-900">{{ $branch->name }}</h3>
                                     <p class="text-sm text-gray-500 flex items-center">
                                         <i class="fas fa-map-marker-alt text-gray-400 mr-1.5" style="font-size: 0.8em;"></i>
-                                        {{ $branch->location ?? 'No address set' }}
+                                        {{ $branch->address ?? 'No address set' }}
                                     </p>
                                 </div>
                             </div>

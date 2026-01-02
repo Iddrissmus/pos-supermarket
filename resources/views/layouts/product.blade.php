@@ -32,7 +32,7 @@
     @endphp
 
     <!-- Notifications -->
-    <div id="notification-container" class="fixed top-4 right-4 z-50 space-y-2 pointer-events-none"></div>
+    <div id="notification-container" class="fixed top-20 right-4 z-[100] space-y-2 pointer-events-none"></div>
     @if (session('success')) <div class="hidden" id="flash-success">{{ session('success') }}</div> @endif
     @if (session('error')) <div class="hidden" id="flash-error">{{ session('error') }}</div> @endif
 
@@ -237,18 +237,37 @@
                         @php
                             $product = $item->product ?? $item;
                             $branchProduct = $item->product ? $item : null;
-                            $stockQty = $branchProduct->stock_quantity ?? $product->stock ?? 0;
+                            
+                            if ($branchProduct) {
+                                $stockQty = $branchProduct->stock_quantity;
+                            } else {
+                                // For Warehouse View, show what's available to assign
+                                $stockQty = $product->available_units ?? 0;
+                            }
                             $price = $branchProduct->price ?? $product->price ?? 0;
                             $cost = $branchProduct->cost_price ?? $product->cost_price ?? 0;
                             
                             $stockStatus = 'In Stock';
                             $stockColor = 'green';
-                            if ($stockQty <= 0) {
-                                $stockStatus = 'Out of Stock';
-                                $stockColor = 'red';
-                            } elseif ($stockQty <= 10) { // Assuming 10 is low stock threshold
-                                $stockStatus = 'Low Stock';
-                                $stockColor = 'orange';
+                            
+                            if (!$branchProduct) {
+                                // Logic for Business Admin viewing Product Catalog (Warehouse View)
+                                if ($stockQty > 0) {
+                                    $stockStatus = 'Pending Assignment';
+                                    $stockColor = 'blue';
+                                } else {
+                                    $stockStatus = 'Out of Stock';
+                                    $stockColor = 'red';
+                                }
+                            } else {
+                                // Logic for Branch View
+                                if ($stockQty <= 0) {
+                                    $stockStatus = 'Out of Stock';
+                                    $stockColor = 'red';
+                                } elseif ($stockQty <= 10) { 
+                                    $stockStatus = 'Low Stock';
+                                    $stockColor = 'orange';
+                                }
                             }
                         @endphp
                         <tr class="hover:bg-gray-50/80 transition-colors group">
@@ -293,10 +312,14 @@
                                 @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <a href="{{ route('products.show', $product->id) }}" class="text-blue-600 hover:text-blue-900 transition-colors mr-3" title="View Details">
-                                    <i class="fas fa-eye"></i>
+                                <a href="{{ route('products.show', $product->id) }}" class="text-slate-400 hover:text-blue-600 transition-colors mr-3" title="View Details">
+                                    <i class="fas fa-eye text-lg"></i>
                                 </a>
-                                {{-- Add Edit/Delete actions if needed, sticking to view for now --}}
+                                @if(auth()->user()->role === 'business_admin' || auth()->user()->role === 'superadmin')
+                                    <button onclick="deleteProduct('{{ $product->id }}', '{{ addslashes($product->name) }}')" class="text-slate-400 hover:text-red-600 transition-colors" title="Delete Product">
+                                        <i class="fas fa-trash-alt text-lg"></i>
+                                    </button>
+                                @endif
                             </td>
                         </tr>
                     @empty
@@ -381,9 +404,46 @@
         
         // Remove after 3s
         setTimeout(() => {
-            notif.classList.add('translate-x-full', 'opacity-0');
-            setTimeout(() => notif.remove(), 300);
+            if(notif.parentNode) {
+                notif.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => notif.remove(), 300);
+            }
         }, 4000);
+    }
+
+    // Delete Product Functionality
+    function deleteProduct(id, name) {
+        if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        fetch(`/product/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                showNotification(`Product "${name}" deleted successfully.`, 'success');
+                // Remove the row from the table or refresh
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                return response.json().then(data => {
+                    throw new Error(data.error || 'Failed to delete product.');
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification(error.message, 'error');
+        });
     }
 </script>
 @endsection

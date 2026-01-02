@@ -137,6 +137,8 @@ function notificationBell() {
             // Navigate to action URL if exists
             if (notification.action_url) {
                 window.location.href = notification.action_url;
+            } else {
+                window.location.href = '{{ route("notifications.index") }}';
             }
         },
         
